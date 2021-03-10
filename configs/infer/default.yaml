@@ -1,0 +1,5 @@
+inference_data_path: "data/ratings-split3.csv"
+model_path: "models/sequifier-5542ff02-last.onnx"
+device: "cpu"
+seq_length: 10
+output_probabilities: True
