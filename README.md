@@ -43,6 +43,11 @@ If the data on which the model is trained comes from the preprocessing step, the
 
 should also be added.
 
+If the training data does not come from the preprocessing step, both train and validation
+data have to take the form of a csv file with the columns:
+
+> sequenceId, seq_length, seq_length-1,...,1, target
+
 The training step configured using the config. The two default configs can be found here:
 
 > configs/train/default.yaml
