@@ -48,9 +48,10 @@ data have to take the form of a csv file with the columns:
 
 > sequenceId, seq_length, seq_length-1,...,1, target
 
-The training step configured using the config. The two default configs can be found here:
+The training step is configured using the config. The two default configs can be found here:
 
 > configs/train/default.yaml
+
 > configs/train/default-on-preprocessed.yaml
 
 
