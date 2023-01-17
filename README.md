@@ -9,9 +9,9 @@ each of these steps is explained below.
 ## Preprocessing of data into sequences for training
 
 The preprocessing step is specifically designed for scenarios where for long series
-of events, the prediction of the next event is of interest. In cases of sequences
-where only the last user item interaction is a valid target, preprocessing step does
-not apply.
+of events, the prediction of the next event from the previous N events  is of interest.
+In cases of sequences where only the last interaction is a valid target,the  preprocessing
+step does not apply.
 
 This step presupposes input data with three columns: sequenceId, itemId and timesort.
 sequenceId and itemId identify user/item interaction, and the timesort column must
