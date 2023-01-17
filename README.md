@@ -21,7 +21,9 @@ where the config path specifies the path to the preprocessing config and the pro
 path the path to the (preferably empty) folder where the output files of the different
 steps are written to.
 
-The default config can be found on this path: configs/preprocess/default.yaml
+The default config can be found on this path:
+
+> configs/preprocess/default.yaml
 
 
 ## Configuring and training the sequence classification model
@@ -30,7 +32,9 @@ The training step is executed with the command:
 
 > sequifier.py --train --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
-and configured using the config. The default config can be found here: configs/train/default.yaml
+and configured using the config. The default config can be found here:
+
+> configs/train/default.yaml
 
 
 ## Inferring on test data using the trained model
@@ -39,5 +43,7 @@ Inference is done using the command:
 
 > sequifier.py --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
-and configured using a config file. The default version can be found here: configs/infer/default.yaml
+and configured using a config file. The default version can be found here:
+
+> configs/infer/default.yaml
 
