@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--config_path", type=str, help="file path to config for current processing step")
     parser.add_argument('-p', '--preprocess', action='store_true') 
     parser.add_argument('-t', '--train', action='store_true') 
+    parser.add_argument('-op', '--on-preprocessed', action='store_true') 
     parser.add_argument('-i', '--infer', action='store_true') 
 
     args = parser.parse_args()

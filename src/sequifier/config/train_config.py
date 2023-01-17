@@ -95,19 +95,20 @@ class TransformerModel(BaseModel):
 
 
 
-def load_transformer_config(config_path, project_path):
+def load_transformer_config(config_path, project_path, on_preprocessed):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
     
     config_values["project_path"] = project_path
 
-    dd_config_path = (f'{project_path}/{config_values.pop("ddconfig_path")}').replace("//", "/")
-    with open(dd_config_path, "r") as f:
-        dd_config = json.loads(f.read())
-    
-    config_values["n_classes"] = dd_config["n_classes"]
-    config_values["training_data_path"] = dd_config["split_paths"][0]
-    config_values["validation_data_path"] = dd_config["split_paths"][0]
+    if on_preprocessed:
+        dd_config_path = (f'{project_path}/{config_values.pop("ddconfig_path")}').replace("//", "/")
+        with open(dd_config_path, "r") as f:
+            dd_config = json.loads(f.read())
+        
+        config_values["n_classes"] = dd_config["n_classes"]
+        config_values["training_data_path"] = dd_config["split_paths"][0]
+        config_values["validation_data_path"] = dd_config["split_paths"][1]
 
     return(TransformerModel(**config_values))
 

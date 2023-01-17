@@ -1,5 +1,7 @@
-#data driven config path
-ddconfig_path: "/configs/ddconfigs/ratings.json" 
+#metadata
+n_classes: 3288
+training_data_path: "/home/leon/Documents/test/data/ratings-split0.csv"
+validation_data_path: "/home/leon/Documents/test/data/ratings-split1.csv"
 
 model_name: 
 #data specification

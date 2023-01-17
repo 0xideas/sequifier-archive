@@ -227,7 +227,7 @@ class PositionalEncoding(nn.Module):
 
 
 def train(args):
-    config = load_transformer_config(args.config_path, args.project_path)
+    config = load_transformer_config(args.config_path, args.project_path, args.on_preprocessed)
 
     data_train = pd.read_csv(config.training_data_path, sep=",", decimal=".", index_col=None)
     X_train, y_train = numpy_to_pytorch(data_train, config.seq_length, config.training_spec.device)
