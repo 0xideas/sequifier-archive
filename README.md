@@ -22,8 +22,8 @@ valid subsequences in the original data with the command:
 
 > sequifier.py --preprocess --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
-where the config path specifies the path to the preprocessing config and the project
-path the path to the (preferably empty) folder where the output files of the different
+The config path specifies the path to the preprocessing config and the project
+path the path to the (preferably empty) folder the output files of the different
 steps are written to.
 
 The default config can be found on this path:
@@ -41,7 +41,7 @@ If the data on which the model is trained comes from the preprocessing step, the
 
 > --on-preprocessed
 
-should also be added
+should also be added.
 
 The training step configured using the config. The two default configs can be found here:
 
