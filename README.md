@@ -3,10 +3,15 @@ The sequifier package enables:
   - the extraction of sequences for training from a standardised format
   - the configuration and training of a transformer classification model
   - inference on data with a trained model
-each of these steps is explained below
+each of these steps is explained below.
 
 
 ## Preprocessing of data into sequences for training
+
+The preprocessing step is specifically designed for scenarios where for long series
+of events, the prediction of the next event is of interest. In cases of sequences
+where only the last user item interaction is a valid target, preprocessing step does
+not apply.
 
 This step presupposes input data with three columns: sequenceId, itemId and timesort.
 sequenceId and itemId identify user/item interaction, and the timesort column must
@@ -32,9 +37,16 @@ The training step is executed with the command:
 
 > sequifier.py --train --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
-and configured using the config. The default config can be found here:
+If the data on which the model is trained comes from the preprocessing step, the flag
+
+> --on-preprocessed
+
+should also be added
+
+The training step configured using the config. The two default configs can be found here:
 
 > configs/train/default.yaml
+> configs/train/default-on-preprocessed.yaml
 
 
 ## Inferring on test data using the trained model
