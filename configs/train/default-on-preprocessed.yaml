@@ -1,0 +1,29 @@
+#data driven config path
+ddconfig_path: "/configs/ddconfigs/ratings.json" 
+
+model_name: 
+#data specification
+seq_length: 10
+
+#model specification
+model_spec:
+  d_model: 50
+  nhead: 2
+  d_hid: 50
+  nlayers: 2
+
+#training specification
+training_spec:
+  device: "cpu"
+  epochs: 5
+  iter_save: 2
+  batch_size: 50
+  lr: 0.001  # learning rate
+  dropout: 0.3
+  criterion: "CrossEntropyLoss"
+  optimizer: 
+    name: "Adam"
+  scheduler:
+    name: "StepLR"
+    step_size: 1.0
+    gamma: 0.99
