@@ -1,5 +1,5 @@
 #data driven config path
-ddconfig_path: "/configs/ddconfigs/ratings.json" 
+ddconfig_path: "/configs/ddconfigs/chr8.json" 
 
 model_name: 
 #data specification
@@ -15,10 +15,10 @@ model_spec:
 #training specification
 training_spec:
   device: "cpu"
-  epochs: 5
+  epochs: 100
   iter_save: 2
   batch_size: 50
-  lr: 0.001  # learning rate
+  lr: 0.01  # learning rate
   dropout: 0.3
   criterion: "CrossEntropyLoss"
   optimizer: 

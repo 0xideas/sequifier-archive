@@ -5,6 +5,7 @@ import pandas as pd
 import math
 import json
 
+
 from helpers import create_folder_if_not_exists, numpy_to_pytorch
 from config.preprocess_config import load_preprocessor_config
 
@@ -23,7 +24,9 @@ class Preprocessor(object):
         n_classes = len(np.unique(data["itemId"])) + 1
 
         data, id_map = self.replace_ids(data)
+
         sequences = self.extract_sequences(data, seq_length)
+
         self.splits = self.extract_data_subsets(sequences, group_proportions)  
         self.splits = [self.cast_columns_to_string(data) for data in self.splits]
         self.export(id_map, n_classes) 
@@ -49,9 +52,8 @@ class Preprocessor(object):
 
     @classmethod
     def replace_ids(cls, data):
-        ids = sorted(list(np.unique(data["itemId"])))
+        ids = sorted([int(x) if not isinstance(x, str) else x for x in np.unique(data["itemId"])])
         id_map = {id_: i+1 for i, id_ in enumerate(ids)}
-        id_map = {int(id_): i for id_, i in id_map.items() if type(id_).__module__ == "numpy"}
         data["itemId"] = data["itemId"].map(id_map)
         return(data, id_map)
 
