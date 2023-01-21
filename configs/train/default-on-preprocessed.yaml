@@ -3,7 +3,7 @@ ddconfig_path: "/configs/ddconfigs/chr8.json"
 
 model_name: 
 #data specification
-seq_length: 10
+seq_length: 50
 
 #model specification
 model_spec:
@@ -18,7 +18,7 @@ training_spec:
   epochs: 100
   iter_save: 2
   batch_size: 50
-  lr: 0.01  # learning rate
+  lr: 0.003  # learning rate
   dropout: 0.3
   criterion: "CrossEntropyLoss"
   optimizer: 
