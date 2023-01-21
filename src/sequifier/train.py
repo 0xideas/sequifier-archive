@@ -208,8 +208,9 @@ class TransformerModel(nn.Module):
 
         if latest_model_path is not None:
             print(f"Loading model weights from {latest_model_path}")
-            self.load_state_dict(torch.load(latest_model_path))
-            self.start_epoch = int(re.findall("epoch-([0-9]+)", latest_model_path)[0])
+            checkpoint = torch.load(latest_model_path)
+            self.load_state_dict(checkpoint['model_state_dict'])
+            self.start_epoch = int(re.findall("epoch-([0-9]+)", latest_model_path)[0]) + 1
         else:
             self.start_epoch = 1
 
