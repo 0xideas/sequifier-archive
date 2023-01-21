@@ -6,18 +6,19 @@ The sequifier package enables:
   - the extraction of sequences for training from a standardised format
   - the configuration and training of a transformer classification model
   - inference on data with a trained model
-each of these steps is explained below.
+
+Each of these steps is explained below.
 
 
 ## Preprocessing of data into sequences for training
 
 The preprocessing step is specifically designed for scenarios where for long series
 of events, the prediction of the next event from the previous N events  is of interest.
-In cases of sequences where only the last interaction is a valid target,the  preprocessing
+In cases of sequences where only the last item is a valid target, the  preprocessing
 step does not apply.
 
 This step presupposes input data with three columns: sequenceId, itemId and timesort.
-sequenceId and itemId identify user/item interaction, and the timesort column must
+sequenceId and itemId identify sequence and item, and the timesort column must
 provide values that enable sequential sorting. Often this will simply be a timestamp.
 
 The data can then be processed into training, validation and testing datasets of all
