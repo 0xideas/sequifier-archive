@@ -23,7 +23,7 @@ provide values that enable sequential sorting. Often this will simply be a times
 The data can then be processed into training, validation and testing datasets of all
 valid subsequences in the original data with the command:
 
-> sequifier.py --preprocess --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+> sequifier --preprocess --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 The config path specifies the path to the preprocessing config and the project
 path the path to the (preferably empty) folder the output files of the different
@@ -38,7 +38,7 @@ The default config can be found on this path:
 
 The training step is executed with the command:
 
-> sequifier.py --train --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+> sequifier --train --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 If the data on which the model is trained comes from the preprocessing step, the flag
 
@@ -62,7 +62,7 @@ The training step is configured using the config. The two default configs can be
 
 Inference is done using the command:
 
-> sequifier.py --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+> sequifier --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 and configured using a config file. The default version can be found here:
 
