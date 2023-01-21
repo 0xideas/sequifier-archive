@@ -1,3 +1,6 @@
+<img src="./design/logo.svg">
+
+
 ## Overview
 The sequifier package enables:
   - the extraction of sequences for training from a standardised format
