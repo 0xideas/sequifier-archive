@@ -9,7 +9,9 @@ class InfererModel(BaseModel):
     model_path: str
     device: str
     seq_length: int
+    ddconfig_path: Optional[str] = None
     output_probabilities: bool = False
+    map_to_id: bool = True
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):

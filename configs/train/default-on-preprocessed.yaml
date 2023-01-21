@@ -15,8 +15,8 @@ model_spec:
 #training specification
 training_spec:
   device: "cpu"
-  epochs: 100
-  iter_save: 2
+  epochs: 3
+  iter_save: 1
   batch_size: 50
   lr: 0.003  # learning rate
   dropout: 0.3

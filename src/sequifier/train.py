@@ -188,12 +188,14 @@ class TransformerModel(nn.Module):
 
     def save(self, epoch, val_loss):
         create_folder_if_not_exists(f"{self.project_path}/checkpoints")
+        output_path = f"{self.project_path}/checkpoints/model-{self.model_name}-epoch-{epoch}.pt"
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'loss': val_loss,
-            }, f"{self.project_path}/checkpoints/model-{self.model_name}-epoch-{epoch}.pt")
+            }, output_path)
+        print(f"Saved model to {output_path}")
 
 
 ######################################################################

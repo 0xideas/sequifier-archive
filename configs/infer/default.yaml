@@ -1,8 +1,8 @@
 #data driven config path
 ddconfig_path: "/configs/ddconfigs/chr8.json" 
-
-inference_data_path: "data/ratings-split3.csv"
-model_path: "models/sequifier-5542ff02-last.onnx"
+inference_data_path: "data/chr8-split3.csv"
+model_path: "models/sequifier-da03be96-last.onnx"
 device: "cpu"
 seq_length: 10
 output_probabilities: True
+map_to_id: True
