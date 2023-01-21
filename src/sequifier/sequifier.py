@@ -1,19 +1,10 @@
 from argparse import ArgumentParser
-from preprocess import preprocess
-from train import train
-from infer import infer
+from sequifier.preprocess import preprocess
+from sequifier.train import train
+from sequifier.infer import infer
 
 
-def main(args):
-    if args.preprocess:
-        preprocess(args)
-    if args.train:
-        train(args)
-    if args.infer:
-        infer(args)
-
-
-if __name__ == "__main__":
+def main():
     parser = ArgumentParser()
 
     parser.add_argument("--project_path", type=str, help="file path to folder that will contain the output paths")
@@ -24,4 +15,15 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--infer', action='store_true') 
 
     args = parser.parse_args()
-    main(args)
+
+    if args.preprocess:
+        preprocess(args)
+    if args.train:
+        train(args)
+    if args.infer:
+        infer(args)
+
+
+if __name__ == "__main__":
+
+    main()

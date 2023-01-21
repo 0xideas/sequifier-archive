@@ -4,10 +4,10 @@ import numpy as np
 import json
 import onnxruntime
 
-from helpers import create_folder_if_not_exists
-from helpers import numpy_to_pytorch
+from sequifier.helpers import create_folder_if_not_exists
+from sequifier.helpers import numpy_to_pytorch
 
-from config.infer_config import load_inferer_config
+from sequifier.config.infer_config import load_inferer_config
 
 
 class Inferer(object):

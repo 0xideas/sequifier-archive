@@ -13,9 +13,10 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.utils.data import dataset
 
 import uuid
-from helpers import create_folder_if_not_exists
-from config.train_config import load_transformer_config
-from helpers import numpy_to_pytorch
+
+from sequifier.helpers import create_folder_if_not_exists
+from sequifier.config.train_config import load_transformer_config
+from sequifier.helpers import numpy_to_pytorch
 
 
 

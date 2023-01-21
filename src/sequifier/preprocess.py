@@ -6,8 +6,8 @@ import math
 import json
 
 
-from helpers import create_folder_if_not_exists, numpy_to_pytorch
-from config.preprocess_config import load_preprocessor_config
+from sequifier.helpers import create_folder_if_not_exists, numpy_to_pytorch
+from sequifier.config.preprocess_config import load_preprocessor_config
 
 class Preprocessor(object):
     def __init__(self, project_path, data_path, group_proportions, seq_length, max_rows = None):
