@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
-
+import glob
+import os
+import re
 import pandas as pd
 import math
 import copy
@@ -51,6 +53,7 @@ class TransformerModel(nn.Module):
         self.scheduler = self.get_scheduler(**self.filter_key(hparams.training_spec.scheduler, "name"))
 
         self.iter_save = hparams.training_spec.iter_save
+        self.load_weights_if_exists()
 
 
     def filter_key(self, dict_, key):
@@ -129,7 +132,7 @@ class TransformerModel(nn.Module):
         best_val_loss = float('inf')
         best_model = None
 
-        for epoch in range(1, self.hparams.training_spec.epochs + 1):
+        for epoch in range(self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch):
             epoch_start_time = time.time()
             self.train_epoch(X_train, y_train, epoch)
             val_loss = self.evaluate(X_valid, y_valid)
@@ -199,6 +202,30 @@ class TransformerModel(nn.Module):
         print(f"Saved model to {output_path}")
 
 
+    def load_weights_if_exists(self):
+
+        latest_model_path = self.get_latest_model_name()
+
+        if latest_model_path is not None:
+            print(f"Loading model weights from {latest_model_path}")
+            self.load_state_dict(torch.load(latest_model_path))
+            self.start_epoch = int(re.findall("epoch-([0-9]+)", latest_model_path)[0])
+        else:
+            self.start_epoch = 1
+
+    
+
+    def get_latest_model_name(self):
+    
+        checkpoint_path = f"{self.project_path}/checkpoints/*"
+        model_str = f"model-{self.model_name}".replace("model-model-", "model-")
+
+        files = glob.glob(checkpoint_path) # * means all if need specific format then *.csv
+        files = [file for file in files if file.split("/")[-1].startswith(model_str)]
+        if len(files):
+            return(max(files, key=os.path.getctime))
+        else:
+            return(None)
 ######################################################################
 # ``PositionalEncoding`` module injects some information about the
 # relative or absolute position of the tokens in the sequence. The
