@@ -1,4 +1,4 @@
-<img src="./design/logo.svg">
+<img src="./design/logo.png">
 
 
 ## Overview
