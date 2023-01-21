@@ -3,7 +3,7 @@ n_classes: 3288
 training_data_path: "/home/leon/Documents/test/data/chr8-split0.csv"
 validation_data_path: "/home/leon/Documents/test/data/chr8-split1.csv"
 
-model_name: a3e3671a
+model_name: 
 #data specification
 seq_length: 10
 
