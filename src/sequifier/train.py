@@ -100,7 +100,7 @@ class TransformerModel(nn.Module):
         log_interval = 200
         start_time = time.time()
 
-        num_batches = len(X_train)
+        num_batches = math.ceil(len(X_train)/self.batch_size)
         for batch, i in enumerate(range(0, X_train.size(0) - 1, self.batch_size)):
             data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
             output = self(data)
