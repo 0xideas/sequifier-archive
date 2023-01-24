@@ -29,4 +29,5 @@ training_spec:
     name: "StepLR" # learning rate scheduler, can be any in torch.optim.lr_scheduler
     step_size: 1.0
     gamma: 0.99
+  continue_training: true
 

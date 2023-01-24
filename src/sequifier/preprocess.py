@@ -88,7 +88,6 @@ class Preprocessor(object):
     def get_subset_indices(cls, user_data, groups):
         subset_indices = [math.floor(size*user_data.shape[0]) for size in groups]
         diff = user_data.shape[0] - np.sum(subset_indices)
-        np.random.seed()
         additional = np.random.choice(range(len(groups)), replace=True, size=diff)
         for i in additional:
             subset_indices[i] += 1

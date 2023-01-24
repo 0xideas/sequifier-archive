@@ -53,7 +53,8 @@ class TransformerModel(nn.Module):
         self.scheduler = self.get_scheduler(**self.filter_key(hparams.training_spec.scheduler, "name"))
 
         self.iter_save = hparams.training_spec.iter_save
-        self.load_weights_if_exists()
+        self.continue_training = hparams.training_spec.continue_training
+        self.load_weights_conditional()
 
 
     def filter_key(self, dict_, key):
@@ -202,11 +203,11 @@ class TransformerModel(nn.Module):
         print(f"Saved model to {output_path}")
 
 
-    def load_weights_if_exists(self):
+    def load_weights_conditional(self):
 
         latest_model_path = self.get_latest_model_name()
 
-        if latest_model_path is not None:
+        if latest_model_path is not None and self.continue_training:
             print(f"Loading model weights from {latest_model_path}")
             checkpoint = torch.load(latest_model_path)
             self.load_state_dict(checkpoint['model_state_dict'])

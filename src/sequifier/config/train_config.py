@@ -34,6 +34,7 @@ class TrainingSpecModel(BaseModel):
     criterion: str
     optimizer: CustomValidation[DotDict] # mandatory
     scheduler: CustomValidation[DotDict] # mandatory
+    continue_training: bool
 
 
     def __init__(self, **kwargs):
