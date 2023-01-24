@@ -1,6 +1,7 @@
 import os
 import json
 import numpy as np
+import pandas as pd
 import pytest
 
 
@@ -41,3 +42,22 @@ def test_dd_config(dd_config):
     # assert False, id_map_values
     assert np.all(id_map_values == np.arange(1, 31)), id_map_values
 
+
+@pytest.fixture()
+def data_splits(project_path):
+    data_splits_paths = [f"{project_path}/data/test_data-split{i}.csv" for i in range(3)]
+
+    data_split_values = [pd.read_csv(path, sep=",", decimal=".", index_col=None) for path in data_splits_paths]
+
+    return(data_split_values)
+
+
+def test_preprocessed_data(data_splits):
+    assert np.all(np.array([data.shape[0] for data in data_splits])==np.array([51, 18, 21]))
+
+    for data in data_splits:
+        assert data.shape[1] == 12
+        sequence_step = data["sequenceId"].values[:-1] != data["sequenceId"].values[1:]
+        assert np.all((data["target"].values[:-1] == data["1"].values[1:]) | sequence_step)
+        assert np.all((data["1"].values[:-1] == data["2"].values[1:]) | sequence_step)
+        assert np.all((data["7"].values[:-1] == data["8"].values[1:]) | sequence_step)
