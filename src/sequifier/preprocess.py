@@ -19,7 +19,7 @@ class Preprocessor(object):
 
         create_folder_if_not_exists(f"{project_path}/data")
         self.data_name_root = data_path.split('/')[-1].split('.')[0]
-        self.split_paths = [f"{self.project_path}/data/{self.data_name_root}-split{i}.csv" for i in range(len(group_proportions))]
+        self.split_paths = [f"{self.project_path}/data/{self.data_name_root}-split{i}.csv".replace("//", "/") for i in range(len(group_proportions))]
 
         n_classes = len(np.unique(data["itemId"])) + 1
 
@@ -44,6 +44,7 @@ class Preprocessor(object):
 
         for split_path, split in zip(self.split_paths, self.splits):
             split.to_csv(split_path, sep=",", decimal=".", index=None)
+            print(f"Written data to {split_path}")
 
     @classmethod
     def cast_columns_to_string(cls, data):
