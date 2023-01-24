@@ -31,8 +31,9 @@ def run_preprocessing(project_path, preprocessing_config_path):
 @pytest.fixture(scope="session")
 def remove_old_checkpoints(project_path):
     checkpoint_path = f"{project_path}/checkpoints"
-    for file in os.listdir(checkpoint_path):
-        os.remove(os.path.join(checkpoint_path, file))
+    if os.path.exists(checkpoint_path):
+        for file in os.listdir(checkpoint_path):
+            os.remove(os.path.join(checkpoint_path, file))
 
     time.sleep(1)
 
