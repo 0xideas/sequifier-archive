@@ -1,31 +1,32 @@
 #metadata
-n_classes: 3288
-training_data_path: "/home/leon/Documents/test/data/chr8-split0.csv"
-validation_data_path: "/home/leon/Documents/test/data/chr8-split1.csv"
+n_classes: 3288 # number of classes
+training_data_path: "/home/leon/Documents/test/data/chr8-split0.csv" # absolute path to training data
+validation_data_path: "/home/leon/Documents/test/data/chr8-split1.csv" # absolute path to validation data
 
-model_name: 
+model_name:  # model name to load from in case there are checkpoints of that model available
 #data specification
-seq_length: 10
+seq_length: 50 # length of sequence used for classification, cannot be larger than sew_length in the preprocessing step
 
 #model specification
 model_spec:
-  d_model: 50
-  nhead: 2
-  d_hid: 50
-  nlayers: 2
+  d_model: 50 # dimensionality of the token embedding system
+  nhead: 2 # number of attention heads within each transformer layer
+  d_hid: 50 # dimensionality of feedforward network inside transformer layer
+  nlayers: 2 # number of transformer layers
 
 #training specification
 training_spec:
-  device: "cpu"
-  epochs: 5
-  iter_save: 2
-  batch_size: 50
-  lr: 0.001  # learning rate
-  dropout: 0.3
-  criterion: "CrossEntropyLoss"
+  device: "cpu" # device for model training
+  epochs: 3 # number of epochs
+  iter_save: 1 # frequency of checkpointing
+  batch_size: 50 # batch size for training
+  lr: 0.003  # learning rate
+  dropout: 0.3 # dropout rate during training
+  criterion: "CrossEntropyLoss" # loss function, can be any in torch.nn
   optimizer: 
-    name: "Adam"
+    name: "Adam" # optimizer, can be any on torch.optim
   scheduler:
-    name: "StepLR"
+    name: "StepLR" # learning rate scheduler, can be any in torch.optim.lr_scheduler
     step_size: 1.0
     gamma: 0.99
+
