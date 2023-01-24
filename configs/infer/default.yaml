@@ -1,6 +1,6 @@
 #data driven config path
 inference_data_path: "data/chr8-split3.csv" # path to validation data (within project folder)
-model_path: "models/sequifier-1882bbb8-best.onnx" # path to model (within project folder)
+model_path: "models/sequifier-default-best.onnx" # path to model (within project folder)
 device: "cpu" # device used for inference
 seq_length: 50 # sequence length for prediction (must be identical to training)
 output_probabilities: True # write out class probablities for further processing

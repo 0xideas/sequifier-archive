@@ -1,7 +1,7 @@
 #data driven config path
 ddconfig_path: "/configs/ddconfigs/chr8.json" # 'data driven' config path, written to by preprocessing step
 
-model_name:  # model name to load from in case there are checkpoints of that model available
+model_name: "default"  # model name to load from in case there are checkpoints of that model available, can be None
 #data specification
 seq_length: 50 # length of sequence used for classification, cannot be larger than sew_length in the preprocessing step
 
