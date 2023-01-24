@@ -72,7 +72,7 @@ and configured using a config file. The default version can be found here:
 
 ## Complete example how to use the repository
 
-1. create a new "project" folder at PROJECT PATH and a "configs" subfolder
+1. create a new project folder at PROJECT PATH and a "configs" subfolder
 2. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
 3. adapt preprocess config to take the path to the data you want to preprocess
 4. run 
