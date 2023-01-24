@@ -11,11 +11,6 @@ def config_path():
 
 
 @pytest.fixture()
-def project_path():
-    return ("tests/project_folder") 
-
-
-@pytest.fixture()
 def run_preprocessing(project_path, config_path):
     os.system(f"sequifier --preprocess --config_path={config_path} --project_path={project_path}")  
 
