@@ -69,3 +69,18 @@ and configured using a config file. The default version can be found here:
 
 > configs/infer/default.yaml
 
+
+## Complete example how to use the repository
+
+1. create a new "project" folder at PROJECT PATH and a "configs" subfolder
+2. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
+3. adapt preprocess config to take the path to the data you want to preprocess
+4. run 
+> sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
+5. adapt dd_config parameter in train.yaml and infer.yaml in to dd_config path from preprocessing
+6. run 
+> sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
+7. adapt inference_data_path in infer.yaml
+8. run  
+> sequifier --infer --config_path=PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
+9. find your predictions at [PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv
