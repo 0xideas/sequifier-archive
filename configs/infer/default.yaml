@@ -1,8 +1,8 @@
 #data driven config path
-ddconfig_path: "/configs/ddconfigs/chr8.json" 
-inference_data_path: "data/chr8-split3.csv"
-model_path: "models/sequifier-1882bbb8-best.onnx"
-device: "cpu"
-seq_length: 50
-output_probabilities: True
-map_to_id: True
+inference_data_path: "data/chr8-split3.csv" # path to validation data (within project folder)
+model_path: "models/sequifier-1882bbb8-best.onnx" # path to model (within project folder)
+device: "cpu" # device used for inference
+seq_length: 50 # sequence length for prediction (must be identical to training)
+output_probabilities: True # write out class probablities for further processing
+ddconfig_path: "/configs/ddconfigs/chr8.json" # data driven config path, or path to any json that contains {{'id_map':{label1:index1, ..., }}}, can be none if map_to_id is false
+map_to_id: True # map predictions from indices to labels (requires ddconfig_path)
