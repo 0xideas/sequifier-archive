@@ -1,0 +1,4 @@
+data_path: "tests/resources/test_data.csv"
+seq_length: 10 # length of extracted subsequences
+group_proportions: [0.6, 0.2, 0.2] # group share of total cases: train set share, validation set share, test set 1 share, test set 2 share,...(min one test set)
+max_rows: # maximum number of rows written out, all rows are written out if max_rows is None
