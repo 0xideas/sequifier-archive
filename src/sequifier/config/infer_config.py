@@ -12,6 +12,7 @@ class InfererModel(BaseModel):
     ddconfig_path: Optional[str] = None
     output_probabilities: bool = False
     map_to_id: bool = True
+    seed: int
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):
@@ -21,9 +22,9 @@ class InfererModel(BaseModel):
         return(v)
 
 
-def load_inferer_config(config_path, project_path):
+def load_inferer_config(config_path, args_config):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
+    config_values.update(args_config)
     
-    config_values["project_path"] = project_path
     return(InfererModel(**config_values))

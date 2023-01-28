@@ -35,8 +35,8 @@ class Inferer(object):
 
 
 
-def infer(args):
-    config = load_inferer_config(args.config_path, args.project_path)
+def infer(args, args_config):
+    config = load_inferer_config(args.config_path, args_config)
 
     model_id = config.model_path.split("/")[-1].replace(".onnx", "")
 

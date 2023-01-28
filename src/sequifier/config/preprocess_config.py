@@ -9,6 +9,7 @@ class PreprocessorModel(BaseModel):
     seq_length: int
     group_proportions: List[float]
     max_rows: Optional[int]
+    seed: int
 
 
     @validator("data_path")
@@ -26,10 +27,11 @@ class PreprocessorModel(BaseModel):
         return(v)
 
 
-def load_preprocessor_config(config_path, project_path):
+def load_preprocessor_config(config_path, args_config):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
+
+    config_values.update(args_config)
     
-    config_values["project_path"] = project_path
 
     return(PreprocessorModel(**config_values))

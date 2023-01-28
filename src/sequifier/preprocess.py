@@ -4,14 +4,17 @@ import numpy as np
 import pandas as pd
 import math
 import json
-
+import random
 
 from sequifier.helpers import create_folder_if_not_exists, numpy_to_pytorch
 from sequifier.config.preprocess_config import load_preprocessor_config
 
 class Preprocessor(object):
-    def __init__(self, project_path, data_path, group_proportions, seq_length, max_rows = None):
+    def __init__(self, project_path, data_path, group_proportions, seq_length, seed, max_rows = None):
         self.project_path = project_path
+        self.seed = seed
+        np.random.seed(seed)
+
         data = pd.read_csv(data_path)
 
         if max_rows is not None:
@@ -71,7 +74,6 @@ class Preprocessor(object):
         
         return(seqs, targets)
 
-
     @classmethod
     def extract_sequences(cls, data, seq_length):
         raw_sequences = data.sort_values(["sequenceId", "timesort"]).groupby("sequenceId")["itemId"].apply(list).reset_index(drop=False)
@@ -83,11 +85,11 @@ class Preprocessor(object):
         sequences = pd.DataFrame(rows, columns = ["sequenceId"] + list(range(seq_length, 0, -1)) + ["target"])   
         return(sequences)
 
-
     @classmethod
     def get_subset_indices(cls, user_data, groups):
         subset_indices = [math.floor(size*user_data.shape[0]) for size in groups]
         diff = user_data.shape[0] - np.sum(subset_indices)
+
         additional = np.random.choice(range(len(groups)), replace=True, size=diff)
         for i in additional:
             subset_indices[i] += 1
@@ -109,7 +111,7 @@ class Preprocessor(object):
             
 
 
-def preprocess(args):
-    config = load_preprocessor_config(args.config_path, args.project_path)
+def preprocess(args, args_config):
+    config = load_preprocessor_config(args.config_path, args_config)
     Preprocessor(**config.dict())
     print("Preprocessing complete")

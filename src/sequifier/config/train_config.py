@@ -85,6 +85,7 @@ class TransformerModel(BaseModel):
     n_classes: int
     training_data_path: str
     validation_data_path: str
+    seed: int
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
@@ -96,14 +97,14 @@ class TransformerModel(BaseModel):
 
 
 
-def load_transformer_config(config_path, project_path, on_preprocessed):
+def load_transformer_config(config_path, args_config, on_preprocessed):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
     
-    config_values["project_path"] = project_path
+    config_values.update(args_config)
 
     if on_preprocessed:
-        dd_config_path = (f'{project_path}/{config_values.pop("ddconfig_path")}').replace("//", "/")
+        dd_config_path = (f'{config_values["project_path"]}/{config_values.pop("ddconfig_path")}').replace("//", "/")
         with open(dd_config_path, "r") as f:
             dd_config = json.loads(f.read())
         
