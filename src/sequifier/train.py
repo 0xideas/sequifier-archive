@@ -14,7 +14,6 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 import uuid
 
-from sequifier.helpers import create_folder_if_not_exists
 from sequifier.config.train_config import load_transformer_config
 from sequifier.helpers import numpy_to_pytorch
 
@@ -175,11 +174,12 @@ class TransformerModel(nn.Module):
         self.eval()
         x = torch.randint(0, self.hparams.n_classes, (self.hparams.seq_length, self.batch_size))
 
-        create_folder_if_not_exists(f"{self.project_path}/models")
+        os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
         # Export the model
+        export_path = os.path.join(self.project_path, "models", f"sequifier-{self.model_name}-{suffix}.onnx")
         torch.onnx.export(model,               # model being run
                         x,                 # model input (or a tuple for multiple inputs)
-                        f"{self.project_path}/models/sequifier-{self.model_name}-{suffix}.onnx",   # where to save the model (can be a file or file-like object)
+                        export_path,  # where to save the model (can be a file or file-like object)
                         export_params=True,        # store the trained parameter weights inside the model file
                         opset_version=10,          # the ONNX version to export the model to
                         do_constant_folding=True,  # whether to execute constant folding for optimization
@@ -190,8 +190,10 @@ class TransformerModel(nn.Module):
 
 
     def save(self, epoch, val_loss):
-        create_folder_if_not_exists(f"{self.project_path}/checkpoints")
-        output_path = f"{self.project_path}/checkpoints/model-{self.model_name}-epoch-{epoch}.pt"
+        os.makedirs(os.path.join(self.project_path, "checkpoints"), exist_ok=True)
+
+        output_path = os.path.join(self.project_path, "checkpoints", f"model-{self.model_name}-epoch-{epoch}.pt")
+
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
@@ -217,11 +219,11 @@ class TransformerModel(nn.Module):
 
     def get_latest_model_name(self):
     
-        checkpoint_path = f"{self.project_path}/checkpoints/*"
+        checkpoint_path = os.path.join(self.project_path, "checkpoints", "*")
         model_str = f"model-{self.model_name}".replace("model-model-", "model-")
 
         files = glob.glob(checkpoint_path) # * means all if need specific format then *.csv
-        files = [file for file in files if file.split("/")[-1].startswith(model_str)]
+        files = [file for file in files if os.path.split(file)[1].startswith(model_str)]
         if len(files):
             return(max(files, key=os.path.getctime))
         else:
