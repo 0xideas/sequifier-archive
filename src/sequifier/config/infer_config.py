@@ -16,7 +16,8 @@ class InfererModel(BaseModel):
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):
-        path = (f"{values['project_path']}/{v}").replace("//", "/")
+        path = os.path.join(values['project_path'], v)
+        
         if not os.path.exists(path):
             raise ValueError(f"{path} does not exist")
         return(v)

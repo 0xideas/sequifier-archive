@@ -3,6 +3,7 @@ import yaml
 import json
 from dataclasses import dataclass
 from pydantic import BaseModel, validator
+import os
 
 from typing import Dict, Union, Optional
 ANYTYPE = Union[str, int, float]
@@ -104,7 +105,7 @@ def load_transformer_config(config_path, args_config, on_preprocessed):
     config_values.update(args_config)
 
     if on_preprocessed:
-        dd_config_path = (f'{config_values["project_path"]}/{config_values.pop("ddconfig_path")}').replace("//", "/")
+        dd_config_path = os.path.join(config_values["project_path"], config_values.pop("ddconfig_path"))
         with open(dd_config_path, "r") as f:
             dd_config = json.loads(f.read())
         

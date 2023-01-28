@@ -4,9 +4,8 @@ import numpy as np
 import pandas as pd
 import math
 import json
-import random
+import os
 
-from sequifier.helpers import create_folder_if_not_exists, numpy_to_pytorch
 from sequifier.config.preprocess_config import load_preprocessor_config
 
 class Preprocessor(object):
@@ -15,14 +14,15 @@ class Preprocessor(object):
         self.seed = seed
         np.random.seed(seed)
 
-        data = pd.read_csv(data_path)
+        data = pd.read_csv(data_path, sep=",", decimal=".", index_col=None)
 
         if max_rows is not None:
             data = data.head(int(max_rows))
 
-        create_folder_if_not_exists(f"{project_path}/data")
-        self.data_name_root = data_path.split('/')[-1].split('.')[0]
-        self.split_paths = [f"{self.project_path}/data/{self.data_name_root}-split{i}.csv".replace("//", "/") for i in range(len(group_proportions))]
+        os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
+
+        self.data_name_root =  os.path.split(data_path)[1].split('.')[0]
+        self.split_paths = [os.path.join(self.project_path, "data", f"{self.data_name_root}-split{i}.csv") for i in range(len(group_proportions))]
 
         n_classes = len(np.unique(data["itemId"])) + 1
 
@@ -41,8 +41,9 @@ class Preprocessor(object):
             "id_map": id_map, 
             "split_paths": self.split_paths
         }
-        create_folder_if_not_exists(f"{self.project_path}/configs/ddconfigs")
-        with open(f"{self.project_path}/configs/ddconfigs/{self.data_name_root}.json", "w") as f:
+        os.makedirs(os.path.join(self.project_path, "configs", "ddconfigs"), exist_ok=True)
+
+        with open(os.path.join(self.project_path, "configs", "ddconfigs", f"{self.data_name_root}.json"), "w") as f:
             f.write(json.dumps(data_driven_config))
 
         for split_path, split in zip(self.split_paths, self.splits):
