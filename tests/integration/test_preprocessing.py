@@ -8,7 +8,7 @@ import pytest
 
 @pytest.fixture()
 def dd_config(run_preprocessing, project_path):
-    with open(f"{project_path}/configs/ddconfigs/test_data.json", "r") as f:
+    with open(os.path.join(project_path, "configs", "ddconfigs", "test_data.json"), "r") as f:
         dd_conf = json.loads(f.read())
     return(dd_conf)
 
@@ -31,7 +31,7 @@ def test_dd_config(dd_config):
 
 @pytest.fixture()
 def data_splits(project_path):
-    data_splits_paths = [f"{project_path}/data/test_data-split{i}.csv" for i in range(3)]
+    data_splits_paths = [os.path.join(project_path, "data", f"test_data-split{i}.csv") for i in range(3)]
 
     data_split_values = [pd.read_csv(path, sep=",", decimal=".", index_col=None) for path in data_splits_paths]
 
