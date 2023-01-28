@@ -4,5 +4,5 @@ model_path: "models/sequifier-default-best.onnx" # path to model (within project
 device: "cpu" # device used for inference
 seq_length: 50 # sequence length for prediction (must be identical to training)
 output_probabilities: True # write out class probablities for further processing
-ddconfig_path: "/configs/ddconfigs/chr8.json" # data driven config path, or path to any json that contains {{'id_map':{label1:index1, ..., }}}, can be none if map_to_id is false
+ddconfig_path: "configs/ddconfigs/chr8.json" # data driven config path, or path to any json that contains {{'id_map':{label1:index1, ..., }}}, can be none if map_to_id is false
 map_to_id: True # map predictions from indices to labels (requires ddconfig_path)
