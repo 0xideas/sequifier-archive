@@ -10,7 +10,26 @@ The sequifier package enables:
 Each of these steps is explained below.
 
 
-## Preprocessing of data into sequences for training
+## Complete example how to build and apply a transformer sequence classifier with sequifier
+
+1. create a conda environment and run
+> pip install sequifier
+2. create a new project folder at PROJECT PATH and a "configs" subfolder
+3. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
+4. adapt preprocess config to take the path to the data you want to preprocess
+5. run 
+> sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
+6. adapt dd_config parameter in train.yaml and infer.yaml in to dd_config path from preprocessing
+7. run 
+> sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
+8. adapt inference_data_path in infer.yaml
+9. run  
+> sequifier --infer --config_path=PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
+10. find your predictions at [PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv
+
+
+## More detailed explanations of the three steps
+#### Preprocessing of data into sequences for training
 
 The preprocessing step is specifically designed for scenarios where for long series
 of events, the prediction of the next event from the previous N events  is of interest.
@@ -35,7 +54,7 @@ The default config can be found on this path:
 > configs/preprocess/default.yaml
 
 
-## Configuring and training the sequence classification model
+#### Configuring and training the sequence classification model
 
 The training step is executed with the command:
 
@@ -59,7 +78,7 @@ The training step is configured using the config. The two default configs can be
 > configs/train/default-on-preprocessed.yaml
 
 
-## Inferring on test data using the trained model
+#### Inferring on test data using the trained model
 
 Inference is done using the command:
 
@@ -70,17 +89,3 @@ and configured using a config file. The default version can be found here:
 > configs/infer/default.yaml
 
 
-## Complete example how to use the repository
-
-1. create a new project folder at PROJECT PATH and a "configs" subfolder
-2. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
-3. adapt preprocess config to take the path to the data you want to preprocess
-4. run 
-> sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
-5. adapt dd_config parameter in train.yaml and infer.yaml in to dd_config path from preprocessing
-6. run 
-> sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
-7. adapt inference_data_path in infer.yaml
-8. run  
-> sequifier --infer --config_path=PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
-9. find your predictions at [PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv
