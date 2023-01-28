@@ -1,9 +1,9 @@
-import os
 import json
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
-
 
 
 def test_checkpoint_files_exists(run_training, project_path):
@@ -17,6 +17,8 @@ def test_checkpoint_files_exists(run_training, project_path):
 def test_model_files_exists(run_training, project_path):
 
     found_items = sorted(list(os.listdir(os.path.join(project_path, "models"))))
-    expected_items = np.array(["sequifier-default-best.onnx", "sequifier-default-last.onnx"])
+    expected_items = np.array(
+        ["sequifier-default-best.onnx", "sequifier-default-last.onnx"]
+    )
 
     assert np.all(found_items == expected_items), found_items
