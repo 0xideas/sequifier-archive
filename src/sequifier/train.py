@@ -3,16 +3,14 @@ import glob
 import os
 import re
 import pandas as pd
+import numpy as np
 import math
 import copy
 import time
-from typing import Tuple
 
 import torch
 from torch import nn, Tensor
-import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-from torch.utils.data import dataset
 
 import uuid
 
@@ -258,8 +256,8 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-def train(args):
-    config = load_transformer_config(args.config_path, args.project_path, args.on_preprocessed)
+def train(args, args_config):
+    config = load_transformer_config(args.config_path, args_config, args.on_preprocessed)
 
     data_train = pd.read_csv(config.training_data_path, sep=",", decimal=".", index_col=None)
     X_train, y_train = numpy_to_pytorch(data_train, config.seq_length, config.training_spec.device)
@@ -268,6 +266,9 @@ def train(args):
     data_valid = pd.read_csv(config.validation_data_path, sep=",", decimal=".", index_col=None)
     X_valid, y_valid = numpy_to_pytorch(data_valid, config.seq_length, config.training_spec.device)
     del data_valid
+
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
 
     model = TransformerModel(config)
 
