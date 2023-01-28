@@ -1,5 +1,5 @@
 #data driven config path
-ddconfig_path: "/configs/ddconfigs/chr8.json" # 'data driven' config path, written to by preprocessing step
+ddconfig_path: "configs/ddconfigs/chr8.json" # 'data driven' config path, written to by preprocessing step
 
 model_name: "default"  # model name to load from in case there are checkpoints of that model available, can be None
 #data specification
