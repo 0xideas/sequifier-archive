@@ -1,22 +1,32 @@
-import os
 import json
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
 
 
-
 @pytest.fixture()
 def predictions(run_inference, project_path):
-    prediction_path = os.path.join(project_path, "outputs", "predictions", "sequifier-default-best_predictions.csv")
-    preds = pd.read_csv(prediction_path, sep=",", decimal=".", index_col=None).values.flatten()
-    return(preds)
+    prediction_path = os.path.join(
+        project_path, "outputs", "predictions", "sequifier-default-best_predictions.csv"
+    )
+    preds = pd.read_csv(
+        prediction_path, sep=",", decimal=".", index_col=None
+    ).values.flatten()
+    return preds
+
 
 @pytest.fixture()
 def probabilities(run_inference, project_path):
-    prediction_path = os.path.join(project_path, "outputs", "probabilities", "sequifier-default-best_probabilities.csv")
+    prediction_path = os.path.join(
+        project_path,
+        "outputs",
+        "probabilities",
+        "sequifier-default-best_probabilities.csv",
+    )
     probs = pd.read_csv(prediction_path, sep=",", decimal=".", index_col=None)
-    return(probs)
+    return probs
 
 
 def test_predictions(predictions):

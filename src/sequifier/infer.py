@@ -1,18 +1,17 @@
-
-import pandas as pd
-import numpy as np
 import json
-import onnxruntime
 import os
 
-from sequifier.helpers import numpy_to_pytorch
+import numpy as np
+import onnxruntime
+import pandas as pd
 
 from sequifier.config.infer_config import load_inferer_config
+from sequifier.helpers import numpy_to_pytorch
 
 
 class Inferer(object):
     def __init__(self, model_path, project_path, id_map, map_to_id):
-        self.index_map = {v:k for k,v in id_map.items()} if map_to_id else None
+        self.index_map = {v: k for k, v in id_map.items()} if map_to_id else None
         self.map_to_id = map_to_id
         model_path_load = os.path.join(project_path, model_path)
         self.ort_session = onnxruntime.InferenceSession(model_path_load)
@@ -21,7 +20,7 @@ class Inferer(object):
         """x.shape=(seq_length, any)"""
         ort_inputs = {self.ort_session.get_inputs()[0].name: x}
         ort_outs = self.ort_session.run(None, ort_inputs)
-        return(ort_outs[0])
+        return ort_outs[0]
 
     def infer(self, x, probs=None):
         """x.shape=(seq_length, any)"""
@@ -30,9 +29,7 @@ class Inferer(object):
         preds = probs.argmax(1)
         if self.map_to_id:
             preds = np.array([self.index_map[i] for i in preds])
-        return(preds)
-
-
+        return preds
 
 
 def infer(args, args_config):
@@ -50,7 +47,9 @@ def infer(args, args_config):
     del data
 
     if config.map_to_id:
-        assert config.ddconfig_path is not None, "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
+        assert (
+            config.ddconfig_path is not None
+        ), "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
         with open(os.path.join(config.project_path, config.ddconfig_path), "r") as f:
             id_map = json.loads(f.read())["id_map"]
     else:
@@ -60,16 +59,29 @@ def infer(args, args_config):
 
     if config.output_probabilities:
         probs = inferer.infer_probs(X.T)
-        os.makedirs(os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True)
-        probabilities_path = os.path.join(config.project_path, "outputs", "probabilities", f"{model_id}_probabilities.csv")
+        os.makedirs(
+            os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True
+        )
+        probabilities_path = os.path.join(
+            config.project_path,
+            "outputs",
+            "probabilities",
+            f"{model_id}_probabilities.csv",
+        )
         print(f"Writing probabilities to {probabilities_path}")
-        pd.DataFrame(probs).to_csv(probabilities_path, sep=",", decimal=".", index=False)
+        pd.DataFrame(probs).to_csv(
+            probabilities_path, sep=",", decimal=".", index=False
+        )
         preds = inferer.infer(None, probs)
     else:
         preds = inferer.infer(X.T)
 
-    os.makedirs(os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True)
-    predictions_path = os.path.join(config.project_path, "outputs", "predictions", f"{model_id}_predictions.csv")
+    os.makedirs(
+        os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
+    )
+    predictions_path = os.path.join(
+        config.project_path, "outputs", "predictions", f"{model_id}_predictions.csv"
+    )
 
     print(f"Writing predictions to {predictions_path}")
     pd.DataFrame(preds).to_csv(predictions_path, sep=",", decimal=".", index=False)
