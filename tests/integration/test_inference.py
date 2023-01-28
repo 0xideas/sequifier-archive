@@ -36,3 +36,7 @@ def test_predictions(predictions):
 
 def test_probabilities(probabilities):
     assert probabilities.shape[1] == 31
+
+    np.testing.assert_almost_equal(
+        probabilities.sum(1), np.ones(probabilities.shape[0]), decimal=5
+    )
