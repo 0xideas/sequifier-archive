@@ -1,4 +1,5 @@
 import os
+import shutil
 import pytest
 import time
 
@@ -24,22 +25,21 @@ def inference_config_path():
 
 
 @pytest.fixture(scope="session")
-def run_preprocessing(project_path, preprocessing_config_path):
-    os.system(f"sequifier --preprocess --config_path={preprocessing_config_path} --project_path={project_path}")  
+def remove_project_path_contents(project_path):
 
-
-@pytest.fixture(scope="session")
-def remove_old_checkpoints(project_path):
-    checkpoint_path = f"{project_path}/checkpoints"
-    if os.path.exists(checkpoint_path):
-        for file in os.listdir(checkpoint_path):
-            os.remove(os.path.join(checkpoint_path, file))
+    shutil.rmtree(project_path)
+    os.makedirs(project_path)
 
     time.sleep(1)
 
 
 @pytest.fixture(scope="session")
-def run_training(run_preprocessing, remove_old_checkpoints, project_path, training_config_path):
+def run_preprocessing(project_path, preprocessing_config_path, remove_project_path_contents):
+    os.system(f"sequifier --preprocess --config_path={preprocessing_config_path} --project_path={project_path}")  
+
+
+@pytest.fixture(scope="session")
+def run_training(run_preprocessing, project_path, training_config_path):
     os.system(f"sequifier --train --on-preprocessed --config_path={training_config_path} --project_path={project_path}")  
 
 
