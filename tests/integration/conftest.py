@@ -28,7 +28,8 @@ def inference_config_path():
 @pytest.fixture(scope="session")
 def remove_project_path_contents(project_path):
 
-    shutil.rmtree(project_path)
+    if os.path.exists(project_path):
+        shutil.rmtree(project_path)
     os.makedirs(project_path)
 
     time.sleep(1)
