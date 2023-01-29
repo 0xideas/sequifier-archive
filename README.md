@@ -95,7 +95,7 @@ The training step is configured using the config. The two default configs can be
 
 [configs/train/default-on-preprocessed.yaml](./configs/train/default-on-preprocessed.yaml)
 
-Depending on whether the preprocessing step was executed.
+depending on whether the preprocessing step was executed.
 
 
 #### Inferring on test data using the trained model
