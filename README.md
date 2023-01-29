@@ -19,14 +19,14 @@ The sequifier package enables:
 ```console
 pip install sequifier
 ```
-2. create a new project folder (at a path referred to as PROJECT PATH later) and a "configs" subfolder
-3. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
+2. create a new project folder (at a path referred to as `PROJECT PATH` later) and a "configs" subfolder
+3. copy default configs from repository for preprocessing, training and inference and name them `preprocess.yaml`, `train.yaml` and `infer.yaml`
 4. adapt preprocess config to take the path to the data you want to preprocess
 5. run 
 ```console
 sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
 ```
-6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the location of train, validation and test splits of data. Adapt the dd_config parameter in train.yaml and infer.yaml in to the path [PROJECT PATH]/configs/ddconfigs/[FILE NAME]
+6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the dd_config parameter in train.yaml and infer.yaml in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
 7. run
 ```console
 sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
@@ -36,7 +36,7 @@ sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.y
 ```console
 sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
 ```
-10. find your predictions at [PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv
+10. find your predictions at `[PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv`
 
 
 ## More detailed explanations of the three steps
