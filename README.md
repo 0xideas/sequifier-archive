@@ -15,8 +15,10 @@ The sequifier package enables:
 
 ## Complete example how to build and apply a transformer sequence classifier with sequifier
 
-1. create a conda environment and run
-> pip install sequifier
+1. create a conda environment, activate and run
+```console
+pip install sequifier
+```
 2. create a new project folder (at a path referred to as PROJECT PATH later) and a "configs" subfolder
 3. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
 4. adapt preprocess config to take the path to the data you want to preprocess
