@@ -34,7 +34,7 @@ sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.y
 8. adapt inference_data_path in infer.yaml
 9. run
 ```console
-sequifier --infer --config_path=PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
+sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
 ```
 10. find your predictions at [PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv
 
@@ -65,9 +65,8 @@ steps are written to.
 
 The default config can be found on this path:
 
-```console
-configs/preprocess/default.yaml
-```
+[configs/preprocess/default.yaml](./configs/preprocess/default.yaml)
+
 
 
 #### Configuring and training the sequence classification model
@@ -95,9 +94,9 @@ You can find an example of the preprocessing input data at "documentation/exampl
 
 The training step is configured using the config. The two default configs can be found here:
 
-> configs/train/default.yaml
+[configs/train/default.yaml](./configs/train/default.yaml)
 
-> configs/train/default-on-preprocessed.yaml
+[configs/train/default-on-preprocessed.yaml](./configs/train/default-on-preprocessed.yaml)
 
 Depending on whether the preprocessing step was executed.
 
@@ -112,6 +111,6 @@ sequifier --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 and configured using a config file. The default version can be found here:
 
-> configs/infer/default.yaml
+[configs/infer/default.yaml](./configs/infer/default.yaml)
 
 
