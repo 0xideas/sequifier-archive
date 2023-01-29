@@ -1,25 +1,27 @@
 <img src="./design/logo.png">
 
 
+### easy sequence classification training and inference with transformers
+
+
+
 ## Overview
 The sequifier package enables:
-  - the extraction of sequences for training from a standardised format
+  - the extraction of sequences for training
   - the configuration and training of a transformer classification model
   - inference on data with a trained model
-
-Each of these steps is explained below.
 
 
 ## Complete example how to build and apply a transformer sequence classifier with sequifier
 
 1. create a conda environment and run
 > pip install sequifier
-2. create a new project folder at PROJECT PATH and a "configs" subfolder
+2. create a new project folder (at a path referred to as PROJECT PATH later) and a "configs" subfolder
 3. copy default configs from repository for preprocessing, training and inference and name them preprocess.yaml, train.yaml and infer.yaml
 4. adapt preprocess config to take the path to the data you want to preprocess
 5. run 
 > sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
-6. adapt dd_config parameter in train.yaml and infer.yaml in to dd_config path from preprocessing
+6. the preprocessing step outputs a "data driven config" at [PROJECT PATH]/configs/ddconfigs/[file name]. It contains the number of classes found in the data, a map of classes to indices and the location of train, validation and test splits of data. Adapt the dd_config parameter in train.yaml and infer.yaml in to the path [PROJECT PATH]/configs/ddconfigs/[file name]
 7. run 
 > sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
 8. adapt inference_data_path in infer.yaml
@@ -31,16 +33,17 @@ Each of these steps is explained below.
 ## More detailed explanations of the three steps
 #### Preprocessing of data into sequences for training
 
-The preprocessing step is specifically designed for scenarios where for long series
+The preprocessing step is designed for scenarios where for long series
 of events, the prediction of the next event from the previous N events  is of interest.
-In cases of sequences where only the last item is a valid target, the  preprocessing
-step does not apply.
+In cases of sequences where only the last item is a valid target, the preprocessing
+step should not be executed.
 
-This step presupposes input data with three columns: sequenceId, itemId and timesort.
-sequenceId and itemId identify sequence and item, and the timesort column must
+This step presupposes input data with three columns: "sequenceId", "itemId" and "timesort".
+"sequenceId" and "itemId" identify sequence and item, and the timesort column must
 provide values that enable sequential sorting. Often this will simply be a timestamp.
+You can find an example of the preprocessing input data at "documentation/example_inputs/preprocessing_input.csv"
 
-The data can then be processed into training, validation and testing datasets of all
+The data can then be processed and split into training, validation and testing datasets of all
 valid subsequences in the original data with the command:
 
 > sequifier --preprocess --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
@@ -71,11 +74,15 @@ data have to take the form of a csv file with the columns:
 
 > sequenceId, seq_length, seq_length-1,...,1, target
 
+You can find an example of the preprocessing input data at "documentation/example_inputs/training_input.csv"
+
 The training step is configured using the config. The two default configs can be found here:
 
 > configs/train/default.yaml
 
 > configs/train/default-on-preprocessed.yaml
+
+Depending on whether the preprocessing step was executed.
 
 
 #### Inferring on test data using the trained model
