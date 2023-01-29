@@ -26,12 +26,12 @@ pip install sequifier
 ```console
 sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
 ```
-6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the dd_config parameter in train.yaml and infer.yaml in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
+6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
 7. run
 ```console
 sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
 ```
-8. adapt inference_data_path in infer.yaml
+8. adapt `inference_data_path` in `infer.yaml`
 9. run
 ```console
 sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
