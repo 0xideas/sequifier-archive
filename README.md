@@ -2,13 +2,10 @@
 
 
 ### easy sequence classification training and inference with transformers
-
 \
-
 \
-
 \
-
+\
 ## Overview
 The sequifier package enables:
   - the extraction of sequences for training
