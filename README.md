@@ -50,7 +50,7 @@ step should not be executed.
 This step presupposes input data with three columns: "sequenceId", "itemId" and "timesort".
 "sequenceId" and "itemId" identify sequence and item, and the timesort column must
 provide values that enable sequential sorting. Often this will simply be a timestamp.
-You can find an example of the preprocessing input data at "documentation/example_inputs/preprocessing_input.csv"
+You can find an example of the preprocessing input data at [documentation/example_inputs/preprocessing_input.csv](./documentation/example_inputs/preprocessing_input.csv)
 
 The data can then be processed and split into training, validation and testing datasets of all
 valid subsequences in the original data with the command:
@@ -90,7 +90,7 @@ data have to take the form of a csv file with the columns:
 
 sequenceId, seq_length, seq_length-1,...,1, target
 
-You can find an example of the preprocessing input data at "documentation/example_inputs/training_input.csv"
+You can find an example of the preprocessing input data at [documentation/example_inputs/training_input.csv](./documentation/example_inputs/training_input.csv)
 
 The training step is configured using the config. The two default configs can be found here:
 
