@@ -65,8 +65,7 @@ steps are written to.
 
 The default config can be found on this path:
 
-<a href="./configs/preprocess/default.yaml/" target="_blank">configs/preprocess/default.yaml</a>
-
+[configs/preprocess/default.yaml](./configs/preprocess/default.yaml)
 
 
 
