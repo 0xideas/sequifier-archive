@@ -65,7 +65,7 @@ steps are written to.
 
 The default config can be found on this path:
 
-[configs/preprocess/default.yaml](./configs/preprocess/default.yaml)
+[configs/preprocess/default.yaml](./configs/preprocess/default.yaml){:target="_blank"}
 
 
 
@@ -94,9 +94,9 @@ You can find an example of the preprocessing input data at "documentation/exampl
 
 The training step is configured using the config. The two default configs can be found here:
 
-[configs/train/default.yaml](./configs/train/default.yaml)
+[configs/train/default.yaml](./configs/train/default.yaml){:target="_blank"}
 
-[configs/train/default-on-preprocessed.yaml](./configs/train/default-on-preprocessed.yaml)
+[configs/train/default-on-preprocessed.yaml](./configs/train/default-on-preprocessed.yaml){:target="_blank"}
 
 Depending on whether the preprocessing step was executed.
 
@@ -111,6 +111,6 @@ sequifier --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 and configured using a config file. The default version can be found here:
 
-[configs/infer/default.yaml](./configs/infer/default.yaml)
+[configs/infer/default.yaml](./configs/infer/default.yaml){:target="_blank"}
 
 
