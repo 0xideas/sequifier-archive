@@ -86,10 +86,7 @@ If the data on which the model is trained comes from the preprocessing step, the
 should also be added.
 
 If the training data does not come from the preprocessing step, both train and validation
-data have to take the form of a csv file with the columns:
-
-sequenceId, seq_length, seq_length-1,...,1, target
-
+data have to take the form of a csv file with the columns "sequenceId", [SEQ LENGTH], [SEQ LENGTH - 1],...,"1", "target".
 You can find an example of the preprocessing input data at [documentation/example_inputs/training_input.csv](./documentation/example_inputs/training_input.csv)
 
 The training step is configured using the config. The two default configs can be found here:
