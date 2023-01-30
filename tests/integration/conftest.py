@@ -12,17 +12,17 @@ def project_path():
 
 @pytest.fixture(scope="session")
 def preprocessing_config_path():
-    return os.path.join("tests", "configs", "preprocess", "test.yaml")
+    return os.path.join("tests", "configs", "preprocess-test.yaml")
 
 
 @pytest.fixture(scope="session")
 def training_config_path():
-    return os.path.join("tests", "configs", "train", "test.yaml")
+    return os.path.join("tests", "configs", "train-test.yaml")
 
 
 @pytest.fixture(scope="session")
 def inference_config_path():
-    return os.path.join("tests", "configs", "infer", "test.yaml")
+    return os.path.join("tests", "configs", "infer-test.yaml")
 
 
 @pytest.fixture(scope="session")

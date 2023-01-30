@@ -20,16 +20,16 @@ The sequifier package enables:
 pip install sequifier
 ```
 2. create a new project folder (at a path referred to as `PROJECT PATH` later) and a `configs` subfolder
-3. copy default configs from repository for preprocessing, training and inference and name them `preprocess.yaml`, `train.yaml` and `infer.yaml`
+3. copy default configs from repository for preprocessing, training and inference
 4. adapt preprocess config to take the path to the data you want to preprocess
 5. run 
 ```console
 sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
 ```
-6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
+6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train-on-preprocessed.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
 7. run
 ```console
-sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train.yaml --project_path=[PROJECT PATH]
+sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml --project_path=[PROJECT PATH]
 ```
 8. adapt `inference_data_path` in `infer.yaml`
 9. run
@@ -65,7 +65,7 @@ steps are written to.
 
 The default config can be found on this path:
 
-[configs/preprocess/default.yaml](./configs/preprocess/default.yaml)
+[configs/preprocess.yaml](./configs/preprocess.yaml)
 
 
 
@@ -91,9 +91,9 @@ You can find an example of the preprocessing input data at [documentation/exampl
 
 The training step is configured using the config. The two default configs can be found here:
 
-[configs/train/default.yaml](./configs/train/default.yaml)
+[configs/train.yaml](./configs/train.yaml)
 
-[configs/train/default-on-preprocessed.yaml](./configs/train/default-on-preprocessed.yaml)
+[configs/train-on-preprocessed.yaml](./configs/train-on-preprocessed.yaml)
 
 depending on whether the preprocessing step was executed.
 
@@ -108,6 +108,6 @@ sequifier --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
 
 and configured using a config file. The default version can be found here:
 
-[configs/infer/default.yaml](./configs/infer/default.yaml)
+[configs/infer.yaml](./configs/infer.yaml)
 
 
