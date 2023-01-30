@@ -14,11 +14,11 @@ The sequifier package enables:
 
 
 ## Other materials 
-If you want to first get a more specific understanding of the transformer architecture, check out
-this [Wikipedia article](https://en.wikipedia.org/wiki/Transformer_(machine_learning_model))
+If you want to first get a more specific understanding of the transformer architecture, have a look at
+the [Wikipedia article.](https://en.wikipedia.org/wiki/Transformer_(machine_learning_model))
 
 If you want to see a benchmark on a small synthetic dataset with 10k cases, agains a random forest,
-an xgboost model and a logistic regression, check out [this notebook](./documentation/demos/benchmark-small-data.ipynb)
+an xgboost model and a logistic regression, check out [this notebook.](./documentation/demos/benchmark-small-data.ipynb)
 
 
 ## Complete example how to build and apply a transformer sequence classifier with sequifier
