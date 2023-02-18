@@ -54,8 +54,5 @@ def test_preprocessed_data(data_splits):
     for data in data_splits:
         assert data.shape[1] == 12
         sequence_step = data["sequenceId"].values[:-1] != data["sequenceId"].values[1:]
-        assert np.all(
-            (data["target"].values[:-1] == data["1"].values[1:]) | sequence_step
-        )
         assert np.all((data["1"].values[:-1] == data["2"].values[1:]) | sequence_step)
         assert np.all((data["7"].values[:-1] == data["8"].values[1:]) | sequence_step)

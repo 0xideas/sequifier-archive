@@ -1,7 +1,8 @@
 import os
 import shutil
 import time
-
+import yaml
+import pandas as pd
 import pytest
 
 
@@ -52,7 +53,27 @@ def run_training(run_preprocessing, project_path, training_config_path):
 
 
 @pytest.fixture(scope="session")
-def run_inference(run_training, project_path, inference_config_path):
+def delete_inference_target(run_preprocessing, project_path, inference_config_path):
+    with open(inference_config_path, "r") as f:
+        config = yaml.safe_load(f)
+    inference_data_path = os.path.join(project_path, config["inference_data_path"])
+
+    inference_data = pd.read_csv(
+        inference_data_path,
+        sep=",",
+        decimal=".",
+        index_col=None,
+    )
+
+    inference_data = inference_data.drop(columns=["target"])
+
+    inference_data.to_csv(inference_data_path)
+
+
+@pytest.fixture(scope="session")
+def run_inference(
+    run_training, delete_inference_target, project_path, inference_config_path
+):
     os.system(
         f"sequifier --infer --config_path={inference_config_path} --project_path={project_path}"
     )

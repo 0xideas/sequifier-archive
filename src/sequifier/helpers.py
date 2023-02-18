@@ -5,9 +5,16 @@ from torch import tensor
 
 
 def numpy_to_pytorch(data, seq_length, device):
-    return (
+
+    sequence = (
         tensor(data[[str(c) for c in range(seq_length, 0, -1)]].values)
         .to(torch.int64)
-        .to(device),
-        tensor(data["target"].values).to(torch.int64).to(device),
+        .to(device)
     )
+
+    if "target" in data:
+        target = tensor(data["target"].values).to(torch.int64).to(device)
+    else:
+        target = None
+
+    return (sequence, target)
