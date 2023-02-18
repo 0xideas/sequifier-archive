@@ -18,8 +18,8 @@ class Inferer(object):
 
     def infer_probs(self, x):
         """x.shape=(seq_length, any)"""
-        ort_inputs = {self.ort_session.get_inputs()[0].name: x}
-        ort_outs = self.ort_session.run(None, ort_inputs)[0]
+        ort_inputs = {self.ort_session.get_inputs()[0].name: x.T}
+        ort_outs = self.ort_session.run(None, ort_inputs)[0].T
         normalizer = np.repeat(
             np.sum(np.exp(ort_outs), axis=1), ort_outs.shape[1]
         ).reshape(ort_outs.shape)
