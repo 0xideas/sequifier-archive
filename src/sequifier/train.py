@@ -92,7 +92,7 @@ class TransformerModel(nn.Module):
         Args:
             src: Tensor, shape [batch_size, seq_len]
         Returns:
-            output Tensor of shape [batch_size, seq_len, n_classes]
+            output Tensor of shape [batch_size, n_classes]
         """
 
         src = self.encoder(src.T) * math.sqrt(self.hparams.model_spec.d_model)
@@ -103,7 +103,7 @@ class TransformerModel(nn.Module):
             transposed.size()[0], transposed.size()[1] * transposed.size()[2]
         )
         output = self.decoder(concatenated)
-        return output.transpose(0, 1)
+        return output
 
     def get_batch(self, X, y, i, batch_size):
         return (X[i : i + batch_size, :], y[i : i + batch_size])
@@ -118,9 +118,7 @@ class TransformerModel(nn.Module):
         for batch, i in enumerate(range(0, X_train.size(0) - 1, self.batch_size)):
             data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
             output = self(data)
-            loss = self.criterion(
-                output.transpose(0, 1).view(-1, self.hparams.n_classes), targets
-            )
+            loss = self.criterion(output.view(-1, self.hparams.n_classes), targets)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -182,7 +180,7 @@ class TransformerModel(nn.Module):
             for i in range(0, X_valid.size(0) - 1, self.batch_size):
                 data, targets = self.get_batch(X_valid, y_valid, i, self.batch_size)
                 output = self(data)
-                output_flat = output.transpose(0, 1).view(-1, self.hparams.n_classes)
+                output_flat = output.view(-1, self.hparams.n_classes)
                 total_loss += (
                     self.hparams.seq_length
                     * self.criterion(output_flat, targets).item()
