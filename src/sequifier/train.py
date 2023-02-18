@@ -90,12 +90,12 @@ class TransformerModel(nn.Module):
     def forward(self, src: Tensor) -> Tensor:
         """
         Args:
-            src: Tensor, shape [seq_len, batch_size]
+            src: Tensor, shape [batch_size, seq_len]
         Returns:
-            output Tensor of shape [seq_len, batch_size, n_classes]
+            output Tensor of shape [batch_size, n_classes]
         """
 
-        src = self.encoder(src) * math.sqrt(self.hparams.model_spec.d_model)
+        src = self.encoder(src.T) * math.sqrt(self.hparams.model_spec.d_model)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, self.src_mask)
         transposed = output.transpose(0, 1)
@@ -106,7 +106,7 @@ class TransformerModel(nn.Module):
         return output
 
     def get_batch(self, X, y, i, batch_size):
-        return (X[i : i + batch_size, :].T, y[i : i + batch_size])
+        return (X[i : i + batch_size, :], y[i : i + batch_size])
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
@@ -190,7 +190,7 @@ class TransformerModel(nn.Module):
     def export(self, model, suffix):
         self.eval()
         x = torch.randint(
-            0, self.hparams.n_classes, (self.hparams.seq_length, self.batch_size)
+            0, self.hparams.n_classes, (self.batch_size, self.hparams.seq_length)
         )
 
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
@@ -208,8 +208,8 @@ class TransformerModel(nn.Module):
             input_names=["input"],  # the model's input names
             output_names=["output"],  # the model's output names
             dynamic_axes={
-                "input": {1: "batch_size"},  # variable length axes
-                "output": {1: "batch_size"},
+                "input": {0: "batch_size"},  # variable length axes
+                "output": {0: "batch_size"},
             },
         )
 

@@ -17,7 +17,7 @@ class Inferer(object):
         self.ort_session = onnxruntime.InferenceSession(model_path_load)
 
     def infer_probs(self, x):
-        """x.shape=(seq_length, any)"""
+        """x.shape=(any, seq_length)"""
         ort_inputs = {self.ort_session.get_inputs()[0].name: x}
         ort_outs = self.ort_session.run(None, ort_inputs)[0]
         normalizer = np.repeat(
@@ -27,7 +27,7 @@ class Inferer(object):
         return probs
 
     def infer(self, x, probs=None):
-        """x.shape=(seq_length, any)"""
+        """x.shape=(any, seq_length)"""
         if probs is None:
             probs = self.infer_probs(x)
         preds = probs.argmax(1)
@@ -62,7 +62,7 @@ def infer(args, args_config):
     inferer = Inferer(config.model_path, config.project_path, id_map, config.map_to_id)
 
     if config.output_probabilities:
-        probs = inferer.infer_probs(X.T)
+        probs = inferer.infer_probs(X)
         os.makedirs(
             os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True
         )
@@ -78,7 +78,7 @@ def infer(args, args_config):
         )
         preds = inferer.infer(None, probs)
     else:
-        preds = inferer.infer(X.T)
+        preds = inferer.infer(X)
 
     os.makedirs(
         os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
