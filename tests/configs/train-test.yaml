@@ -1,3 +1,5 @@
+project_path: "tests/project_folder"
+
 #data driven config path
 ddconfig_path: "configs/ddconfigs/test_data.json" # 'data driven' config path, written to by preprocessing step
 

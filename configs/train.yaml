@@ -1,3 +1,4 @@
+project_path:
 #metadata
 n_classes: 3288 # number of classes
 training_data_path: "/home/leon/Documents/test/data/chr8-split0.csv" # absolute path to training data
