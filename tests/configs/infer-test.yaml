@@ -1,4 +1,5 @@
 #data driven config path
+project_path: "tests/project_folder"
 inference_data_path: "data/test_data-split2.csv" # path to validation data (within project folder)
 model_path: "models/sequifier-default-best.onnx" # path to model (within project folder)
 device: "cpu" # device used for inference

@@ -29,20 +29,20 @@ pip install sequifier
 ```
 2. create a new project folder (at a path referred to as `PROJECT PATH` later) and a `configs` subfolder
 3. copy default configs from repository for preprocessing, training and inference
-4. adapt preprocess config to take the path to the data you want to preprocess
+4. adapt preprocess config to take the path to the data you want to preprocess and set `project_path` to`PROJECT PATH`
 5. run 
 ```console
-sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml --project_path=[PROJECT PATH]
+sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml
 ```
-6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train-on-preprocessed.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`
+6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train-on-preprocessed.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`and set `project_path` to `PROJECT PATH` in both configs
 7. run
 ```console
-sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml --project_path=[PROJECT PATH]
+sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml
 ```
 8. adapt `inference_data_path` in `infer.yaml`
 9. run
 ```console
-sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml --project_path=[PROJECT PATH]
+sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml
 ```
 10. find your predictions at `[PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv`
 
@@ -64,7 +64,7 @@ The data can then be processed and split into training, validation and testing d
 valid subsequences in the original data with the command:
 
 ```console
-sequifier --preprocess --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+sequifier --preprocess --config_path=[CONFIG PATH]
 ```
 
 The config path specifies the path to the preprocessing config and the project
@@ -82,7 +82,7 @@ The default config can be found on this path:
 The training step is executed with the command:
 
 ```console
-sequifier --train --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+sequifier --train --config_path=[CONFIG PATH]
 ```
 
 If the data on which the model is trained comes from the preprocessing step, the flag
@@ -111,7 +111,7 @@ depending on whether the preprocessing step was executed.
 Inference is done using the command:
 
 ```console
-sequifier --infer --config_path=[CONFIG PATH] --project_path=[PROJECT PATH]
+sequifier --infer --config_path=[CONFIG PATH]
 ```
 
 and configured using a config file. The default version can be found here:

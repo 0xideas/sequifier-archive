@@ -8,13 +8,11 @@ from sequifier.train import train
 
 
 def build_args_config(args):
-    args_config = {"project_path": args.project_path}
-
     if args.randomize:
         seed = np.random.choice(np.arange(int(1e9)))
-        args_config["seed"] = seed
+        args_config = {"seed": seed}
     else:
-        args_config["seed"] = 1010
+        args_config = {"seed": 1010}
 
     return args_config
 
@@ -22,11 +20,6 @@ def build_args_config(args):
 def main():
     parser = ArgumentParser()
 
-    parser.add_argument(
-        "--project_path",
-        type=str,
-        help="file path to folder that will contain the output paths",
-    )
     parser.add_argument(
         "--config_path",
         type=str,

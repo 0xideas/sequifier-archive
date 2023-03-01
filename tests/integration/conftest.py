@@ -37,18 +37,14 @@ def remove_project_path_contents(project_path):
 
 
 @pytest.fixture(scope="session")
-def run_preprocessing(
-    project_path, preprocessing_config_path, remove_project_path_contents
-):
-    os.system(
-        f"sequifier --preprocess --config_path={preprocessing_config_path} --project_path={project_path}"
-    )
+def run_preprocessing(preprocessing_config_path, remove_project_path_contents):
+    os.system(f"sequifier --preprocess --config_path={preprocessing_config_path}")
 
 
 @pytest.fixture(scope="session")
-def run_training(run_preprocessing, project_path, training_config_path):
+def run_training(run_preprocessing, training_config_path):
     os.system(
-        f"sequifier --train --on-preprocessed --config_path={training_config_path} --project_path={project_path}"
+        f"sequifier --train --on-preprocessed --config_path={training_config_path}"
     )
 
 
@@ -74,6 +70,4 @@ def delete_inference_target(run_preprocessing, project_path, inference_config_pa
 def run_inference(
     run_training, delete_inference_target, project_path, inference_config_path
 ):
-    os.system(
-        f"sequifier --infer --config_path={inference_config_path} --project_path={project_path}"
-    )
+    os.system(f"sequifier --infer --config_path={inference_config_path}")

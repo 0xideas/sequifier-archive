@@ -1,3 +1,4 @@
+project_path: "tests/project_folder"
 data_path: "tests/resources/test_data.csv"
 seq_length: 10 # length of extracted subsequences
 group_proportions: [0.6, 0.2, 0.2] # group share of total cases: train set share, validation set share, test set 1 share, test set 2 share,...(min one test set)
