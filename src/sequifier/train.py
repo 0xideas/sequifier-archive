@@ -15,7 +15,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
 from sequifier.helpers import numpy_to_pytorch
-
+from sequifier.export import convert_model_to_int32
 
 class TransformerModel(nn.Module):
     def __init__(self, hparams):
@@ -190,7 +190,10 @@ class TransformerModel(nn.Module):
     def export(self, model, suffix):
         self.eval()
         x = torch.randint(
-            0, self.hparams.n_classes, (self.batch_size, self.hparams.seq_length)
+            0,
+            self.hparams.n_classes,
+            (self.batch_size, self.hparams.seq_length),
+            dtype=torch.int32,
         )
 
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
@@ -198,8 +201,10 @@ class TransformerModel(nn.Module):
         export_path = os.path.join(
             self.project_path, "models", f"sequifier-{self.model_name}-{suffix}.onnx"
         )
+        model32 = convert_model_to_int32(model)
+        
         torch.onnx.export(
-            model,  # model being run
+            model32,  # model being run
             x,  # model input (or a tuple for multiple inputs)
             export_path,  # where to save the model (can be a file or file-like object)
             export_params=True,  # store the trained parameter weights inside the model file

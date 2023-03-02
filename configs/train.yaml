@@ -1,6 +1,6 @@
-project_path:
+project_path: "/home/leon/Documents/test"
 #metadata
-n_classes: 3288 # number of classes
+n_classes: 30 # number of classes
 training_data_path: "/home/leon/Documents/test/data/chr8-split0.csv" # absolute path to training data
 validation_data_path: "/home/leon/Documents/test/data/chr8-split1.csv" # absolute path to validation data
 

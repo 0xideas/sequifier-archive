@@ -1,6 +1,7 @@
 BSD 3-Clause License
 
 Copyright (c) 2017-2023, Pytorch contributors for those parts coming from the Pytorch tutorial on sequence classification
+Copyright (c) 2021, Aadhithya Sankar (ஆதித்யா சங்கர்), for export.py
 Copyright (c) 2021-2023, Sequifier contributors for everything else
 
 All rights reserved.
