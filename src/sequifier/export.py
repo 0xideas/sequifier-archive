@@ -86,13 +86,14 @@ def convert_constant_nodes_to_int32(nodes):
     return new_nodes
 
 
-def convert_model_to_int32(model):
+def convert_model_to_int32(model_path: str, out_path: str):
     """
     convert_model_to_int32 Converts ONNX model with INT64 params to INT32 params.\n
     Args:\n
         model_path (str): path to original ONNX model.\n
         out_path (str): path to save converted model.
     """
+    model = onnx.load_model(model_path)
     ch.check_model(model)
     # * get model opset version.
     opset_version = model.opset_import[0].version
@@ -117,4 +118,4 @@ def convert_model_to_int32(model):
     model_int32 = h.make_model(graph_int32, producer_name="onnx-typecast")
     model_int32.opset_import[0].version = opset_version
     ch.check_model(model_int32)
-    return model_int32
+    onnx.save_model(model_int32, out_path)

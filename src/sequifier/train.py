@@ -201,10 +201,9 @@ class TransformerModel(nn.Module):
         export_path = os.path.join(
             self.project_path, "models", f"sequifier-{self.model_name}-{suffix}.onnx"
         )
-        model32 = convert_model_to_int32(model)
         
         torch.onnx.export(
-            model32,  # model being run
+            model,  # model being run
             x,  # model input (or a tuple for multiple inputs)
             export_path,  # where to save the model (can be a file or file-like object)
             export_params=True,  # store the trained parameter weights inside the model file
@@ -217,6 +216,8 @@ class TransformerModel(nn.Module):
                 "output": {0: "batch_size"},
             },
         )
+        # convert_model_to_int32(export_path, export_path)
+
 
     def save(self, epoch, val_loss):
         os.makedirs(os.path.join(self.project_path, "checkpoints"), exist_ok=True)
