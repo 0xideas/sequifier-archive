@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 
+
 @pytest.fixture(scope="session")
 def project_path():
     return os.path.join("tests", "project_folder")
@@ -36,8 +37,47 @@ def remove_project_path_contents(project_path):
     time.sleep(1)
 
 
+def reformat_parameter(attr, param, type):
+    if attr.endswith("_path"):
+        if type == "linux->local":
+            return(os.path.join(*param.split("/")))
+        elif type == "local->linux":
+            return("/".join(os.path.split(param)))
+    else:
+        return(param)
+
+
+
+@pytest.fixture(scope="session", autouse=True)
+def format_configs_locally(preprocessing_config_path, training_config_path, inference_config_path):
+    config_paths = [preprocessing_config_path, training_config_path, inference_config_path]
+    for config_path in config_paths:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        config_formatted = {attr:reformat_parameter(attr, param, "linux->local") for attr, param in config.items()}
+        
+        with open(config_path, "w") as f:
+            yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
+
+    yield
+    
+    for config_path in config_paths:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        config_formatted = {attr:reformat_parameter(attr, param, "local->linux") for attr, param in config.items()}
+        
+        with open(config_path, "w") as f:
+            yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
+
+
+
+
+
+
 @pytest.fixture(scope="session")
-def run_preprocessing(preprocessing_config_path, remove_project_path_contents):
+def run_preprocessing(preprocessing_config_path, format_configs_locally, remove_project_path_contents):
     os.system(f"sequifier --preprocess --config_path={preprocessing_config_path}")
 
 
