@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 
 import numpy as np
 import pandas as pd
+from random import shuffle
 
 from sequifier.config.preprocess_config import load_preprocessor_config
 
@@ -56,6 +57,7 @@ class Preprocessor(object):
                 raise Exception(f"Column {sup_col} is of dtype {dtype}, which is not supported")
             
         sequences, col_types = self.extract_sequences(data, seq_length, supplementary_columns)
+
 
         self.splits = self.extract_data_subsets(sequences, group_proportions)
         self.splits = [self.cast_columns_to_string(data) for data in self.splits]
@@ -145,26 +147,27 @@ class Preprocessor(object):
         return sequences, col_types
 
     @classmethod
-    def get_subset_indices(cls, user_data, groups):
-        subset_indices = [math.floor(size * user_data.shape[0]) for size in groups]
-        diff = user_data.shape[0] - np.sum(subset_indices)
-
-        additional = np.random.choice(range(len(groups)), replace=True, size=diff)
-        for i in additional:
-            subset_indices[i] += 1
-
-        return subset_indices
+    def get_subset_groups(cls, sequence_data, groups, n_cols):
+        n_cases = int(sequence_data.shape[0]/n_cols)
+        subset_groups = [([i]*math.floor(n_cases*size)) for i, size in enumerate(groups)]
+        subset_groups = [inner for outer in subset_groups for inner in outer]
+        diff = n_cases - len(subset_groups)
+        subset_groups = ([0]*diff) + subset_groups
+        return subset_groups
 
     @classmethod
     def extract_data_subsets(cls, sequences, groups):
-        assert abs(1 - np.sum(groups)) < 0.99999999999, np.sum(groups)
+        assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
 
         datasets = [[] for _ in range(len(groups))]
-        for _, user_data in sequences.groupby("sequenceId"):
-            subset_indices = cls.get_subset_indices(user_data, groups)
-            indices = list(np.cumsum(subset_indices))
-            for i, (start, end) in enumerate(zip([0] + indices[:-1], indices)):
-                datasets[i].append(user_data.iloc[start:end, :])
+        n_cols = len(np.unique(sequences["input_col"]))
+        for _, sequence_data in sequences.groupby("sequenceId"):
+            subset_groups = cls.get_subset_groups(sequence_data, groups, n_cols)
+            print(subset_groups)
+            assert len(subset_groups)*n_cols == sequence_data.shape[0]
+            for i, group in enumerate(subset_groups):
+                case_start = (i*n_cols)
+                datasets[group].append(sequence_data.iloc[case_start:case_start+n_cols, :])
 
         return [pd.concat(dataset, axis=0) for dataset in datasets]
 

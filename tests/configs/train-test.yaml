@@ -11,7 +11,7 @@ training_spec:
   device: cpu
   epochs: 3
   iter_save: 1
-  batch_size: 10
+  batch_size: 20
   lr: 0.003
   dropout: 0.3
   criterion: CrossEntropyLoss
