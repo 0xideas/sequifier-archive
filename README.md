@@ -55,8 +55,8 @@ of events, the prediction of the next event from the previous N events  is of in
 In cases of sequences where only the last item is a valid target, the preprocessing
 step should not be executed.
 
-This step presupposes input data with three columns: "sequenceId", "itemId" and "timesort".
-"sequenceId" and "itemId" identify sequence and item, and the timesort column must
+This step presupposes input data with three columns: "sequenceId", "itemId" and "itemPosition".
+"sequenceId" and "itemId" identify sequence and item, and the itemPosition column must
 provide values that enable sequential sorting. Often this will simply be a timestamp.
 You can find an example of the preprocessing input data at [documentation/example_inputs/preprocessing_input.csv](./documentation/example_inputs/preprocessing_input.csv)
 

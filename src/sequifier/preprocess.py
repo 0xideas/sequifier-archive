@@ -100,7 +100,7 @@ class Preprocessor(object):
     @classmethod
     def extract_sequences(cls, data, seq_length):
         raw_sequences = (
-            data.sort_values(["sequenceId", "timesort"])
+            data.sort_values(["sequenceId", "itemPosition"])
             .groupby("sequenceId")["itemId"]
             .apply(list)
             .reset_index(drop=False)
