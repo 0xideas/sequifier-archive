@@ -38,8 +38,8 @@ class Preprocessor(object):
             for i in range(len(group_proportions))
         ]
 
-        n_classes = len(np.unique(data["itemId"])) + 1
         supplementary_columns = [col for col in data.columns if col not in ["sequenceId", "itemId", "itemPosition"]]
+        n_classes = {col: len(np.unique(data[col])) + 1 for col in ["itemId"] + supplementary_columns}
 
         data, id_map = self.replace_ids(data, column="itemId")
 
@@ -55,18 +55,19 @@ class Preprocessor(object):
             else:
                 raise Exception(f"Column {sup_col} is of dtype {dtype}, which is not supported")
             
-        sequences = self.extract_sequences(data, seq_length, supplementary_columns)
+        sequences, col_types = self.extract_sequences(data, seq_length, supplementary_columns)
 
         self.splits = self.extract_data_subsets(sequences, group_proportions)
         self.splits = [self.cast_columns_to_string(data) for data in self.splits]
-        self.export(id_maps, n_classes)
+        self.export(id_maps, n_classes, col_types)
 
-    def export(self, id_maps, n_classes):
+    def export(self, id_maps, n_classes, col_types):
 
         data_driven_config = {
             "n_classes": n_classes,
             "id_maps": id_maps,
             "split_paths": self.split_paths,
+            "column_types": col_types
         }
         os.makedirs(
             os.path.join(self.project_path, "configs", "ddconfigs"), exist_ok=True
@@ -133,15 +134,15 @@ class Preprocessor(object):
             item_id_seqs = seqs.pop("itemId")
             for i, (seq, target) in enumerate(zip(item_id_seqs, targets)):
                 subsequence_id = i
-                rows.append([in_row["sequenceId"]] + [subsequence_id, "itemId", col_types["itemId"]] + seq + [target])
+                rows.append([in_row["sequenceId"]] + [subsequence_id, "itemId"] + seq + [target])
 
                 for sup_col, sup_col_seqs in seqs.items():
-                    rows.append([in_row["sequenceId"]] + [subsequence_id, sup_col, col_types[sup_col]] + sup_col_seqs[i] + [None])
+                    rows.append([in_row["sequenceId"]] + [subsequence_id, sup_col] + sup_col_seqs[i] + [None])
                 
         sequences = pd.DataFrame(
-            rows, columns=["sequenceId", "subsequenceId", "input_col", "input_type"] + list(range(seq_length, 0, -1)) + ["target"]
+            rows, columns=["sequenceId", "subsequenceId", "input_col"] + list(range(seq_length, 0, -1)) + ["target"]
         )
-        return sequences
+        return sequences, col_types
 
     @classmethod
     def get_subset_indices(cls, user_data, groups):

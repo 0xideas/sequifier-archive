@@ -1,6 +1,6 @@
 project_path: tests/project_folder
 data_path: tests/resources/test_data.csv
-seq_length: 10
+seq_length: 8
 group_proportions:
 - 0.6
 - 0.2

@@ -16,6 +16,10 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from sequifier.config.train_config import load_transformer_config
 from sequifier.helpers import numpy_to_pytorch
 
+PANDAS_TO_TORCH_TYPES = {
+    "int64": torch.int64,
+    "float64": torch.float64
+}
 
 class TransformerModel(nn.Module):
     def __init__(self, hparams):
@@ -28,11 +32,19 @@ class TransformerModel(nn.Module):
         )
         self.hparams = hparams
         self.model_type = "Transformer"
-        self.pos_encoder = PositionalEncoding(
-            hparams.model_spec.d_model, hparams.training_spec.dropout
-        )
+
+        self.encoder = {}
+        self.pos_encoder = {}
+        for col, n_classes in hparams.n_classes.items():
+            if col in hparams.categorical_columns:
+                self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
+                self.pos_encoder[col] = PositionalEncoding(
+                    hparams.model_spec.d_model, hparams.training_spec.dropout
+                )
+
+
         encoder_layers = TransformerEncoderLayer(
-            hparams.model_spec.d_model,
+            hparams.model_spec.d_model * len(hparams.categorical_columns) + len(hparams.real_columns) * hparams.model_spec.nhead,
             hparams.model_spec.nhead,
             hparams.model_spec.d_hid,
             hparams.training_spec.dropout,
@@ -40,9 +52,8 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(
             encoder_layers, hparams.model_spec.nlayers
         )
-        self.encoder = nn.Embedding(hparams.n_classes, hparams.model_spec.d_model)
         self.decoder = nn.Linear(
-            hparams.model_spec.d_model * hparams.seq_length, hparams.n_classes
+            hparams.model_spec.d_model * hparams.seq_length, hparams.n_classes["itemId"]
         )
         self.criterion = eval(f"torch.nn.{hparams.training_spec.criterion}()")
         self.batch_size = hparams.training_spec.batch_size
@@ -83,11 +94,12 @@ class TransformerModel(nn.Module):
 
     def init_weights(self) -> None:
         initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
+        for col in self.hparams.categorical_columns:
+            self.encoder[col].weight.data.uniform_(-initrange, initrange)
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: Tensor) -> Tensor:
+    def forward(self, src: dict[str, Tensor]) -> Tensor:
         """
         Args:
             src: Tensor, shape [batch_size, seq_len]
@@ -95,8 +107,15 @@ class TransformerModel(nn.Module):
             output Tensor of shape [batch_size, n_classes]
         """
 
-        src = self.encoder(src.T) * math.sqrt(self.hparams.model_spec.d_model)
-        src = self.pos_encoder(src)
+        srcs = []
+        for col in self.hparams.categorical_columns:
+
+            src_t = self.encoder[col](src[col].T) * math.sqrt(self.hparams.model_spec.d_model)
+            src_t = self.pos_encoder[col](src_t)
+            srcs.append(src_t)
+
+
+        src = torch.cat(srcs)
         output = self.transformer_encoder(src, self.src_mask)
         transposed = output.transpose(0, 1)
         concatenated = transposed.reshape(
@@ -105,8 +124,8 @@ class TransformerModel(nn.Module):
         output = self.decoder(concatenated)
         return output
 
-    def get_batch(self, X, y, i, batch_size):
-        return (X[i : i + batch_size, :], y[i : i + batch_size])
+    def get_batch(self, X, y, i, batch_size,):
+        return ({col: X[col][i : i + batch_size, :] for col in X.keys()}, y[i : i + batch_size])
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
@@ -115,10 +134,10 @@ class TransformerModel(nn.Module):
         start_time = time.time()
 
         num_batches = math.ceil(len(X_train) / self.batch_size)
-        for batch, i in enumerate(range(0, X_train.size(0) - 1, self.batch_size)):
+        for batch, i in enumerate(range(0, X_train["itemId"].size(0) - 1, self.batch_size)):
             data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
             output = self(data)
-            loss = self.criterion(output.view(-1, self.hparams.n_classes), targets)
+            loss = self.criterion(output.view(-1, self.hparams.n_classes["itemId"]), targets)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -180,7 +199,7 @@ class TransformerModel(nn.Module):
             for i in range(0, X_valid.size(0) - 1, self.batch_size):
                 data, targets = self.get_batch(X_valid, y_valid, i, self.batch_size)
                 output = self(data)
-                output_flat = output.view(-1, self.hparams.n_classes)
+                output_flat = output.view(-1, self.hparams.n_classes["itemId"])
                 total_loss += (
                     self.hparams.seq_length
                     * self.criterion(output_flat, targets).item()
@@ -190,7 +209,7 @@ class TransformerModel(nn.Module):
     def export(self, model, suffix):
         self.eval()
         x = torch.randint(
-            0, self.hparams.n_classes, (self.batch_size, self.hparams.seq_length)
+            0, self.hparams.n_classes["itemId"], (self.batch_size, self.hparams.seq_length)
         )
 
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
@@ -299,11 +318,13 @@ def train(args, args_config):
         args.config_path, args_config, args.on_preprocessed
     )
 
+    column_types = {col: PANDAS_TO_TORCH_TYPES[config.column_types[col]] for col in config.column_types}
+
     data_train = pd.read_csv(
         config.training_data_path, sep=",", decimal=".", index_col=None
     )
     X_train, y_train = numpy_to_pytorch(
-        data_train, config.seq_length, config.training_spec.device
+        data_train, column_types, config.seq_length, config.training_spec.device
     )
     del data_train
 
@@ -311,7 +332,7 @@ def train(args, args_config):
         config.validation_data_path, sep=",", decimal=".", index_col=None
     )
     X_valid, y_valid = numpy_to_pytorch(
-        data_valid, config.seq_length, config.training_spec.device
+        data_valid, column_types, config.seq_length, config.training_spec.device
     )
     del data_valid
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sequifier"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Leon Luithlen <leontimnaluithlen@gmail.com>"]
 description = "Train a transformer model with the command line"
 keywords = ["transformer", "sequence classification", "machine learning", "sequence", "sequence modelling", "nlp", "language", "language modelling", "torch", "pytorch"]
@@ -19,7 +19,7 @@ pandas = "^2.0"
 numpy = "^1.23"
 torch = "^2.0"
 onnx = "^1.15.0"
-onnxruntime = "^1.12"
+onnxruntime = "^1.17"
 pyyaml = "^6.0"
 pydantic = "^1.10"
 poetry = "^1.3"

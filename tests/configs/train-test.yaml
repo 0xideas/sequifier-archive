@@ -1,7 +1,7 @@
 project_path: tests/project_folder
 ddconfig_path: configs/ddconfigs/test_data.json
 model_name: default
-seq_length: 10
+seq_length: 8
 model_spec:
   d_model: 10
   nhead: 2
