@@ -14,12 +14,8 @@ from torch import Tensor, nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, ModuleDict
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import numpy_to_pytorch
+from sequifier.helpers import numpy_to_pytorch, PANDAS_TO_TORCH_TYPES
 
-PANDAS_TO_TORCH_TYPES = {
-    "int64": torch.int64,
-    "float64": torch.float32
-}
 
 class TransformerModel(nn.Module):
     def __init__(self, hparams):

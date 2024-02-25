@@ -3,6 +3,11 @@ import os
 import torch
 from torch import tensor
 
+PANDAS_TO_TORCH_TYPES = {
+    "int64": torch.int64,
+    "float64": torch.float32
+}
+
 
 def numpy_to_pytorch(data, column_types, seq_length, device):
 

@@ -2,7 +2,8 @@ project_path: tests/project_folder
 inference_data_path: data/test_data-split2.csv
 model_path: models/sequifier-default-best.onnx
 device: cpu
-seq_length: 10
+seq_length: 8
 output_probabilities: true
 ddconfig_path: configs/ddconfigs/test_data.json
 map_to_id: true
+batch_size: 20
