@@ -18,18 +18,18 @@ def dd_config(run_preprocessing, project_path):
 def test_dd_config(dd_config):
     assert np.all(
         np.array(list(dd_config.keys()))
-        == np.array(["n_classes", "id_map", "split_paths"])
+        == np.array(["n_classes", "id_maps", "split_paths", "column_types"])
     )
-    assert dd_config["n_classes"] == 31
+    assert dd_config["n_classes"]["itemId"] == 31
     assert len(dd_config["split_paths"]) == 3
     assert dd_config["split_paths"][0].endswith("test_data-split0.csv")
-    assert len(dd_config["id_map"]) == 30
+    assert len(dd_config["id_maps"]["itemId"]) == 30
 
-    id_map_keys = np.array(sorted(list(dd_config["id_map"].keys())))
+    id_map_keys = np.array(sorted(list(dd_config["id_maps"]["itemId"].keys())))
     # assert False, np.array([str(x) for x in range(100, 130)])
     assert np.all(id_map_keys == np.array([str(x) for x in range(100, 130)]))
 
-    id_map_values = np.array(sorted(list(dd_config["id_map"].values())))
+    id_map_values = np.array(sorted(list(dd_config["id_maps"]["itemId"].values())))
     # assert False, id_map_values
     assert np.all(id_map_values == np.arange(1, 31)), id_map_values
 
