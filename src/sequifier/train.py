@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import Tensor, nn
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch.nn import TransformerEncoder, TransformerEncoderLayer, ModuleDict
 
 from sequifier.config.train_config import load_transformer_config
 from sequifier.helpers import numpy_to_pytorch
@@ -33,8 +33,8 @@ class TransformerModel(nn.Module):
         self.hparams = hparams
         self.model_type = "Transformer"
 
-        self.encoder = {}
-        self.pos_encoder = {}
+        self.encoder = ModuleDict()
+        self.pos_encoder = ModuleDict()
         for col, n_classes in hparams.n_classes.items():
             if col in hparams.categorical_columns:
                 self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
@@ -210,9 +210,17 @@ class TransformerModel(nn.Module):
 
     def export(self, model, suffix):
         self.eval()
-        x = torch.randint(
-            0, self.hparams.n_classes["itemId"], (self.batch_size, self.hparams.seq_length)
-        )
+        x_cat = {
+            col: torch.randint(
+                0, self.hparams.n_classes[col], (self.batch_size, self.hparams.seq_length)
+            )
+            for col in self.hparams.categorical_columns
+        }
+        x_real = {
+            col: torch.rand(self.batch_size, self.hparams.seq_length) for col in self.hparams.real_columns
+        }
+
+        x = {"src": {**x_cat, **x_real}}
 
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
         # Export the model
