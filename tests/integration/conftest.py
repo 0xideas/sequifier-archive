@@ -13,8 +13,8 @@ def project_path():
 
 
 @pytest.fixture(scope="session")
-def preprocessing_config_path():
-    return os.path.join("tests", "configs", "preprocess-test.yaml")
+def preprocessing_config_paths():
+    return [os.path.join("tests", "configs", file_name) for file_name in ["preprocess-test.yaml", "preprocess-test-3.yaml", "preprocess-test-5.yaml"]]
 
 
 @pytest.fixture(scope="session")
@@ -49,8 +49,8 @@ def reformat_parameter(attr, param, type):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def format_configs_locally(preprocessing_config_path, training_config_path, inference_config_path):
-    config_paths = [preprocessing_config_path, training_config_path, inference_config_path]
+def format_configs_locally(preprocessing_config_paths, training_config_path, inference_config_path):
+    config_paths = preprocessing_config_paths + [training_config_path, inference_config_path]
     for config_path in config_paths:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
@@ -77,8 +77,9 @@ def format_configs_locally(preprocessing_config_path, training_config_path, infe
 
 
 @pytest.fixture(scope="session")
-def run_preprocessing(preprocessing_config_path, format_configs_locally, remove_project_path_contents):
-    os.system(f"sequifier --preprocess --config_path={preprocessing_config_path}")
+def run_preprocessing(preprocessing_config_paths, format_configs_locally, remove_project_path_contents):
+    for preprocessing_config_path in preprocessing_config_paths:
+        os.system(f"sequifier --preprocess --config_path={preprocessing_config_path}")
 
 
 @pytest.fixture(scope="session")

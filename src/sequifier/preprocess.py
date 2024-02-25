@@ -163,7 +163,6 @@ class Preprocessor(object):
         n_cols = len(np.unique(sequences["input_col"]))
         for _, sequence_data in sequences.groupby("sequenceId"):
             subset_groups = cls.get_subset_groups(sequence_data, groups, n_cols)
-            print(subset_groups)
             assert len(subset_groups)*n_cols == sequence_data.shape[0]
             for i, group in enumerate(subset_groups):
                 case_start = (i*n_cols)
