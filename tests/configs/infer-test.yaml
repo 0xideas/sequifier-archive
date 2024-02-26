@@ -4,6 +4,6 @@ model_path: models/sequifier-default-best.onnx
 device: cpu
 seq_length: 8
 output_probabilities: true
-ddconfig_path: configs/ddconfigs/test_data.json
+ddconfig_path: configs/ddconfigs/test_data_1.json
 map_to_id: true
 batch_size: 20

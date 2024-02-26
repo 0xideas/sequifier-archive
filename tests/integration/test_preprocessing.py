@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture()
 def dd_configs(run_preprocessing, project_path):
     dd_configs = {}
-    for file_name in ["test_data.json", "test_data_3.json", "test_data_5.json"]:
+    for file_name in ["test_data_1.json", "test_data_3.json", "test_data_5.json"]:
         with open(
             os.path.join(project_path, "configs", "ddconfigs", file_name), "r"
         ) as f:
@@ -42,23 +42,19 @@ def test_dd_config(dd_configs):
 
 @pytest.fixture()
 def data_splits(project_path):
-    data_splits_paths = [
-        os.path.join(project_path, "data", f"test_data-split{i}.csv") for i in range(3)
-    ]
-
-    data_split_values = [
-        pd.read_csv(path, sep=",", decimal=".", index_col=None)
-        for path in data_splits_paths
-    ]
+    data_split_values = {j: [
+        pd.read_csv(os.path.join(project_path, "data", f"test_data_1-split{i}.csv"), sep=",", decimal=".", index_col=None) for i in range(3)
+    ] for j in [1, 3, 5]}
 
     return data_split_values
 
 
 def test_preprocessed_data(data_splits):
-    assert len(data_splits) == 3
+    for j in [1, 3, 5]:
+        assert len(data_splits[j]) == 3
 
-    for data in data_splits:
-        assert data.shape[1] == 12
-        sequence_step = data["sequenceId"].values[:-1] != data["sequenceId"].values[1:]
-        assert np.all((data["1"].values[:-1] == data["2"].values[1:]) | sequence_step)
-        assert np.all((data["7"].values[:-1] == data["8"].values[1:]) | sequence_step)
+        for data in data_splits[j]:
+            assert data.shape[1] == 12
+            sequence_step = data["sequenceId"].values[:-1] != data["sequenceId"].values[1:]
+            assert np.all((data["1"].values[:-1] == data["2"].values[1:]) | sequence_step)
+            assert np.all((data["7"].values[:-1] == data["8"].values[1:]) | sequence_step)
