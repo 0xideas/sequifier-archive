@@ -10,8 +10,8 @@ import pytest
 def dd_configs(run_preprocessing, project_path):
     dd_configs = {}
     for data_number in [1, 3, 5]:
-        for variant in ["", "_real"]:
-            file_name = f"test_data{variant}_{data_number}.json"
+        for variant in ["categorical", "real"]:
+            file_name = f"test_data_{variant}_{data_number}.json"
             with open(
                 os.path.join(project_path, "configs", "ddconfigs", file_name), "r"
             ) as f:
@@ -50,10 +50,10 @@ def test_dd_config(dd_configs):
 @pytest.fixture()
 def data_splits(project_path):
     data_split_values = {
-        f"{j}{variant}": [
+        f"{j}_{variant}": [
             pd.read_csv(
                 os.path.join(
-                    project_path, "data", f"test_data{variant}_1-split{i}.csv"
+                    project_path, "data", f"test_data_{variant}_{j}-split{i}.csv"
                 ),
                 sep=",",
                 decimal=".",
@@ -61,27 +61,43 @@ def data_splits(project_path):
             )
             for i in range(3)
         ]
-        for variant in ["", "_real"]
+        for variant in ["categorical", "real"]
         for j in [1, 3, 5]
     }
 
     return data_split_values
 
 
-def test_preprocessed_data(data_splits):
-    for variant in ["", "_real"]:
-        for j in [1, 3, 5]:
-            name = f"{j}{variant}"
-            assert len(data_splits[name]) == 3
+def test_preprocessed_data_real(data_splits):
+    for j in [1, 3, 5]:
+        name = f"{j}_real"
+        assert len(data_splits[name]) == 3
 
-            for data in data_splits[name]:
-                assert data.shape[1] == 12
-                sequence_step = (
-                    data["sequenceId"].values[:-1] != data["sequenceId"].values[1:]
-                )
+        for data in data_splits[name]:
+            assert data.shape[1] == 12
+            for sequenceId, group in data.groupby("sequenceId"):
+
+                # offset by j in either direction as that is the number of columns in the input
+                # data, thus an offset by 1 'observation' requires an offset by j values
+                assert np.all((group["1"].values[:-j] == group["2"].values[j:]))
+                assert np.all((group["5"].values[:-j] == group["6"].values[j:]))
+
+
+def test_preprocessed_data_categorical(data_splits):
+    for j in [1, 3, 5]:
+        name = f"{j}_categorical"
+        assert len(data_splits[name]) == 3
+
+        for data in data_splits[name]:
+            assert data.shape[1] == 12
+
+            for sequenceId, group in data.groupby("sequenceId"):
+
+                # offset by j in either direction as that is the number of columns in the input
+                # data, thus an offset by 1 'observation' requires an offset by j values
                 assert np.all(
-                    (data["1"].values[:-1] == data["2"].values[1:]) | sequence_step
-                )
+                    np.abs(group["1"].values[:-j] - group["2"].values[j:]) < 0.0001
+                ), f'{list(group["1"].values[:-j]) = } != {list(group["2"].values[j:]) = }'
                 assert np.all(
-                    (data["7"].values[:-1] == data["8"].values[1:]) | sequence_step
-                )
+                    np.abs(group["5"].values[:-j] - group["6"].values[j:]) < 0.0001
+                ), f'{list(group["5"].values[:-j]) = } != {list(group["6"].values[j:]) = }'

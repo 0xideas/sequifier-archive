@@ -1,7 +1,7 @@
 project_path: tests/project_folder
 target_column: itemId
 target_column_type: categorical
-ddconfig_path: configs/ddconfigs/test_data_1.json
+ddconfig_path: configs/ddconfigs/test_data_categorical_1.json
 model_name: default
 seq_length: 8
 model_spec:

@@ -11,8 +11,8 @@ def test_checkpoint_files_exists(run_training, project_path):
     found_items = sorted(list(os.listdir(os.path.join(project_path, "checkpoints"))))
     expected_items = np.array(
         [
-            f"{model_type}-{j}-epoch-{i}.pt"
-            for model_type in ["model", "model-real"]
+            f"model-{model_type}-{j}-epoch-{i}.pt"
+            for model_type in ["categorical", "real"]
             for j in [1, 3, 5]
             for i in range(1, 4)
         ]
@@ -31,8 +31,8 @@ def test_model_files_exists(run_training, project_path):
     found_items = sorted(list(os.listdir(os.path.join(project_path, "models"))))
     expected_items = np.array(
         [
-            f"sequifier-{model_type}-{j}-{kind}.onnx"
-            for model_type in ["model", "model-real"]
+            f"sequifier-model-{model_type}-{j}-{kind}.onnx"
+            for model_type in ["categorical", "real"]
             for j in [1, 3, 5]
             for kind in ["best", "last"]
         ]

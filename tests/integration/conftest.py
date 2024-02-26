@@ -14,7 +14,7 @@ def project_path():
 
 @pytest.fixture(scope="session")
 def preprocessing_config_path_cat():
-    return os.path.join("tests", "configs", "preprocess-test.yaml")
+    return os.path.join("tests", "configs", "preprocess-test-categorical.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -24,7 +24,7 @@ def preprocessing_config_path_real():
 
 @pytest.fixture(scope="session")
 def training_config_path_cat():
-    return os.path.join("tests", "configs", "train-test.yaml")
+    return os.path.join("tests", "configs", "train-test-categorical.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -34,7 +34,7 @@ def training_config_path_real():
 
 @pytest.fixture(scope="session")
 def inference_config_path_cat():
-    return os.path.join("tests", "configs", "infer-test.yaml")
+    return os.path.join("tests", "configs", "infer-test-categorical.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -115,7 +115,7 @@ def run_preprocessing(
 ):
     for data_number in [1, 3, 5]:
         data_path_cat = os.path.join(
-            "tests", "resources", f"test_data_{data_number}.csv"
+            "tests", "resources", f"test_data_categorical_{data_number}.csv"
         )
         os.system(
             f"sequifier --preprocess --config_path={preprocessing_config_path_cat} --data-path={data_path_cat}"
@@ -135,9 +135,9 @@ def run_training(
 ):
     for model_number in [1, 3, 5]:
         ddconfig_path_cat = os.path.join(
-            "configs", "ddconfigs", f"test_data_{model_number}.json"
+            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
         )
-        model_name_cat = f"model-{model_number}"
+        model_name_cat = f"model-categorical-{model_number}"
         os.system(
             f"sequifier --train --on-preprocessed --config_path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat}"
         )
@@ -189,13 +189,13 @@ def run_inference(
 ):
     for model_number in [1, 3, 5]:
         inference_model_path_cat = os.path.join(
-            "models", f"sequifier-model-{model_number}-best.onnx"
+            "models", f"sequifier-model-categorical-{model_number}-best.onnx"
         )
         inference_data_path_cat = os.path.join(
-            "data", f"test_data_{model_number}-split2.csv"
+            "data", f"test_data_categorical_{model_number}-split2.csv"
         )
         ddconfig_path_cat = os.path.join(
-            "configs", "ddconfigs", f"test_data_{model_number}.json"
+            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
         )
         os.system(
             f"sequifier --infer --on-preprocessed --config_path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat}"

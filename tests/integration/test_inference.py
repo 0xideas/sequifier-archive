@@ -9,10 +9,10 @@ import pytest
 @pytest.fixture()
 def predictions(run_inference, project_path):
     preds = {}
-    for variant, middlebit in zip(["categorical", "real"], ["-", "-real-"]):
+    for variant in ["categorical", "real"]:
         preds[variant] = {}
         for model_number in [1, 3, 5]:
-            model_name = f"model{middlebit}{model_number}"
+            model_name = f"model-{variant}-{model_number}"
             prediction_path = os.path.join(
                 project_path,
                 "outputs",
@@ -29,7 +29,7 @@ def predictions(run_inference, project_path):
 def probabilities(run_inference, project_path):
     probs = {}
     for model_number in [1, 3, 5]:
-        model_name = f"model-{model_number}"
+        model_name = f"model-categorical-{model_number}"
         prediction_path = os.path.join(
             project_path,
             "outputs",
