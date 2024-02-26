@@ -9,17 +9,19 @@ import pytest
 @pytest.fixture()
 def predictions(run_inference, project_path):
     preds = {}
-    for model_number in [1, 3, 5]:
-        model_name = f"model-{model_number}"
-        prediction_path = os.path.join(
-            project_path,
-            "outputs",
-            "predictions",
-            f"sequifier-{model_name}-best_predictions.csv",
-        )
-        preds[model_name] = pd.read_csv(
-            prediction_path, sep=",", decimal=".", index_col=None
-        ).values.flatten()
+    for variant, middlebit in zip(["categorical", "real"], ["-", "-real-"]):
+        preds[variant] = {}
+        for model_number in [1, 3, 5]:
+            model_name = f"model{middlebit}{model_number}"
+            prediction_path = os.path.join(
+                project_path,
+                "outputs",
+                "predictions",
+                f"sequifier-{model_name}-best_predictions.csv",
+            )
+            preds[variant][model_name] = pd.read_csv(
+                prediction_path, sep=",", decimal=".", index_col=None
+            ).values.flatten()
     return preds
 
 
@@ -40,9 +42,14 @@ def probabilities(run_inference, project_path):
     return probs
 
 
-def test_predictions(predictions):
+def test_predictions_real(predictions):
+    for model_name, model_predictions in predictions["real"].items():
+        assert np.all([v > -10.0 and v < 10.0 for v in model_predictions])
+
+
+def test_predictions_cat(predictions):
     valid_values = np.arange(100, 130)
-    for model_name, model_predictions in predictions.items():
+    for model_name, model_predictions in predictions["categorical"].items():
         assert np.all([v in valid_values for v in model_predictions])
 
 
