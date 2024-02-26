@@ -145,9 +145,16 @@ class TransformerModel(BaseModel):
     column_types: dict[str, str]
     categorical_columns: list[str]
     real_columns: list[str]
+    target_column: str
+    target_column_type: str
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
+
+    @validator("target_column_type")
+    def validate_target_column_type(cls, v):
+        assert v in ["categorical", "real"]
+        return v
 
     def __init__(self, **kwargs):
         super().__init__(

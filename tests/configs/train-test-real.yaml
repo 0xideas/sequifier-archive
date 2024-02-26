@@ -1,4 +1,6 @@
 project_path: tests/project_folder
+target_column: itemValue
+target_column_type: real
 ddconfig_path: configs/ddconfigs/test_data_1.json
 model_name: default
 seq_length: 8

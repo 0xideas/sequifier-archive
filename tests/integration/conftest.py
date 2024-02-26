@@ -13,18 +13,33 @@ def project_path():
 
 
 @pytest.fixture(scope="session")
-def preprocessing_config_path():
-    return os.path.join("tests", "configs", "preprocess-test.yaml")
+def preprocessing_config_path_cat():
+    return os.path.join("tests", "configs", "preprocess-test-categorical.yaml")
 
 
 @pytest.fixture(scope="session")
-def training_config_path():
-    return os.path.join("tests", "configs", "train-test.yaml")
+def preprocessing_config_path_real():
+    return os.path.join("tests", "configs", "preprocess-test-real.yaml")
 
 
 @pytest.fixture(scope="session")
-def inference_config_path():
-    return os.path.join("tests", "configs", "infer-test.yaml")
+def training_config_path_cat():
+    return os.path.join("tests", "configs", "train-test-categorical.yaml")
+
+
+@pytest.fixture(scope="session")
+def training_config_path_real():
+    return os.path.join("tests", "configs", "train-test-real.yaml")
+
+
+@pytest.fixture(scope="session")
+def inference_config_path_cat():
+    return os.path.join("tests", "configs", "infer-test-categorical.yaml")
+
+
+@pytest.fixture(scope="session")
+def inference_config_path_real():
+    return os.path.join("tests", "configs", "infer-test-real.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -49,12 +64,20 @@ def reformat_parameter(attr, param, type):
 
 @pytest.fixture(scope="session", autouse=True)
 def format_configs_locally(
-    preprocessing_config_path, training_config_path, inference_config_path
+    preprocessing_config_path_cat,
+    preprocessing_config_path_real,
+    training_config_path_cat,
+    training_config_path_real,
+    inference_config_path_cat,
+    inference_config_path_real,
 ):
     config_paths = [
-        preprocessing_config_path,
-        training_config_path,
-        inference_config_path,
+        preprocessing_config_path_cat,
+        preprocessing_config_path_real,
+        training_config_path_cat,
+        training_config_path_real,
+        inference_config_path_cat,
+        inference_config_path_real,
     ]
     for config_path in config_paths:
         with open(config_path, "r") as f:
@@ -85,54 +108,108 @@ def format_configs_locally(
 
 @pytest.fixture(scope="session")
 def run_preprocessing(
-    preprocessing_config_path, format_configs_locally, remove_project_path_contents
+    preprocessing_config_path_cat,
+    preprocessing_config_path_real,
+    format_configs_locally,
+    remove_project_path_contents,
 ):
-    for data_path in [
-        "tests/resources/test_data_1.csv",
-        "tests/resources/test_data_3.csv",
-        "tests/resources/test_data_5.csv",
-    ]:
+    for data_number in [1, 3, 5]:
+        data_path_cat = os.path.join(
+            "tests", "resources", f"test_data_categorical_{data_number}.csv"
+        )
         os.system(
-            f"sequifier --preprocess --config_path={preprocessing_config_path} --data-path={data_path}"
+            f"sequifier --preprocess --config_path={preprocessing_config_path_cat} --data-path={data_path_cat}"
+        )
+
+        data_path_real = os.path.join(
+            "tests", "resources", f"test_data_real_{data_number}.csv"
+        )
+        os.system(
+            f"sequifier --preprocess --config_path={preprocessing_config_path_real} --data-path={data_path_real}"
         )
 
 
 @pytest.fixture(scope="session")
-def run_training(run_preprocessing, training_config_path):
+def run_training(
+    run_preprocessing, training_config_path_cat, training_config_path_real
+):
     for model_number in [1, 3, 5]:
-        ddconfig_path = f"configs/ddconfigs/test_data_{model_number}.json"
-        model_name = f"model-{model_number}"
+        ddconfig_path_cat = os.path.join(
+            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
+        )
+        model_name_cat = f"model-categorical-{model_number}"
         os.system(
-            f"sequifier --train --on-preprocessed --config_path={training_config_path} --ddconfig-path={ddconfig_path} --model-name={model_name}"
+            f"sequifier --train --on-preprocessed --config_path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat}"
+        )
+
+        ddconfig_path_real = os.path.join(
+            "configs", "ddconfigs", f"test_data_real_{model_number}.json"
+        )
+        model_name_real = f"model-real-{model_number}"
+        os.system(
+            f"sequifier --train --on-preprocessed --config_path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real}"
         )
 
 
 @pytest.fixture(scope="session")
-def delete_inference_target(run_preprocessing, project_path, inference_config_path):
-    with open(inference_config_path, "r") as f:
-        config = yaml.safe_load(f)
-    inference_data_path = os.path.join(project_path, config["inference_data_path"])
+def delete_inference_target(
+    run_preprocessing,
+    project_path,
+    inference_config_path_cat,
+    inference_config_path_real,
+):
 
-    inference_data = pd.read_csv(
-        inference_data_path,
-        sep=",",
-        decimal=".",
-        index_col=None,
-    )
+    for inference_config_path in [
+        inference_config_path_cat,
+        inference_config_path_real,
+    ]:
+        with open(inference_config_path, "r") as f:
+            config = yaml.safe_load(f)
+        inference_data_path = os.path.join(project_path, config["inference_data_path"])
 
-    inference_data = inference_data.drop(columns=["target"])
+        inference_data = pd.read_csv(
+            inference_data_path,
+            sep=",",
+            decimal=".",
+            index_col=None,
+        )
 
-    inference_data.to_csv(inference_data_path)
+        inference_data = inference_data.drop(columns=["target"])
+
+        inference_data.to_csv(inference_data_path)
 
 
 @pytest.fixture(scope="session")
 def run_inference(
-    run_training, delete_inference_target, project_path, inference_config_path
+    run_training,
+    delete_inference_target,
+    project_path,
+    inference_config_path_cat,
+    inference_config_path_real,
 ):
     for model_number in [1, 3, 5]:
-        inference_model_path = f"models/sequifier-model-{model_number}-best.onnx"
-        inference_data_path = f"data/test_data_{model_number}-split2.csv"
-        ddconfig_path = f"configs/ddconfigs/test_data_{model_number}.json"
+        inference_model_path_cat = os.path.join(
+            "models", f"sequifier-model-categorical-{model_number}-best.onnx"
+        )
+        inference_data_path_cat = os.path.join(
+            "data", f"test_data_categorical_{model_number}-split2.csv"
+        )
+        ddconfig_path_cat = os.path.join(
+            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
+        )
         os.system(
-            f"sequifier --infer --on-preprocessed --config_path={inference_config_path} --ddconfig-path={ddconfig_path} --inference-model-path={inference_model_path} --inference-data-path={inference_data_path}"
+            f"sequifier --infer --on-preprocessed --config_path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat}"
+        )
+
+        inference_model_path_real = os.path.join(
+            "models", f"sequifier-model-real-{model_number}-best.onnx"
+        )
+        inference_data_path_real = os.path.join(
+            "data", f"test_data_real_{model_number}-split2.csv"
+        )
+        ddconfig_path_real = os.path.join(
+            "configs", "ddconfigs", f"test_data_real_{model_number}.json"
+        )
+        os.system(
+            f"sequifier --infer --on-preprocessed --config_path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real}"
         )

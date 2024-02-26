@@ -6,7 +6,7 @@ from torch import tensor
 PANDAS_TO_TORCH_TYPES = {"int64": torch.int64, "float64": torch.float32}
 
 
-def numpy_to_pytorch(data, column_types, seq_length, device):
+def numpy_to_pytorch(data, column_types, target_column, seq_length, device):
 
     sequence = {
         col: (
@@ -23,8 +23,8 @@ def numpy_to_pytorch(data, column_types, seq_length, device):
 
     if "target" in data:
         target = (
-            tensor(data.query(f"input_col=='itemId'")["target"].values)
-            .to(torch.int64)
+            tensor(data.query(f"input_col=='{target_column}'")["target"].values)
+            .to(column_types[target_column])
             .to(device)
         )
     else:

@@ -12,6 +12,7 @@ class PreprocessorModel(BaseModel):
     group_proportions: List[float]
     max_rows: Optional[int]
     seed: int
+    target_column: str
 
     @validator("data_path")
     def validate_data_path(cls, v):

@@ -19,6 +19,8 @@ class InfererModel(BaseModel):
     column_types: dict[str, str]
     categorical_columns: list[str]
     real_columns: list[str]
+    target_column: str
+    target_column_type: str
     batch_size: int
 
     @validator("inference_data_path")
@@ -29,6 +31,16 @@ class InfererModel(BaseModel):
             raise ValueError(f"{path} does not exist")
 
         return v
+
+    @validator("target_column_type")
+    def validate_target_column_type(cls, v):
+        assert v in ["categorical", "real"], v
+        return v
+
+    def __init__(self, **kwargs):
+        super().__init__(**{k: v for k, v in kwargs.items()})
+        if self.target_column_type == "real":
+            assert not self.output_probabilities
 
 
 def load_inferer_config(config_path, args_config, on_preprocessed):

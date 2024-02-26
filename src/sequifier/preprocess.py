@@ -18,6 +18,7 @@ class Preprocessor(object):
         group_proportions,
         seq_length,
         seed,
+        target_column,
         max_rows=None,
     ):
         self.project_path = project_path
@@ -39,34 +40,27 @@ class Preprocessor(object):
             for i in range(len(group_proportions))
         ]
 
-        supplementary_columns = [
-            col
-            for col in data.columns
-            if col not in ["sequenceId", "itemId", "itemPosition"]
+        data_columns = [
+            col for col in data.columns if col not in ["sequenceId", "itemPosition"]
         ]
-        n_classes = {
-            col: len(np.unique(data[col])) + 1
-            for col in ["itemId"] + supplementary_columns
-        }
 
-        data, id_map = self.replace_ids(data, column="itemId")
-
-        id_maps = {"itemId": id_map}
-        float_supplementary_columns = []
-        for sup_col in supplementary_columns:
-            dtype = str(data[sup_col].dtype)
+        n_classes, id_maps = {}, {}
+        float_data_columns = []
+        for data_col in data_columns:
+            dtype = str(data[data_col].dtype)
             if dtype in ["object", "int64"]:
-                data, sup_id_map = self.replace_ids(data, column=sup_col)
-                id_maps[sup_col] = dict(sup_id_map)
+                data, sup_id_map = self.replace_ids(data, column=data_col)
+                id_maps[data_col] = dict(sup_id_map)
+                n_classes[data_col] = len(np.unique(data[data_col])) + 1
             elif dtype in ["float64"]:
-                float_supplementary_columns.append(sup_col)
+                float_data_columns.append(data_col)
             else:
                 raise Exception(
-                    f"Column {sup_col} is of dtype {dtype}, which is not supported"
+                    f"Column {data_col} is of dtype {dtype}, which is not supported"
                 )
 
         sequences, col_types = self.extract_sequences(
-            data, seq_length, supplementary_columns
+            data, seq_length, data_columns, target_column
         )
 
         self.splits = self.extract_data_subsets(sequences, group_proportions)
@@ -112,59 +106,50 @@ class Preprocessor(object):
         return (data, id_map)
 
     @classmethod
-    def extract_subsequences(cls, in_seq, seq_length, supplementary_columns):
+    def extract_subsequences(cls, in_seq, seq_length, data_columns, target_column):
 
         nseq = max(
-            len(in_seq["itemId"]) - seq_length - 1, min(1, len(in_seq["itemId"]))
+            len(in_seq[target_column]) - seq_length - 1,
+            min(1, len(in_seq[target_column])),
         )
 
-        item_id_seqs = [in_seq["itemId"][i : i + seq_length] for i in range(nseq)]
-        targets = [in_seq["itemId"][i + seq_length] for i in range(nseq)]
-        seqs = {"itemId": item_id_seqs}
+        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
 
-        for sup_col in supplementary_columns:
-            seqs[sup_col] = [in_seq[sup_col][i : i + seq_length] for i in range(nseq)]
+        seqs = {}
+        for data_col in data_columns:
+            seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
 
-        if len(seqs["itemId"]) == 1:
+        if len(seqs[target_column]) == 1:
             seqs = {
                 col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
-                for col in ["itemId"] + supplementary_columns
+                for col in data_columns
             }
 
         return (seqs, targets)
 
     @classmethod
-    def extract_sequences(cls, data, seq_length, supplementary_columns):
+    def extract_sequences(cls, data, seq_length, data_columns, target_column):
 
         raw_sequences = (
             data.sort_values(["sequenceId", "itemPosition"])
             .groupby("sequenceId")
-            .agg({**{"itemId": list}, **{col: list for col in supplementary_columns}})
+            .agg({col: list for col in data_columns})
             .reset_index(drop=False)
         )
-        col_types = {
-            col: str(data[col].dtype) for col in ["itemId"] + supplementary_columns
-        }
+        col_types = {col: str(data[col].dtype) for col in data_columns}
         rows = []
         for _, in_row in raw_sequences.iterrows():
             seqs, targets = cls.extract_subsequences(
-                in_row[["itemId"] + supplementary_columns],
-                seq_length,
-                supplementary_columns,
+                in_row[data_columns], seq_length, data_columns, target_column
             )
-            item_id_seqs = seqs.pop("itemId")
-            for i, (seq, target) in enumerate(zip(item_id_seqs, targets)):
+            for i, target in enumerate(targets):
                 subsequence_id = i
-                rows.append(
-                    [in_row["sequenceId"]] + [subsequence_id, "itemId"] + seq + [target]
-                )
-
-                for sup_col, sup_col_seqs in seqs.items():
+                for data_col, data_col_seqs in seqs.items():
                     rows.append(
                         [in_row["sequenceId"]]
-                        + [subsequence_id, sup_col]
-                        + sup_col_seqs[i]
-                        + [None]
+                        + [subsequence_id, data_col]
+                        + data_col_seqs[i]
+                        + [target if data_col == target_column else None]
                     )
 
         sequences = pd.DataFrame(
