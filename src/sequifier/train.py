@@ -291,7 +291,7 @@ class TransformerModel(nn.Module):
         output_path = os.path.join(
             self.project_path,
             "checkpoints",
-            f"model-{self.model_name}-epoch-{epoch}.pt",
+            f"{self.model_name}-epoch-{epoch}.pt",
         )
 
         torch.save(
