@@ -18,6 +18,16 @@ def build_args_config(args):
     if args.data_path is not None:
         args_config["data_path"] = args.data_path
 
+    if args.ddconfig_path is not None:
+        args_config["ddconfig_path"] = args.ddconfig_path
+
+    if args.model_name is not None:
+        args_config["model_name"] = args.model_name
+
+    if args.inference_data_path is not None:
+        args_config["inference_data_path"] = args.inference_data_path
+
+
     return args_config
 
 
@@ -35,6 +45,9 @@ def main():
     parser.add_argument("-i", "--infer", action="store_true")
     parser.add_argument("-r", "--randomize", action="store_true")
     parser.add_argument("-dp", "--data-path", type=str)
+    parser.add_argument("-ddcp", "--ddconfig-path", type=str)
+    parser.add_argument("-mn", "--model-name", type=str)
+    parser.add_argument("-idp", "--inference-data-path", type=str)
 
     args = parser.parse_args()
 

@@ -84,9 +84,12 @@ def run_preprocessing(preprocessing_config_path, format_configs_locally, remove_
 
 @pytest.fixture(scope="session")
 def run_training(run_preprocessing, training_config_path):
-    os.system(
-        f"sequifier --train --on-preprocessed --config_path={training_config_path}"
-    )
+    for model_number in [1, 3, 5]:
+        ddconfig_path = f"configs/ddconfigs/test_data_{model_number}.json"
+        model_name = f"model-{model_number}"
+        os.system(
+            f"sequifier --train --on-preprocessed --config_path={training_config_path} --ddconfig-path={ddconfig_path} --model-name={model_name}"
+        )
 
 
 @pytest.fixture(scope="session")

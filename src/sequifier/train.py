@@ -183,6 +183,8 @@ class TransformerModel(nn.Module):
             if epoch % self.iter_save == 0:
                 self.save(epoch, val_loss)
 
+        model_name = self.hparams.model_name
+
         self.export(self, "last")
         self.export(best_model, "best")
 
@@ -202,7 +204,8 @@ class TransformerModel(nn.Module):
                     self.hparams.seq_length
                     * self.criterion(output_flat, targets).item()
                 )
-        return total_loss / (len(X_valid) - 1)
+
+        return total_loss / (X_valid["itemId"].size(0)  - 1)
 
     def export(self, model, suffix):
         self.eval()
