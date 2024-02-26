@@ -21,6 +21,8 @@ class TransformerModel(nn.Module):
     def __init__(self, hparams):
         super().__init__()
         self.project_path = hparams.project_path
+        self.target_column = hparams.target_column
+        self.target_column_type = hparams.target_column_type
         self.model_name = (
             hparams.model_name
             if hparams.model_name is not None
@@ -50,9 +52,19 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(
             encoder_layers, hparams.model_spec.nlayers
         )
-        self.decoder = nn.Linear(
-            embedding_size * hparams.seq_length, hparams.n_classes["itemId"]
-        )
+
+        if self.target_column_type == "categorical":
+            self.decoder = nn.Linear(
+                embedding_size * hparams.seq_length,
+                hparams.n_classes[self.target_column],
+            )
+        elif self.target_column_type == "real":
+            self.decoder = nn.Linear(embedding_size * hparams.seq_length, 1)
+        else:
+            raise Exception(
+                f"{self.target_column_type = } not in ['categorical', 'real']"
+            )
+
         self.criterion = eval(f"torch.nn.{hparams.training_spec.criterion}()")
         self.batch_size = hparams.training_spec.batch_size
         self.device = hparams.training_spec.device
@@ -148,13 +160,13 @@ class TransformerModel(nn.Module):
 
         num_batches = math.ceil(len(X_train) / self.batch_size)
         for batch, i in enumerate(
-            range(0, X_train["itemId"].size(0) - 1, self.batch_size)
+            range(0, X_train[self.target_column].size(0) - 1, self.batch_size)
         ):
             data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
             output = self(data)
-            loss = self.criterion(
-                output.view(-1, self.hparams.n_classes["itemId"]), targets
-            )
+            if self.target_column_type == "categorical":
+                output = output.view(-1, self.hparams.n_classes[self.target_column])
+            loss = self.criterion(output, targets)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -215,16 +227,16 @@ class TransformerModel(nn.Module):
         self.eval()  # turn on evaluation mode
         total_loss = 0.0
         with torch.no_grad():
-            for i in range(0, X_valid["itemId"].size(0) - 1, self.batch_size):
+            for i in range(0, X_valid[self.target_column].size(0) - 1, self.batch_size):
                 data, targets = self.get_batch(X_valid, y_valid, i, self.batch_size)
                 output = self(data)
-                output_flat = output.view(-1, self.hparams.n_classes["itemId"])
+                if self.target_column_type == "categorical":
+                    output = output.view(-1, self.hparams.n_classes[self.target_column])
                 total_loss += (
-                    self.hparams.seq_length
-                    * self.criterion(output_flat, targets).item()
+                    self.hparams.seq_length * self.criterion(output, targets).item()
                 )
 
-        return total_loss / (X_valid["itemId"].size(0) - 1)
+        return total_loss / (X_valid[self.target_column].size(0) - 1)
 
     def export(self, model, suffix):
         self.eval()

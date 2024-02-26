@@ -146,6 +146,7 @@ class TransformerModel(BaseModel):
     categorical_columns: list[str]
     real_columns: list[str]
     target_column: str
+    target_column_type: str
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
@@ -160,6 +161,7 @@ class TransformerModel(BaseModel):
         )
         self.model_spec = ModelSpecModel(**kwargs.get("model_spec"))
         self.training_spec = TrainingSpecModel(**kwargs.get("training_spec"))
+        assert self.target_column_type in ["categorical", "real"]
 
 
 def load_transformer_config(config_path, args_config, on_preprocessed):
