@@ -142,13 +142,8 @@ class Preprocessor(object):
             seqs, targets = cls.extract_subsequences(
                 in_row[data_columns], seq_length, data_columns, target_column
             )
-            item_id_seqs = seqs.pop("itemId")
-            for i, (seq, target) in enumerate(zip(item_id_seqs, targets)):
+            for i, target in enumerate(targets):
                 subsequence_id = i
-                rows.append(
-                    [in_row["sequenceId"]] + [subsequence_id, "itemId"] + seq + [target]
-                )
-
                 for data_col, data_col_seqs in seqs.items():
                     rows.append(
                         [in_row["sequenceId"]]

@@ -1,4 +1,6 @@
 project_path: tests/project_folder
+target_column: itemId
+target_column_type: categorical
 inference_data_path: data/test_data_1-split2.csv
 model_path: models/sequifier-model-1-best.onnx
 device: cpu

@@ -18,27 +18,33 @@ class Inferer(object):
         map_to_id,
         categorical_columns,
         real_columns,
+        target_column,
+        target_column_type,
         batch_size,
     ):
-        self.index_map = (
-            {v: k for k, v in id_map["itemId"].items()} if map_to_id else None
-        )
+        if target_column_type == "categorical":
+            self.index_map = (
+                {v: k for k, v in id_map[target_column].items()} if map_to_id else None
+            )
+
         self.map_to_id = map_to_id
         model_path_load = os.path.join(project_path, model_path)
         self.ort_session = onnxruntime.InferenceSession(model_path_load)
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
+        self.target_column = target_column
+        self.target_column_type = target_column_type
         self.batch_size = batch_size
 
-    def infer_probs_any_size(self, x):
-        size = x["itemId"].shape[0]
+    def adjust_x_size(self, x):
+        size = x[self.target_column].shape[0]
         if size == self.batch_size:
-            return self.infer_probs(x)
+            return [x]
         elif size < self.batch_size:
             x_expanded = {
                 col: self.expand_to_batch_size(x_col) for col, x_col in x.items()
             }
-            return self.infer_probs(x)[:size, :]
+            return [x_expanded]
         else:
             starts = range(0, size, self.batch_size)
             ends = range(self.batch_size, size + self.batch_size, self.batch_size)
@@ -46,16 +52,27 @@ class Inferer(object):
                 {col: x_col[start:end, :] for col, x_col in x.items()}
                 for start, end in zip(starts, ends)
             ]
-            probs = np.concatneate([self.infer_probs(x_sub) for x_sub in xs], 0)
-            return probs
+            return xs
+
+    def infer_probs_any_size(self, x):
+        size = x[self.target_column].shape[0]
+        x_adjusted = self.adjust_x_size(x)
+        return np.concatenate([self.infer_probs(x_sub) for x_sub in x_adjusted], 0)[
+            :size, :
+        ]
+
+    def infer_real_any_size(self, x):
+        size = x[self.target_column].shape[0]
+        x_adjusted = self.adjust_x_size(x)
+        return np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
+            :size, :
+        ]
 
     def expand_to_batch_size(self, x):
         filler = self.batch_size - x.shape[0]
         return np.concatenate([x, x[0:filler, :]], axis=0)
 
-    def infer_probs(self, x):
-        """x.shape=(any, seq_length)"""
-        # import code; code.interact(local = locals())
+    def infer_pure(self, x):
         ort_inputs = {
             session_input.name: self.expand_to_batch_size(x[col])
             for session_input, col in zip(
@@ -64,20 +81,33 @@ class Inferer(object):
             )
         }
         ort_outs = self.ort_session.run(None, ort_inputs)[0]
+
+        return ort_outs
+
+    def infer_probs(self, x):
+        ort_outs = self.infer_pure(x)
+
         normalizer = np.repeat(
             np.sum(np.exp(ort_outs), axis=1), ort_outs.shape[1]
         ).reshape(ort_outs.shape)
         probs = np.exp(ort_outs) / normalizer
         return probs
 
-    def infer(self, x, probs=None):
-        """x.shape=(any, seq_length)"""
+    def infer_categorical(self, x, probs=None):
         if probs is None:
             probs = self.infer_probs_any_size(x)
         preds = probs.argmax(1)
         if self.map_to_id:
             preds = np.array([self.index_map[i] for i in preds])
         return preds
+
+    def infer(self, x, probs=None):
+        if self.target_column_type == "categorical":
+            return self.infer_categorical(x, probs)
+        elif self.target_column_type == "real":
+            return self.infer_real(x)
+        else:
+            pass
 
 
 def infer(args, args_config):
@@ -115,6 +145,8 @@ def infer(args, args_config):
         config.map_to_id,
         config.categorical_columns,
         config.real_columns,
+        config.target_column,
+        config.target_column_type,
         config.batch_size,
     )
 
