@@ -1,7 +1,7 @@
 project_path: tests/project_folder
-ddconfig_path: configs/ddconfigs/test_data.json
+ddconfig_path: configs/ddconfigs/test_data_1.json
 model_name: default
-seq_length: 10
+seq_length: 8
 model_spec:
   d_model: 10
   nhead: 2
@@ -11,7 +11,7 @@ training_spec:
   device: cpu
   epochs: 3
   iter_save: 1
-  batch_size: 10
+  batch_size: 20
   lr: 0.003
   dropout: 0.3
   criterion: CrossEntropyLoss

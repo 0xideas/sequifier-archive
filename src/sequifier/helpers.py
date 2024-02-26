@@ -3,17 +3,30 @@ import os
 import torch
 from torch import tensor
 
+PANDAS_TO_TORCH_TYPES = {"int64": torch.int64, "float64": torch.float32}
 
-def numpy_to_pytorch(data, seq_length, device):
 
-    sequence = (
-        tensor(data[[str(c) for c in range(seq_length, 0, -1)]].values)
-        .to(torch.int64)
-        .to(device)
-    )
+def numpy_to_pytorch(data, column_types, seq_length, device):
+
+    sequence = {
+        col: (
+            tensor(
+                data.query(f"input_col=='{col}'")[
+                    [str(c) for c in range(seq_length, 0, -1)]
+                ].values
+            )
+            .to(column_types[col])
+            .to(device)
+        )
+        for col in column_types.keys()
+    }
 
     if "target" in data:
-        target = tensor(data["target"].values).to(torch.int64).to(device)
+        target = (
+            tensor(data.query(f"input_col=='itemId'")["target"].values)
+            .to(torch.int64)
+            .to(device)
+        )
     else:
         target = None
 
