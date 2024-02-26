@@ -114,4 +114,8 @@ def delete_inference_target(run_preprocessing, project_path, inference_config_pa
 def run_inference(
     run_training, delete_inference_target, project_path, inference_config_path
 ):
-    os.system(f"sequifier --infer --config_path={inference_config_path}")
+    for model_number in [1, 3, 5]:
+        inference_model_path = f"models/sequifier-model-{model_number}-best.onnx"
+        inference_data_path = f"data/test_data_{model_number}-split2.csv"
+        ddconfig_path = f"configs/ddconfigs/test_data_{model_number}.json"
+        os.system(f"sequifier --infer --on-preprocessed --config_path={inference_config_path} --ddconfig-path={ddconfig_path} --inference-model-path={inference_model_path} --inference-data-path={inference_data_path}")
