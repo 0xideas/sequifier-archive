@@ -1,0 +1,9 @@
+project_path: tests/project_folder
+target_column: itemValue
+data_path: tests/resources/test_data_1.csv
+seq_length: 8
+group_proportions:
+- 0.6
+- 0.2
+- 0.2
+max_rows: null

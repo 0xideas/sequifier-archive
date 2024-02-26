@@ -158,7 +158,7 @@ class TransformerModel(nn.Module):
         log_interval = 200
         start_time = time.time()
 
-        num_batches = math.ceil(len(X_train) / self.batch_size)
+        num_batches = math.ceil(len(X_train[self.target_column]) / self.batch_size)
         for batch, i in enumerate(
             range(0, X_train[self.target_column].size(0) - 1, self.batch_size)
         ):
@@ -166,6 +166,11 @@ class TransformerModel(nn.Module):
             output = self(data)
             if self.target_column_type == "categorical":
                 output = output.view(-1, self.hparams.n_classes[self.target_column])
+            elif self.target_column_type == "real":
+                output = output.flatten()
+            else:
+                pass
+
             loss = self.criterion(output, targets)
 
             self.optimizer.zero_grad()
@@ -232,6 +237,11 @@ class TransformerModel(nn.Module):
                 output = self(data)
                 if self.target_column_type == "categorical":
                     output = output.view(-1, self.hparams.n_classes[self.target_column])
+                elif self.target_column_type == "real":
+                    output = output.flatten()
+                else:
+                    pass
+
                 total_loss += (
                     self.hparams.seq_length * self.criterion(output, targets).item()
                 )
@@ -370,7 +380,11 @@ def train(args, args_config):
         config.training_data_path, sep=",", decimal=".", index_col=None
     )
     X_train, y_train = numpy_to_pytorch(
-        data_train, column_types, config.seq_length, config.training_spec.device
+        data_train,
+        column_types,
+        config.target_column,
+        config.seq_length,
+        config.training_spec.device,
     )
     # del data_train
 
@@ -378,7 +392,11 @@ def train(args, args_config):
         config.validation_data_path, sep=",", decimal=".", index_col=None
     )
     X_valid, y_valid = numpy_to_pytorch(
-        data_valid, column_types, config.seq_length, config.training_spec.device
+        data_valid,
+        column_types,
+        config.target_column,
+        config.seq_length,
+        config.training_spec.device,
     )
     del data_valid
 

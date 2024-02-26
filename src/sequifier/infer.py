@@ -62,6 +62,7 @@ class Inferer(object):
         ]
 
     def infer_real_any_size(self, x):
+        # import code; code.interact(local=locals())
         size = x[self.target_column].shape[0]
         x_adjusted = self.adjust_x_size(x)
         return np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
@@ -105,7 +106,7 @@ class Inferer(object):
         if self.target_column_type == "categorical":
             return self.infer_categorical(x, probs)
         elif self.target_column_type == "real":
-            return self.infer_real(x)
+            return self.infer_real_any_size(x)
         else:
             pass
 
@@ -125,7 +126,9 @@ def infer(args, args_config):
     inference_data_path = os.path.join(config.project_path, config.inference_data_path)
 
     data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
-    X, _ = numpy_to_pytorch(data, column_types, config.seq_length, config.device)
+    X, _ = numpy_to_pytorch(
+        data, column_types, config.target_column, config.seq_length, config.device
+    )
     X = {col: X_col.detach().cpu().numpy() for col, X_col in X.items()}
     del data
 
