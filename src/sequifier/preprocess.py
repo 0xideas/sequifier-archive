@@ -43,15 +43,15 @@ class Preprocessor(object):
         data_columns = [
             col for col in data.columns if col not in ["sequenceId", "itemPosition"]
         ]
-        n_classes = {col: len(np.unique(data[col])) + 1 for col in data_columns}
 
-        id_maps = {}
+        n_classes, id_maps = {}, {}
         float_data_columns = []
         for data_col in data_columns:
             dtype = str(data[data_col].dtype)
             if dtype in ["object", "int64"]:
                 data, sup_id_map = self.replace_ids(data, column=data_col)
                 id_maps[data_col] = dict(sup_id_map)
+                n_classes[data_col] = len(np.unique(data[data_col])) + 1
             elif dtype in ["float64"]:
                 float_data_columns.append(data_col)
             else:

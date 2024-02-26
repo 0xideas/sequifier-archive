@@ -32,9 +32,13 @@ class InfererModel(BaseModel):
 
         return v
 
+    @validator("target_column_type")
+    def validate_target_column_type(cls, v):
+        assert v in ["categorical", "real"], v
+        return v
+
     def __init__(self, **kwargs):
         super().__init__(**{k: v for k, v in kwargs.items()})
-        assert self.target_column_type in ["categorical", "real"]
         if self.target_column_type == "real":
             assert not self.output_probabilities
 

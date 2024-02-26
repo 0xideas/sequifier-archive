@@ -151,6 +151,11 @@ class TransformerModel(BaseModel):
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
 
+    @validator("target_column_type")
+    def validate_target_column_type(cls, v):
+        assert v in ["categorical", "real"]
+        return v
+
     def __init__(self, **kwargs):
         super().__init__(
             **{
@@ -161,7 +166,6 @@ class TransformerModel(BaseModel):
         )
         self.model_spec = ModelSpecModel(**kwargs.get("model_spec"))
         self.training_spec = TrainingSpecModel(**kwargs.get("training_spec"))
-        assert self.target_column_type in ["categorical", "real"]
 
 
 def load_transformer_config(config_path, args_config, on_preprocessed):
