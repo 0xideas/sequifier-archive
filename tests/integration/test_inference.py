@@ -12,7 +12,10 @@ def predictions(run_inference, project_path):
     for model_number in [1, 3, 5]:
         model_name = f"model-{model_number}"
         prediction_path = os.path.join(
-            project_path, "outputs", "predictions", f"sequifier-{model_name}-best_predictions.csv"
+            project_path,
+            "outputs",
+            "predictions",
+            f"sequifier-{model_name}-best_predictions.csv",
         )
         preds[model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None
@@ -31,7 +34,9 @@ def probabilities(run_inference, project_path):
             "probabilities",
             f"sequifier-{model_name}-best_probabilities.csv",
         )
-        probs[model_name] = pd.read_csv(prediction_path, sep=",", decimal=".", index_col=None)
+        probs[model_name] = pd.read_csv(
+            prediction_path, sep=",", decimal=".", index_col=None
+        )
     return probs
 
 

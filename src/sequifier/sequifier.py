@@ -14,7 +14,7 @@ def build_args_config(args):
         args_config["seed"] = seed
     else:
         args_config["seed"] = 1010
-    
+
     if args.data_path is not None:
         args_config["data_path"] = args.data_path
 
@@ -29,7 +29,6 @@ def build_args_config(args):
 
     if args.inference_data_path is not None:
         args_config["inference_data_path"] = args.inference_data_path
-
 
     return args_config
 

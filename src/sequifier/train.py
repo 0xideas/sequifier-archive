@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import Tensor, nn
-from torch.nn import TransformerEncoder, TransformerEncoderLayer, ModuleDict
+from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import numpy_to_pytorch, PANDAS_TO_TORCH_TYPES
+from sequifier.helpers import PANDAS_TO_TORCH_TYPES, numpy_to_pytorch
 
 
 class TransformerModel(nn.Module):
@@ -38,7 +38,9 @@ class TransformerModel(nn.Module):
                     hparams.model_spec.d_model, hparams.training_spec.dropout
                 )
 
-        embedding_size = (hparams.model_spec.d_model * len(hparams.categorical_columns)) + (len(hparams.real_columns) * hparams.model_spec.nhead)
+        embedding_size = (
+            hparams.model_spec.d_model * len(hparams.categorical_columns)
+        ) + (len(hparams.real_columns) * hparams.model_spec.nhead)
         encoder_layers = TransformerEncoderLayer(
             embedding_size,
             hparams.model_spec.nhead,
@@ -105,12 +107,16 @@ class TransformerModel(nn.Module):
 
         srcs = []
         for col in self.hparams.categorical_columns:
-            src_t = self.encoder[col](src[col].T) * math.sqrt(self.hparams.model_spec.d_model)
+            src_t = self.encoder[col](src[col].T) * math.sqrt(
+                self.hparams.model_spec.d_model
+            )
             src_t = self.pos_encoder[col](src_t)
             srcs.append(src_t)
 
         for col in self.hparams.real_columns:
-            srcs.append(src[col].T.unsqueeze(2).repeat(1, 1, self.hparams.model_spec.nhead))
+            srcs.append(
+                src[col].T.unsqueeze(2).repeat(1, 1, self.hparams.model_spec.nhead)
+            )
 
         src = torch.cat(srcs, 2)
 
@@ -122,8 +128,17 @@ class TransformerModel(nn.Module):
         output = self.decoder(concatenated)
         return output
 
-    def get_batch(self, X, y, i, batch_size,):
-        return ({col: X[col][i : i + batch_size, :] for col in X.keys()}, y[i : i + batch_size])
+    def get_batch(
+        self,
+        X,
+        y,
+        i,
+        batch_size,
+    ):
+        return (
+            {col: X[col][i : i + batch_size, :] for col in X.keys()},
+            y[i : i + batch_size],
+        )
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
@@ -132,10 +147,14 @@ class TransformerModel(nn.Module):
         start_time = time.time()
 
         num_batches = math.ceil(len(X_train) / self.batch_size)
-        for batch, i in enumerate(range(0, X_train["itemId"].size(0) - 1, self.batch_size)):
+        for batch, i in enumerate(
+            range(0, X_train["itemId"].size(0) - 1, self.batch_size)
+        ):
             data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
             output = self(data)
-            loss = self.criterion(output.view(-1, self.hparams.n_classes["itemId"]), targets)
+            loss = self.criterion(
+                output.view(-1, self.hparams.n_classes["itemId"]), targets
+            )
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -205,18 +224,21 @@ class TransformerModel(nn.Module):
                     * self.criterion(output_flat, targets).item()
                 )
 
-        return total_loss / (X_valid["itemId"].size(0)  - 1)
+        return total_loss / (X_valid["itemId"].size(0) - 1)
 
     def export(self, model, suffix):
         self.eval()
         x_cat = {
             col: torch.randint(
-                0, self.hparams.n_classes[col], (self.batch_size, self.hparams.seq_length)
+                0,
+                self.hparams.n_classes[col],
+                (self.batch_size, self.hparams.seq_length),
             )
             for col in self.hparams.categorical_columns
         }
         x_real = {
-            col: torch.rand(self.batch_size, self.hparams.seq_length) for col in self.hparams.real_columns
+            col: torch.rand(self.batch_size, self.hparams.seq_length)
+            for col in self.hparams.real_columns
         }
 
         x = {"src": {**x_cat, **x_real}}
@@ -327,7 +349,10 @@ def train(args, args_config):
         args.config_path, args_config, args.on_preprocessed
     )
 
-    column_types = {col: PANDAS_TO_TORCH_TYPES[config.column_types[col]] for col in config.column_types}
+    column_types = {
+        col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
+        for col in config.column_types
+    }
 
     data_train = pd.read_csv(
         config.training_data_path, sep=",", decimal=".", index_col=None

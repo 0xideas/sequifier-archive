@@ -1,5 +1,5 @@
-import os
 import json
+import os
 from typing import Optional
 
 import yaml
@@ -45,6 +45,12 @@ def load_inferer_config(config_path, args_config, on_preprocessed):
             dd_config = json.loads(f.read())
 
         config_values["column_types"] = dd_config["column_types"]
-        config_values["categorical_columns"] = [col for col, type_ in dd_config["column_types"].items() if type_ == "int64"]
-        config_values["real_columns"] =  [col for col, type_ in dd_config["column_types"].items() if type_ == "float64"]
+        config_values["categorical_columns"] = [
+            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
+        ]
+        config_values["real_columns"] = [
+            col
+            for col, type_ in dd_config["column_types"].items()
+            if type_ == "float64"
+        ]
     return InfererModel(**config_values)

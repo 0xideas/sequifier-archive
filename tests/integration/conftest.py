@@ -1,10 +1,10 @@
 import os
 import shutil
 import time
-import yaml
+
 import pandas as pd
 import pytest
-
+import yaml
 
 
 @pytest.fixture(scope="session")
@@ -40,46 +40,61 @@ def remove_project_path_contents(project_path):
 def reformat_parameter(attr, param, type):
     if attr.endswith("_path"):
         if type == "linux->local":
-            return(os.path.join(*param.split("/")))
+            return os.path.join(*param.split("/"))
         elif type == "local->linux":
-            return("/".join(os.path.split(param)))
+            return "/".join(os.path.split(param))
     else:
-        return(param)
-
+        return param
 
 
 @pytest.fixture(scope="session", autouse=True)
-def format_configs_locally(preprocessing_config_path, training_config_path, inference_config_path):
-    config_paths = [preprocessing_config_path, training_config_path, inference_config_path]
+def format_configs_locally(
+    preprocessing_config_path, training_config_path, inference_config_path
+):
+    config_paths = [
+        preprocessing_config_path,
+        training_config_path,
+        inference_config_path,
+    ]
     for config_path in config_paths:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        config_formatted = {attr:reformat_parameter(attr, param, "linux->local") for attr, param in config.items()}
-        
+        config_formatted = {
+            attr: reformat_parameter(attr, param, "linux->local")
+            for attr, param in config.items()
+        }
+
         with open(config_path, "w") as f:
             yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
 
     yield
-    
+
     for config_path in config_paths:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        config_formatted = {attr:reformat_parameter(attr, param, "local->linux") for attr, param in config.items()}
-        
+        config_formatted = {
+            attr: reformat_parameter(attr, param, "local->linux")
+            for attr, param in config.items()
+        }
+
         with open(config_path, "w") as f:
             yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
 
 
-
-
-
-
 @pytest.fixture(scope="session")
-def run_preprocessing(preprocessing_config_path, format_configs_locally, remove_project_path_contents):
-    for data_path in ["tests/resources/test_data_1.csv", "tests/resources/test_data_3.csv", "tests/resources/test_data_5.csv"]:
-        os.system(f"sequifier --preprocess --config_path={preprocessing_config_path} --data-path={data_path}")
+def run_preprocessing(
+    preprocessing_config_path, format_configs_locally, remove_project_path_contents
+):
+    for data_path in [
+        "tests/resources/test_data_1.csv",
+        "tests/resources/test_data_3.csv",
+        "tests/resources/test_data_5.csv",
+    ]:
+        os.system(
+            f"sequifier --preprocess --config_path={preprocessing_config_path} --data-path={data_path}"
+        )
 
 
 @pytest.fixture(scope="session")
@@ -118,4 +133,6 @@ def run_inference(
         inference_model_path = f"models/sequifier-model-{model_number}-best.onnx"
         inference_data_path = f"data/test_data_{model_number}-split2.csv"
         ddconfig_path = f"configs/ddconfigs/test_data_{model_number}.json"
-        os.system(f"sequifier --infer --on-preprocessed --config_path={inference_config_path} --ddconfig-path={ddconfig_path} --inference-model-path={inference_model_path} --inference-data-path={inference_data_path}")
+        os.system(
+            f"sequifier --infer --on-preprocessed --config_path={inference_config_path} --ddconfig-path={ddconfig_path} --inference-model-path={inference_model_path} --inference-data-path={inference_data_path}"
+        )
