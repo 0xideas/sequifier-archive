@@ -29,6 +29,9 @@ class TransformerModel(nn.Module):
             else uuid.uuid4().hex[:8]
         )
         self.hparams = hparams
+        self.real_columns_repetitions = self.get_real_columns_repetitions(
+            hparams.real_columns, hparams.model_spec.nhead
+        )
         self.model_type = "Transformer"
 
         self.encoder = ModuleDict()
@@ -42,7 +45,8 @@ class TransformerModel(nn.Module):
 
         embedding_size = (
             hparams.model_spec.d_model * len(hparams.categorical_columns)
-        ) + (len(hparams.real_columns) * hparams.model_spec.nhead)
+        ) + int(np.sum(list(self.real_columns_repetitions.values())))
+
         encoder_layers = TransformerEncoderLayer(
             embedding_size,
             hparams.model_spec.nhead,
@@ -84,6 +88,17 @@ class TransformerModel(nn.Module):
         self.iter_save = hparams.training_spec.iter_save
         self.continue_training = hparams.training_spec.continue_training
         self.load_weights_conditional()
+
+    def get_real_columns_repetitions(self, real_columns, nhead):
+        real_columns_repetitions = {col: 1 for col in real_columns}
+        column_index = dict(enumerate(real_columns))
+        for i in range(nhead * len(real_columns)):
+            if np.sum(list(real_columns_repetitions.values())) % nhead != 0:
+                j = i % len(real_columns)
+                real_columns_repetitions[column_index[j]] += 1
+        assert np.sum(list(real_columns_repetitions.values())) % nhead == 0
+
+        return real_columns_repetitions
 
     def filter_key(self, dict_, key):
         return {k: v for k, v in dict_.items() if k != key}
@@ -127,7 +142,7 @@ class TransformerModel(nn.Module):
 
         for col in self.hparams.real_columns:
             srcs.append(
-                src[col].T.unsqueeze(2).repeat(1, 1, self.hparams.model_spec.nhead)
+                src[col].T.unsqueeze(2).repeat(1, 1, self.real_columns_repetitions[col])
             )
 
         src = torch.cat(srcs, 2)
