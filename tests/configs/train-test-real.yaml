@@ -16,7 +16,7 @@ training_spec:
   batch_size: 20
   lr: 0.003
   dropout: 0.3
-  criterion: CrossEntropyLoss
+  criterion: MSELoss
   optimizer:
     name: Adam
   scheduler:
