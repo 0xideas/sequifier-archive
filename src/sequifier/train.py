@@ -337,12 +337,11 @@ class TransformerModel(nn.Module):
     def get_latest_model_name(self):
 
         checkpoint_path = os.path.join(self.project_path, "checkpoints", "*")
-        model_str = f"model-{self.model_name}".replace("model-model-", "model-")
 
         files = glob.glob(
             checkpoint_path
         )  # * means all if need specific format then *.csv
-        files = [file for file in files if os.path.split(file)[1].startswith(model_str)]
+        files = [file for file in files if os.path.split(file)[1].startswith(self.model_name)]
         if len(files):
             return max(files, key=os.path.getctime)
         else:
