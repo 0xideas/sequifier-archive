@@ -201,7 +201,7 @@ class TransformerModel(nn.Module):
                 ppl = math.exp(cur_loss)
                 print(
                     f"| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | "
-                    f"lr {lr:02.2f} | ms/batch {ms_per_batch:5.2f} | "
+                    f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
                     f"loss {cur_loss:5.2f} | ppl {ppl:8.2f}"
                 )
                 total_loss = 0
