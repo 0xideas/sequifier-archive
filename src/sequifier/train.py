@@ -33,7 +33,7 @@ class TransformerModel(nn.Module):
             hparams.real_columns, hparams.model_spec.nhead
         )
         self.model_type = "Transformer"
-
+        self.log_interval = hparams.log_interval
         self.encoder = ModuleDict()
         self.pos_encoder = ModuleDict()
         for col, n_classes in hparams.n_classes.items():
@@ -170,7 +170,6 @@ class TransformerModel(nn.Module):
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
         total_loss = 0.0
-        log_interval = 200
         start_time = time.time()
 
         num_batches = math.ceil(len(X_train[self.target_column]) / self.batch_size)
@@ -194,17 +193,17 @@ class TransformerModel(nn.Module):
             self.optimizer.step()
 
             total_loss += loss.item()
-            if batch % log_interval == 0 and batch > 0:
+            if batch % self.log_interval == 0 and batch > 0:
                 lr = self.scheduler.get_last_lr()[0]
-                ms_per_batch = (time.time() - start_time) * 1000 / log_interval
-                cur_loss = total_loss / log_interval
+                ms_per_batch = (time.time() - start_time) * 1000 / self.log_interval
+                cur_loss = total_loss / (self.log_interval * self.batch_size)
                 ppl = math.exp(cur_loss)
                 print(
                     f"| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss:5.2f} | ppl {ppl:8.2f}"
+                    f"loss {cur_loss:5.5f} | ppl {ppl:8.2f}"
                 )
-                total_loss = 0
+                total_loss = 0.0
                 start_time = time.time()
 
     def train_model(self, X_train, y_train, X_valid, y_valid):
@@ -222,7 +221,7 @@ class TransformerModel(nn.Module):
             print("-" * 89)
             print(
                 f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                f"valid loss {val_loss:5.2f} | valid ppl {val_ppl:8.2f}"
+                f"valid loss {val_loss:5.5f} | valid ppl {val_ppl:8.2f}"
             )
             print("-" * 89)
 
@@ -247,7 +246,7 @@ class TransformerModel(nn.Module):
         self.eval()  # turn on evaluation mode
         total_loss = 0.0
         with torch.no_grad():
-            for i in range(0, X_valid[self.target_column].size(0) - 1, self.batch_size):
+            for i in range(0, X_valid[self.target_column].size(0), self.batch_size):
                 data, targets = self.get_batch(X_valid, y_valid, i, self.batch_size)
                 output = self(data)
                 if self.target_column_type == "categorical":
@@ -257,11 +256,9 @@ class TransformerModel(nn.Module):
                 else:
                     pass
 
-                total_loss += (
-                    self.hparams.seq_length * self.criterion(output, targets).item()
-                )
+                total_loss += self.criterion(output, targets).item()
 
-        return total_loss / (X_valid[self.target_column].size(0) - 1)
+        return total_loss / (X_valid[self.target_column].size(0))
 
     def export(self, model, suffix):
         self.eval()
