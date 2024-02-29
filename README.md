@@ -1,7 +1,13 @@
 <img src="./design/logo.png">
 
 
-### easy sequence classification training and inference with transformers
+### one-to-one and many-to-one autoregression made easy
+
+Sequifier enables sequence classification or regression for time based sequences using transformer models, via CLI.
+The specific configuration of preprocessing, which takes a single or multi-variable columnar data file and creates
+training, validation and test sequences, training, which trains a transformer model, and inference, which calculates
+model outputs for data (usually the test data from preprocessing), is done via configuration yaml files.
+
 \
 \
 \
@@ -23,7 +29,7 @@ an xgboost model and a logistic regression, check out [this notebook.](./documen
 
 ## Complete example how to build and apply a transformer sequence classifier with sequifier
 
-1. create a conda environment with python 3.9.12, activate and run
+1. create a conda environment with python >=3.9 activate and run
 ```console
 pip install sequifier
 ```
@@ -50,14 +56,16 @@ sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml
 ## More detailed explanations of the three steps
 #### Preprocessing of data into sequences for training
 
-The preprocessing step is designed for scenarios where for long series
-of events, the prediction of the next event from the previous N events  is of interest.
+The preprocessing step is designed for scenarios where for timeseries or timeseries-like data,
+the prediction of the next data point of a particular variable from prior values of that variable
+and (optionally) other variables is of interest.
 In cases of sequences where only the last item is a valid target, the preprocessing
 step should not be executed.
 
-This step presupposes input data with three columns: "sequenceId", "itemId" and "itemPosition".
-"sequenceId" and "itemId" identify sequence and item, and the itemPosition column must
-provide values that enable sequential sorting. Often this will simply be a timestamp.
+This step presupposes input data with three columns: "sequenceId" and "itemPosition", and a column
+with the variable that is the prediction target.
+"sequenceId" separates different sequences and the itemPosition column
+provides values that enable sequential sorting. Often this will simply be a timestamp.
 You can find an example of the preprocessing input data at [documentation/example_inputs/preprocessing_input.csv](./documentation/example_inputs/preprocessing_input.csv)
 
 The data can then be processed and split into training, validation and testing datasets of all
@@ -94,7 +102,7 @@ If the data on which the model is trained comes from the preprocessing step, the
 should also be added.
 
 If the training data does not come from the preprocessing step, both train and validation
-data have to take the form of a csv file with the columns "sequenceId", [SEQ LENGTH], [SEQ LENGTH - 1],...,"1", "target".
+data have to take the form of a csv file with the columns "sequenceId", "subsequenceId", "col_name", [SEQ LENGTH], [SEQ LENGTH - 1],...,"1", "target".
 You can find an example of the preprocessing input data at [documentation/example_inputs/training_input.csv](./documentation/example_inputs/training_input.csv)
 
 The training step is configured using the config. The two default configs can be found here:
