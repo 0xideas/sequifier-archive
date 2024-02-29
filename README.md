@@ -11,7 +11,6 @@ model outputs for data (usually the test data from preprocessing), is done via c
 \
 \
 \
-\
 ## Overview
 The sequifier package enables:
   - the extraction of sequences for training
