@@ -2,6 +2,7 @@ import json
 import math
 import os
 from argparse import ArgumentParser
+from random import shuffle
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ class Preprocessor(object):
         group_proportions,
         seq_length,
         seed,
+        target_column,
         max_rows=None,
     ):
         self.project_path = project_path
@@ -38,22 +40,40 @@ class Preprocessor(object):
             for i in range(len(group_proportions))
         ]
 
-        n_classes = len(np.unique(data["itemId"])) + 1
+        data_columns = [
+            col for col in data.columns if col not in ["sequenceId", "itemPosition"]
+        ]
 
-        data, id_map = self.replace_ids(data)
+        n_classes, id_maps = {}, {}
+        float_data_columns = []
+        for data_col in data_columns:
+            dtype = str(data[data_col].dtype)
+            if dtype in ["object", "int64"]:
+                data, sup_id_map = self.replace_ids(data, column=data_col)
+                id_maps[data_col] = dict(sup_id_map)
+                n_classes[data_col] = len(np.unique(data[data_col])) + 1
+            elif dtype in ["float64"]:
+                float_data_columns.append(data_col)
+            else:
+                raise Exception(
+                    f"Column {data_col} is of dtype {dtype}, which is not supported"
+                )
 
-        sequences = self.extract_sequences(data, seq_length)
+        sequences, col_types = self.extract_sequences(
+            data, seq_length, data_columns, target_column
+        )
 
         self.splits = self.extract_data_subsets(sequences, group_proportions)
         self.splits = [self.cast_columns_to_string(data) for data in self.splits]
-        self.export(id_map, n_classes)
+        self.export(id_maps, n_classes, col_types)
 
-    def export(self, id_map, n_classes):
+    def export(self, id_maps, n_classes, col_types):
 
         data_driven_config = {
             "n_classes": n_classes,
-            "id_map": id_map,
+            "id_maps": id_maps,
             "split_paths": self.split_paths,
+            "column_types": col_types,
         }
         os.makedirs(
             os.path.join(self.project_path, "configs", "ddconfigs"), exist_ok=True
@@ -77,65 +97,94 @@ class Preprocessor(object):
         return data
 
     @classmethod
-    def replace_ids(cls, data):
+    def replace_ids(cls, data, column):
         ids = sorted(
-            [int(x) if not isinstance(x, str) else x for x in np.unique(data["itemId"])]
+            [int(x) if not isinstance(x, str) else x for x in np.unique(data[column])]
         )
         id_map = {id_: i + 1 for i, id_ in enumerate(ids)}
-        data["itemId"] = data["itemId"].map(id_map)
+        data[column] = data[column].map(id_map)
         return (data, id_map)
 
     @classmethod
-    def extract_subsequences(cls, in_seq, seq_length):
-        nseq = np.max([len(in_seq) - seq_length - 1, np.min([1, len(in_seq)])])
+    def extract_subsequences(cls, in_seq, seq_length, data_columns, target_column):
 
-        seqs = [in_seq[i : i + seq_length] for i in range(nseq)]
-        targets = [in_seq[i + seq_length] for i in range(nseq)]
+        nseq = max(
+            len(in_seq[target_column]) - seq_length - 1,
+            min(1, len(in_seq[target_column])),
+        )
 
-        if len(seqs) == 1:
-            seqs = [[0] * (seq_length - len(seqs[0])) + seqs[0]]
+        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
+
+        seqs = {}
+        for data_col in data_columns:
+            seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
+
+        if len(seqs[target_column]) == 1:
+            seqs = {
+                col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
+                for col in data_columns
+            }
 
         return (seqs, targets)
 
     @classmethod
-    def extract_sequences(cls, data, seq_length):
+    def extract_sequences(cls, data, seq_length, data_columns, target_column):
+
         raw_sequences = (
-            data.sort_values(["sequenceId", "timesort"])
-            .groupby("sequenceId")["itemId"]
-            .apply(list)
+            data.sort_values(["sequenceId", "itemPosition"])
+            .groupby("sequenceId")
+            .agg({col: list for col in data_columns})
             .reset_index(drop=False)
         )
+        col_types = {col: str(data[col].dtype) for col in data_columns}
         rows = []
         for _, in_row in raw_sequences.iterrows():
-            seqs, targets = cls.extract_subsequences(in_row["itemId"], seq_length)
-            for seq, target in zip(seqs, targets):
-                rows.append([in_row["sequenceId"]] + seq + [target])
+            seqs, targets = cls.extract_subsequences(
+                in_row[data_columns], seq_length, data_columns, target_column
+            )
+            for i, target in enumerate(targets):
+                subsequence_id = i
+                for data_col, data_col_seqs in seqs.items():
+                    rows.append(
+                        [in_row["sequenceId"]]
+                        + [subsequence_id, data_col]
+                        + data_col_seqs[i]
+                        + [target if data_col == target_column else None]
+                    )
+
         sequences = pd.DataFrame(
-            rows, columns=["sequenceId"] + list(range(seq_length, 0, -1)) + ["target"]
+            rows,
+            columns=["sequenceId", "subsequenceId", "inputCol"]
+            + list(range(seq_length, 0, -1))
+            + ["target"],
         )
-        return sequences
+        return sequences, col_types
 
     @classmethod
-    def get_subset_indices(cls, user_data, groups):
-        subset_indices = [math.floor(size * user_data.shape[0]) for size in groups]
-        diff = user_data.shape[0] - np.sum(subset_indices)
-
-        additional = np.random.choice(range(len(groups)), replace=True, size=diff)
-        for i in additional:
-            subset_indices[i] += 1
-
-        return subset_indices
+    def get_subset_groups(cls, sequence_data, groups, n_cols):
+        n_cases = int(sequence_data.shape[0] / n_cols)
+        subset_groups = [
+            ([i] * math.floor(n_cases * size)) for i, size in enumerate(groups)
+        ]
+        subset_groups = [inner for outer in subset_groups for inner in outer]
+        diff = n_cases - len(subset_groups)
+        subset_groups = ([0] * diff) + subset_groups
+        return subset_groups
 
     @classmethod
     def extract_data_subsets(cls, sequences, groups):
-        assert abs(1 - np.sum(groups)) < 0.99999999999, np.sum(groups)
+        assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
 
         datasets = [[] for _ in range(len(groups))]
-        for _, user_data in sequences.groupby("sequenceId"):
-            subset_indices = cls.get_subset_indices(user_data, groups)
-            indices = list(np.cumsum(subset_indices))
-            for i, (start, end) in enumerate(zip([0] + indices[:-1], indices)):
-                datasets[i].append(user_data.iloc[start:end, :])
+        n_cols = len(np.unique(sequences["inputCol"]))
+        for _, sequence_data in sequences.groupby("sequenceId"):
+            subset_groups = cls.get_subset_groups(sequence_data, groups, n_cols)
+            assert len(subset_groups) * n_cols == sequence_data.shape[0]
+            for i, group in enumerate(subset_groups):
+                case_start = i * n_cols
+                datasets[group].append(
+                    sequence_data.iloc[case_start : case_start + n_cols, :]
+                )
 
         return [pd.concat(dataset, axis=0) for dataset in datasets]
 

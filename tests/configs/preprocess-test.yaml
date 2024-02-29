@@ -1,8 +1,0 @@
-project_path: tests/project_folder
-data_path: tests/resources/test_data.csv
-seq_length: 10
-group_proportions:
-- 0.6
-- 0.2
-- 0.2
-max_rows: null

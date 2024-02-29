@@ -138,13 +138,24 @@ class TransformerModel(BaseModel):
     project_path: str
     model_name: Optional[str]
     seq_length: int
-    n_classes: int
+    n_classes: dict[str, int]
     training_data_path: str
     validation_data_path: str
     seed: int
+    column_types: dict[str, str]
+    categorical_columns: list[str]
+    real_columns: list[str]
+    target_column: str
+    target_column_type: str
+    log_interval: int
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
+
+    @validator("target_column_type")
+    def validate_target_column_type(cls, v):
+        assert v in ["categorical", "real"]
+        return v
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -171,6 +182,15 @@ def load_transformer_config(config_path, args_config, on_preprocessed):
         with open(dd_config_path, "r") as f:
             dd_config = json.loads(f.read())
 
+        config_values["column_types"] = dd_config["column_types"]
+        config_values["categorical_columns"] = [
+            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
+        ]
+        config_values["real_columns"] = [
+            col
+            for col, type_ in dd_config["column_types"].items()
+            if type_ == "float64"
+        ]
         config_values["n_classes"] = dd_config["n_classes"]
         config_values["training_data_path"] = dd_config["split_paths"][0]
         config_values["validation_data_path"] = dd_config["split_paths"][1]
