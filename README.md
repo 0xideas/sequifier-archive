@@ -1,4 +1,4 @@
-<img src="./design/logo.png">
+<img src="./design/sequifier.png">
 
 
 ### one-to-one and many-to-one autoregression made easy
