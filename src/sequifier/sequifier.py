@@ -37,7 +37,7 @@ def main():
     parser = ArgumentParser()
 
     parser.add_argument(
-        "--config_path",
+        "--config-path",
         type=str,
         help="file path to config for current processing step",
     )

@@ -154,7 +154,7 @@ class Preprocessor(object):
 
         sequences = pd.DataFrame(
             rows,
-            columns=["sequenceId", "subsequenceId", "input_col"]
+            columns=["sequenceId", "subsequenceId", "inputCol"]
             + list(range(seq_length, 0, -1))
             + ["target"],
         )
@@ -176,7 +176,7 @@ class Preprocessor(object):
         assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
 
         datasets = [[] for _ in range(len(groups))]
-        n_cols = len(np.unique(sequences["input_col"]))
+        n_cols = len(np.unique(sequences["inputCol"]))
         for _, sequence_data in sequences.groupby("sequenceId"):
             subset_groups = cls.get_subset_groups(sequence_data, groups, n_cols)
             assert len(subset_groups) * n_cols == sequence_data.shape[0]

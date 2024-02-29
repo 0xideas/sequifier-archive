@@ -118,14 +118,14 @@ def run_preprocessing(
             "tests", "resources", f"test_data_categorical_{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config_path={preprocessing_config_path_cat} --data-path={data_path_cat}"
+            f"sequifier --preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat}"
         )
 
         data_path_real = os.path.join(
             "tests", "resources", f"test_data_real_{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config_path={preprocessing_config_path_real} --data-path={data_path_real}"
+            f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real}"
         )
 
 
@@ -139,7 +139,7 @@ def run_training(
         )
         model_name_cat = f"model-categorical-{model_number}"
         os.system(
-            f"sequifier --train --on-preprocessed --config_path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat}"
+            f"sequifier --train --on-preprocessed --config-path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat}"
         )
 
         ddconfig_path_real = os.path.join(
@@ -147,7 +147,7 @@ def run_training(
         )
         model_name_real = f"model-real-{model_number}"
         os.system(
-            f"sequifier --train --on-preprocessed --config_path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real}"
+            f"sequifier --train --on-preprocessed --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real}"
         )
 
 
@@ -198,7 +198,7 @@ def run_inference(
             "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --on-preprocessed --config_path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat}"
+            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat}"
         )
 
         inference_model_path_real = os.path.join(
@@ -211,5 +211,5 @@ def run_inference(
             "configs", "ddconfigs", f"test_data_real_{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --on-preprocessed --config_path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real}"
+            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real}"
         )

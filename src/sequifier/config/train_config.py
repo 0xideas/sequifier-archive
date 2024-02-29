@@ -147,6 +147,7 @@ class TransformerModel(BaseModel):
     real_columns: list[str]
     target_column: str
     target_column_type: str
+    log_interval: int
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]

@@ -8,7 +8,9 @@ import pytest
 
 def test_checkpoint_files_exists(run_training, project_path):
 
-    found_items = sorted(list(os.listdir(os.path.join(project_path, "checkpoints"))))
+    found_items = np.array(
+        sorted(list(os.listdir(os.path.join(project_path, "checkpoints"))))
+    )
     expected_items = np.array(
         [
             f"model-{model_type}-{j}-epoch-{i}.pt"
@@ -28,7 +30,9 @@ def test_checkpoint_files_exists(run_training, project_path):
 
 def test_model_files_exists(run_training, project_path):
 
-    found_items = sorted(list(os.listdir(os.path.join(project_path, "models"))))
+    found_items = np.array(
+        sorted(list(os.listdir(os.path.join(project_path, "models"))))
+    )
     expected_items = np.array(
         [
             f"sequifier-model-{model_type}-{j}-{kind}.onnx"
