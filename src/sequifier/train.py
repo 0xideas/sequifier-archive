@@ -233,7 +233,7 @@ class TransformerModel(nn.Module):
 
             self.scheduler.step()
             if epoch % self.iter_save == 0:
-                self.save(epoch, val_loss)
+                self.save(epoch, val_loss_normalized)
 
         model_name = self.hparams.model_name
 
