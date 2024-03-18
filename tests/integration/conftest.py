@@ -83,6 +83,8 @@ def format_configs_locally(
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
+        assert config is not None, config_path
+
         config_formatted = {
             attr: reformat_parameter(attr, param, "linux->local")
             for attr, param in config.items()
