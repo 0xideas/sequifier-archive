@@ -54,7 +54,7 @@ class TransformerModel(nn.Module):
             hparams.training_spec.dropout,
         )
         self.transformer_encoder = TransformerEncoder(
-            encoder_layers, hparams.model_spec.nlayers
+            encoder_layers, hparams.model_spec.nlayers, enable_nested_tensor=False
         )
 
         if self.target_column_type == "categorical":
