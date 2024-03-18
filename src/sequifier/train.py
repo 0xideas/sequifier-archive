@@ -269,11 +269,11 @@ class TransformerModel(nn.Module):
                 0,
                 self.hparams.n_classes[col],
                 (self.batch_size, self.hparams.seq_length),
-            )
+            ).to(self.device)
             for col in self.hparams.categorical_columns
         }
         x_real = {
-            col: torch.rand(self.batch_size, self.hparams.seq_length)
+            col: torch.rand(self.batch_size, self.hparams.seq_length).to(self.device)
             for col in self.hparams.real_columns
         }
 
