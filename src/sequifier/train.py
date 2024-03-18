@@ -196,12 +196,14 @@ class TransformerModel(nn.Module):
             if batch % self.log_interval == 0 and batch > 0:
                 lr = self.scheduler.get_last_lr()[0]
                 ms_per_batch = (time.time() - start_time) * 1000 / self.log_interval
-                cur_loss = total_loss / (self.log_interval * self.batch_size)
-                ppl = math.exp(cur_loss)
+                cur_loss_normalized = (
+                    1000 * total_loss / (self.log_interval * self.batch_size)
+                )
+                ppl = math.exp(cur_loss_normalized)
                 print(
                     f"| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss:5.5f} | ppl {ppl:8.2f}"
+                    f"loss {cur_loss_normalized :5.5f} | ppl {ppl:8.2f}"
                 )
                 total_loss = 0.0
                 start_time = time.time()
@@ -215,18 +217,18 @@ class TransformerModel(nn.Module):
         ):
             epoch_start_time = time.time()
             self.train_epoch(X_train, y_train, epoch)
-            val_loss = self.evaluate(X_valid, y_valid)
-            val_ppl = math.exp(val_loss)
+            val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
+            val_ppl = math.exp(val_loss_normalized)
             elapsed = time.time() - epoch_start_time
             print("-" * 89)
             print(
                 f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                f"valid loss {val_loss:5.5f} | valid ppl {val_ppl:8.2f}"
+                f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
             )
             print("-" * 89)
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            if val_loss_normalized < best_val_loss:
+                best_val_loss = val_loss_normalized
                 best_model = copy.deepcopy(self)
 
             self.scheduler.step()
