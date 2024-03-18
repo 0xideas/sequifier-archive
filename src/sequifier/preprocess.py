@@ -58,16 +58,35 @@ class Preprocessor(object):
                 raise Exception(
                     f"Column {data_col} is of dtype {dtype}, which is not supported"
                 )
+        col_types = {col: str(data[col].dtype) for col in data_columns}
+        self.export_metadata(id_maps, n_classes, col_types)
 
-        sequences, col_types = self.extract_sequences(
-            data, seq_length, data_columns, target_column
-        )
+        data = data.sort_values(["sequenceId", "itemPosition"])
+        sequence_ids = sorted(list(np.unique(data["sequenceId"])))
+        for i, sequence_id in enumerate(sequence_ids):
+            data_subset = data.loc[data["sequenceId"] == sequence_id, :]
+            sequences = self.extract_sequences(
+                data_subset, seq_length, data_columns, target_column
+            )
 
-        self.splits = self.extract_data_subsets(sequences, group_proportions)
-        self.splits = [self.cast_columns_to_string(data) for data in self.splits]
-        self.export(id_maps, n_classes, col_types)
+            splits = self.extract_data_subsets(sequences, group_proportions)
+            splits = [self.cast_columns_to_string(data) for data in splits]
 
-    def export(self, id_maps, n_classes, col_types):
+            for split_path, split in zip(self.split_paths, splits):
+                write_mode = "w" if i == 0 else "a"
+                header = i == 0
+                split.to_csv(
+                    split_path,
+                    mode=write_mode,
+                    header=header,
+                    sep=",",
+                    decimal=".",
+                    index=None,
+                )
+
+        print(f"Written data to {self.split_paths}")
+
+    def export_metadata(self, id_maps, n_classes, col_types):
 
         data_driven_config = {
             "n_classes": n_classes,
@@ -86,10 +105,6 @@ class Preprocessor(object):
             "w",
         ) as f:
             f.write(json.dumps(data_driven_config))
-
-        for split_path, split in zip(self.split_paths, self.splits):
-            split.to_csv(split_path, sep=",", decimal=".", index=None)
-            print(f"Written data to {split_path}")
 
     @classmethod
     def cast_columns_to_string(cls, data):
@@ -129,14 +144,12 @@ class Preprocessor(object):
 
     @classmethod
     def extract_sequences(cls, data, seq_length, data_columns, target_column):
-
         raw_sequences = (
-            data.sort_values(["sequenceId", "itemPosition"])
-            .groupby("sequenceId")
+            data.groupby("sequenceId")
             .agg({col: list for col in data_columns})
             .reset_index(drop=False)
         )
-        col_types = {col: str(data[col].dtype) for col in data_columns}
+
         rows = []
         for _, in_row in raw_sequences.iterrows():
             seqs, targets = cls.extract_subsequences(
@@ -158,7 +171,7 @@ class Preprocessor(object):
             + list(range(seq_length, 0, -1))
             + ["target"],
         )
-        return sequences, col_types
+        return sequences
 
     @classmethod
     def get_subset_groups(cls, sequence_data, groups, n_cols):
