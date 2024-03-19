@@ -13,6 +13,7 @@ class PreprocessorModel(BaseModel):
     max_rows: Optional[int]
     seed: int
     target_column: str
+    return_targets: bool = True
 
     @validator("data_path")
     def validate_data_path(cls, v):
