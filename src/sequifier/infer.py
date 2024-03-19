@@ -70,8 +70,9 @@ class Inferer(object):
         ]
 
     def expand_to_batch_size(self, x):
-        filler = self.batch_size - x.shape[0]
-        return np.concatenate([x, x[0:filler, :]], axis=0)
+        repetitions = self.batch_size // x.shape[0]
+        filler = self.batch_size % x.shape[0]
+        return np.concatenate(([x] * repetitions) + [x[0:filler, :]], axis=0)
 
     def infer_pure(self, x):
         ort_inputs = {
@@ -94,7 +95,7 @@ class Inferer(object):
         probs = np.exp(ort_outs) / normalizer
         return probs
 
-    def infer_categorical(self, x, probs=None):
+    def infer_categorical_any_size(self, x, probs=None):
         if probs is None:
             probs = self.infer_probs_any_size(x)
         preds = probs.argmax(1)
@@ -104,7 +105,7 @@ class Inferer(object):
 
     def infer(self, x, probs=None):
         if self.target_column_type == "categorical":
-            return self.infer_categorical(x, probs)
+            return self.infer_categorical_any_size(x, probs)
         elif self.target_column_type == "real":
             return self.infer_real_any_size(x)
         else:
