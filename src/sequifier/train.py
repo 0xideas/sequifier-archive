@@ -14,7 +14,7 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import PANDAS_TO_TORCH_TYPES, numpy_to_pytorch
+from sequifier.helpers import PANDAS_TO_TORCH_TYPES, LogFile, numpy_to_pytorch
 
 
 class TransformerModel(nn.Module):
@@ -88,6 +88,13 @@ class TransformerModel(nn.Module):
         self.iter_save = hparams.training_spec.iter_save
         self.continue_training = hparams.training_spec.continue_training
         self.load_weights_conditional()
+
+        os.makedirs(os.path.join(self.project_path, "logs"), exist_ok=True)
+        open_mode = "w" if self.start_epoch == 1 else "a"
+        self.log_file = LogFile(
+            os.path.join(self.project_path, "logs", f"sequifier-{self.model_name}.txt"),
+            open_mode,
+        )
 
     def get_real_columns_repetitions(self, real_columns, nhead):
         real_columns_repetitions = {col: 1 for col in real_columns}
@@ -200,7 +207,7 @@ class TransformerModel(nn.Module):
                     1000 * total_loss / (self.log_interval * self.batch_size)
                 )
                 ppl = math.exp(cur_loss_normalized)
-                print(
+                self.log_file.write(
                     f"| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
                     f"loss {cur_loss_normalized :5.5f} | ppl {ppl:8.2f}"
@@ -220,16 +227,16 @@ class TransformerModel(nn.Module):
             val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
             val_ppl = math.exp(val_loss_normalized)
             elapsed = time.time() - epoch_start_time
-            print("-" * 89)
-            print(
+            self.log_file.write("-" * 89)
+            self.log_file.write(
                 f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
                 f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
             )
-            print("-" * 89)
+            self.log_file.write("-" * 89)
 
             if val_loss_normalized < best_val_loss:
                 best_val_loss = val_loss_normalized
-                best_model = copy.deepcopy(self)
+                best_model = self.copy_model()
 
             self.scheduler.step()
             if epoch % self.iter_save == 0:
@@ -239,6 +246,15 @@ class TransformerModel(nn.Module):
 
         self.export(self, "last")
         self.export(best_model, "best")
+        self.log_file.write("Training transformer complete")
+        self.log_file.close()
+
+    def copy_model(self):
+        log_file = self.log_file
+        del self.log_file
+        model_copy = copy.deepcopy(self)
+        self.log_file = log_file
+        return model_copy
 
     def generate_square_subsequent_mask(self, sz: int) -> Tensor:
         """Generates an upper-triangular matrix of -inf, with zeros on diag."""
@@ -317,14 +333,14 @@ class TransformerModel(nn.Module):
             },
             output_path,
         )
-        print(f"Saved model to {output_path}")
+        self.log_file.write(f"Saved model to {output_path}")
 
     def load_weights_conditional(self):
 
         latest_model_path = self.get_latest_model_name()
 
         if latest_model_path is not None and self.continue_training:
-            print(f"Loading model weights from {latest_model_path}")
+            self.log_file.write(f"Loading model weights from {latest_model_path}")
             checkpoint = torch.load(latest_model_path)
             self.load_state_dict(checkpoint["model_state_dict"])
             self.start_epoch = (
@@ -421,4 +437,3 @@ def train(args, args_config):
     model = TransformerModel(config).to(config.training_spec.device)
 
     model.train_model(X_train, y_train, X_valid, y_valid)
-    print("Training transformer complete")
