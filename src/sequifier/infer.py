@@ -122,8 +122,10 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
         if probs is not None:
             probs_list.append(probs)
         if (subsequence_id + 1) in subsequence_ids:
-            target_subsequence_filter = data["subsequenceId"] == (subsequence_id + 1)
-            data_col_filter = data["inputCol"] == config.target_column
+            target_subsequence_filter = data["subsequenceId"].values == (
+                subsequence_id + 1
+            )
+            data_col_filter = data["inputCol"].values == config.target_column
             f = np.logical_and(target_subsequence_filter, data_col_filter)
             f_sequence_ids = sorted(list(np.unique(data.loc[f, "sequenceId"])))
             f_sequence_ids_filter = np.array(
@@ -132,19 +134,34 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     for sequence_id in data_subset["sequenceId"]
                 ]
             )
-            f_preds = preds[f_sequence_ids_filter]
+            data_subset_col_filter = (
+                data_subset["inputCol"].values == config.target_column
+            )
+            f_sequence_ids_filter_subset = np.logical_and(
+                f_sequence_ids_filter, data_subset_col_filter
+            )
+
+            f_preds = preds[
+                f_sequence_ids_filter[
+                    np.arange(
+                        0, len(f_sequence_ids_filter), len(np.unique(data["inputCol"]))
+                    )
+                ]
+            ]
             f_data_subset = data_subset.loc[
-                f_sequence_ids_filter, ["sequenceId", "subsequenceId"]
+                f_sequence_ids_filter_subset, ["sequenceId", "subsequenceId"]
             ]
             assert data.loc[f, "1"].shape[0] == f_preds.shape[0]
             assert np.all(
                 data.loc[f, "sequenceId"].values == f_data_subset["sequenceId"].values
             )
-            assert np.all(f_data_subset["subsequenceId"].values == (subsequence_id + 1))
-
+            assert np.all(
+                (f_data_subset["subsequenceId"].values + 1) == (subsequence_id + 1)
+            ), f"{f_data_subset['subsequenceId'].values + 1} != {(subsequence_id + 1)}"
             data.loc[f, "1"] = f_preds
-    preds = np.concatenate(preds, axis=0)
-    if len(probs):
+
+    preds = np.concatenate(preds_list, axis=0)
+    if len(probs_list):
         probs = np.concatenate(probs, axis=0)
     else:
         probs = None
