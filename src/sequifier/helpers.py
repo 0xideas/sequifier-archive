@@ -1,4 +1,4 @@
-import os
+import subprocess
 
 import torch
 from torch import tensor
@@ -40,8 +40,12 @@ class LogFile(object):
 
     def write(self, string):
         self._file.write(f"{string}\n")
+        self._file.flush()
         n_lines = string.count("\n")
-        os.system(f"tail -{n_lines} {self._path}")
+        output = subprocess.check_output(
+            f"tail -{n_lines} {self._path}", shell=True, text=True
+        )
+        print(output)
 
     def close(self):
         self._file.close()
