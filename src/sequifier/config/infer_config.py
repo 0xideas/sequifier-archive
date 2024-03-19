@@ -22,6 +22,7 @@ class InfererModel(BaseModel):
     target_column: str
     target_column_type: str
     batch_size: int
+    auto_regression: bool
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):

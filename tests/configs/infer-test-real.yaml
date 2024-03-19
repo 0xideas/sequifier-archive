@@ -9,3 +9,4 @@ output_probabilities: false
 ddconfig_path: configs/ddconfigs/test_data_real_1.json
 map_to_id: true
 batch_size: 20
+auto_regression: false

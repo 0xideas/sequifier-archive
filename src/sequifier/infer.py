@@ -36,7 +36,7 @@ class Inferer(object):
         self.target_column_type = target_column_type
         self.batch_size = batch_size
 
-    def adjust_x_size(self, x):
+    def prepare_inference_batches(self, x):
         size = x[self.target_column].shape[0]
         if size == self.batch_size:
             return [x]
@@ -56,15 +56,14 @@ class Inferer(object):
 
     def infer_probs_any_size(self, x):
         size = x[self.target_column].shape[0]
-        x_adjusted = self.adjust_x_size(x)
+        x_adjusted = self.prepare_inference_batches(x)
         return np.concatenate([self.infer_probs(x_sub) for x_sub in x_adjusted], 0)[
             :size, :
         ]
 
     def infer_real_any_size(self, x):
-        # import code; code.interact(local=locals())
         size = x[self.target_column].shape[0]
-        x_adjusted = self.adjust_x_size(x)
+        x_adjusted = self.prepare_inference_batches(x)
         return np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
             :size, :
         ]
@@ -112,26 +111,65 @@ class Inferer(object):
             pass
 
 
-def infer(args, args_config):
-    config = load_inferer_config(args.config_path, args_config, args.on_preprocessed)
+def get_probs_preds_auto_regression(config, inferer, data, column_types):
+    data = data.sort_values(["subsequenceId", "sequenceId"])
+    preds_list, probs_list = [], []
+    subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
+    for subsequence_id in subsequence_ids:
+        data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
+        preds, probs = get_probs_preds(config, inferer, data_subset, column_types)
+        preds_list.append(preds)
+        if probs is not None:
+            probs_list.append(probs)
+        if (subsequence_id + 1) in subsequence_ids:
+            target_subsequence_filter = data["subsequenceId"] == (subsequence_id + 1)
+            data_col_filter = data["inputCol"] == config.target_column
+            f = np.logical_and(target_subsequence_filter, data_col_filter)
+            f_sequence_ids = sorted(list(np.unique(data.loc[f, "sequenceId"])))
+            f_sequence_ids_filter = np.array(
+                [
+                    sequence_id in f_sequence_ids
+                    for sequence_id in data_subset["sequenceId"]
+                ]
+            )
+            f_preds = preds[f_sequence_ids_filter]
+            f_data_subset = data_subset.loc[
+                f_sequence_ids_filter, ["sequenceId", "subsequenceId"]
+            ]
+            assert data.loc[f, "1"].shape[0] == f_preds.shape[0]
+            assert np.all(
+                data.loc[f, "sequenceId"].values == f_data_subset["sequenceId"].values
+            )
+            assert np.all(f_data_subset["subsequenceId"].values == (subsequence_id + 1))
 
-    column_types = {
-        col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
-        for col in config.column_types
-    }
+            data.loc[f, "1"] = f_preds
+    preds = np.concatenate(preds, axis=0)
+    if len(probs):
+        probs = np.concatenate(probs, axis=0)
+    else:
+        probs = None
+    return (preds, probs)
 
-    model_id = os.path.split(config.model_path)[1].replace(".onnx", "")
 
-    print(f"Inferring for {model_id}")
-
-    inference_data_path = os.path.join(config.project_path, config.inference_data_path)
-
-    data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
+def get_probs_preds(config, inferer, data, column_types):
     X, _ = numpy_to_pytorch(
         data, column_types, config.target_column, config.seq_length, config.device
     )
     X = {col: X_col.detach().cpu().numpy() for col, X_col in X.items()}
+
     del data
+
+    if config.output_probabilities:
+        probs = inferer.infer_probs_any_size(X)
+        preds = inferer.infer(None, probs)
+    else:
+        probs = None
+        preds = inferer.infer(X)
+    return (probs, preds)
+
+
+def infer(args, args_config):
+    config = load_inferer_config(args.config_path, args_config, args.on_preprocessed)
 
     if config.map_to_id:
         assert (
@@ -154,8 +192,34 @@ def infer(args, args_config):
         config.batch_size,
     )
 
+    column_types = {
+        col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
+        for col in config.column_types
+    }
+
+    model_id = os.path.split(config.model_path)[1].replace(".onnx", "")
+
+    print(f"Inferring for {model_id}")
+
+    inference_data_path = os.path.join(config.project_path, config.inference_data_path)
+
+    data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
+
+    if not config.auto_regression:
+        preds, probs = get_probs_preds(config, inferer, data, column_types)
+    else:
+        preds, probs = get_probs_preds_auto_regression(
+            config, inferer, data, column_types
+        )
+
+    os.makedirs(
+        os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
+    )
+    predictions_path = os.path.join(
+        config.project_path, "outputs", "predictions", f"{model_id}_predictions.csv"
+    )
+
     if config.output_probabilities:
-        probs = inferer.infer_probs_any_size(X)
         os.makedirs(
             os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True
         )
@@ -169,16 +233,6 @@ def infer(args, args_config):
         pd.DataFrame(probs).to_csv(
             probabilities_path, sep=",", decimal=".", index=False
         )
-        preds = inferer.infer(None, probs)
-    else:
-        preds = inferer.infer(X)
-
-    os.makedirs(
-        os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
-    )
-    predictions_path = os.path.join(
-        config.project_path, "outputs", "predictions", f"{model_id}_predictions.csv"
-    )
 
     print(f"Writing predictions to {predictions_path}")
     pd.DataFrame(preds).to_csv(predictions_path, sep=",", decimal=".", index=False)
