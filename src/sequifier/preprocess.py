@@ -19,6 +19,7 @@ class Preprocessor(object):
         seq_length,
         seed,
         target_column,
+        return_targets,
         max_rows=None,
     ):
         self.project_path = project_path
@@ -66,7 +67,7 @@ class Preprocessor(object):
         for i, sequence_id in enumerate(sequence_ids):
             data_subset = data.loc[data["sequenceId"] == sequence_id, :]
             sequences = self.extract_sequences(
-                data_subset, seq_length, data_columns, target_column
+                data_subset, seq_length, data_columns, target_column, return_targets
             )
 
             splits = self.extract_data_subsets(sequences, group_proportions)
@@ -121,14 +122,23 @@ class Preprocessor(object):
         return (data, id_map)
 
     @classmethod
-    def extract_subsequences(cls, in_seq, seq_length, data_columns, target_column):
+    def extract_subsequences(
+        cls, in_seq, seq_length, data_columns, target_column, return_targets
+    ):
 
-        nseq = max(
-            len(in_seq[target_column]) - seq_length - 1,
-            min(1, len(in_seq[target_column])),
-        )
+        if return_targets:
+            nseq = max(
+                len(in_seq[target_column]) - seq_length - 1,
+                min(1, len(in_seq[target_column])),
+            )
 
-        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
+            targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
+        else:
+            nseq = max(
+                len(in_seq[target_column]) - seq_length,
+                min(1, len(in_seq[target_column])),
+            )
+            targets = [np.nan for _ in range(nseq)]
 
         seqs = {}
         for data_col in data_columns:
@@ -143,7 +153,9 @@ class Preprocessor(object):
         return (seqs, targets)
 
     @classmethod
-    def extract_sequences(cls, data, seq_length, data_columns, target_column):
+    def extract_sequences(
+        cls, data, seq_length, data_columns, target_column, return_targets
+    ):
         raw_sequences = (
             data.groupby("sequenceId")
             .agg({col: list for col in data_columns})
@@ -153,7 +165,11 @@ class Preprocessor(object):
         rows = []
         for _, in_row in raw_sequences.iterrows():
             seqs, targets = cls.extract_subsequences(
-                in_row[data_columns], seq_length, data_columns, target_column
+                in_row[data_columns],
+                seq_length,
+                data_columns,
+                target_column,
+                return_targets,
             )
             for i, target in enumerate(targets):
                 subsequence_id = i
