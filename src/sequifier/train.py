@@ -236,7 +236,7 @@ class TransformerModel(nn.Module):
 
             if val_loss_normalized < best_val_loss:
                 best_val_loss = val_loss_normalized
-                best_model = copy.deepcopy(self)
+                best_model = self.copy_model()
 
             self.scheduler.step()
             if epoch % self.iter_save == 0:
@@ -248,6 +248,13 @@ class TransformerModel(nn.Module):
         self.export(best_model, "best")
         self.log_file.write("Training transformer complete")
         self.log_file.close()
+
+    def copy_model(self):
+        log_file = self.log_file
+        del self.log_file
+        model_copy = copy.deepcopy(self)
+        self.log_file = log_file
+        return model_copy
 
     def generate_square_subsequent_mask(self, sz: int) -> Tensor:
         """Generates an upper-triangular matrix of -inf, with zeros on diag."""
