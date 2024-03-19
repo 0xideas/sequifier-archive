@@ -117,7 +117,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
     subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
     for subsequence_id in subsequence_ids:
         data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
-        preds, probs = get_probs_preds(config, inferer, data_subset, column_types)
+        probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
         preds_list.append(preds)
         if probs is not None:
             probs_list.append(probs)
@@ -148,7 +148,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
         probs = np.concatenate(probs, axis=0)
     else:
         probs = None
-    return (preds, probs)
+    return (probs, preds)
 
 
 def get_probs_preds(config, inferer, data, column_types):
@@ -206,9 +206,9 @@ def infer(args, args_config):
     data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
 
     if not config.auto_regression:
-        preds, probs = get_probs_preds(config, inferer, data, column_types)
+        probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
-        preds, probs = get_probs_preds_auto_regression(
+        probs, preds = get_probs_preds_auto_regression(
             config, inferer, data, column_types
         )
 
