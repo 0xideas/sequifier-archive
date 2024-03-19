@@ -31,3 +31,17 @@ def numpy_to_pytorch(data, column_types, target_column, seq_length, device):
         target = None
 
     return (sequence, target)
+
+
+class LogFile(object):
+    def __init__(self, path, open_mode):
+        self._file = open(path, open_mode)
+        self._path = path
+
+    def write(self, string):
+        self._file.write(f"{string}\n")
+        n_lines = string.count("\n")
+        os.system(f"tail -{n_lines} {self._path}")
+
+    def close(self):
+        self._file.close()
