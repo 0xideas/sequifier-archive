@@ -7,3 +7,4 @@ group_proportions:
 - 0.2
 - 0.2
 max_rows: null
+return_targets: true
