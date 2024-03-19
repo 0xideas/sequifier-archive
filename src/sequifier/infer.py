@@ -113,10 +113,16 @@ class Inferer(object):
 
 def get_probs_preds_auto_regression(config, inferer, data, column_types):
     data = data.sort_values(["subsequenceId", "sequenceId"])
-    preds_list, probs_list = [], []
+    n_input_col_values = len(np.unique(data["inputCol"]))
+    preds_list, probs_list, indices = [], [], []
     subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
     for subsequence_id in subsequence_ids:
         data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
+        indices.append(
+            np.array(data_subset.index)[
+                np.arange(0, data_subset.shape[0], n_input_col_values)
+            ]
+        )
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
         preds_list.append(preds)
         if probs is not None:
@@ -143,9 +149,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
 
             f_preds = preds[
                 f_sequence_ids_filter[
-                    np.arange(
-                        0, len(f_sequence_ids_filter), len(np.unique(data["inputCol"]))
-                    )
+                    np.arange(0, len(f_sequence_ids_filter), n_input_col_values)
                 ]
             ]
             f_data_subset = data_subset.loc[
@@ -161,8 +165,18 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
             data.loc[f, "1"] = f_preds
 
     preds = np.concatenate(preds_list, axis=0)
+    index_order = np.concatenate(indices, axis=0)
+    assert len(preds) == len(index_order)
+    preds = np.array(
+        [p for p, i in sorted(list(zip(preds, index_order)), key=lambda t: t[1])]
+    )
     if len(probs_list):
         probs = np.concatenate(probs, axis=0)
+        assert probs.shape[0] == len(index_order)
+        probs = np.array(
+            [p for p, i in sorted(list(zip(probs, index_order)), key=lambda t: t[1])]
+        )
+
     else:
         probs = None
     return (probs, preds)
@@ -221,7 +235,6 @@ def infer(args, args_config):
     inference_data_path = os.path.join(config.project_path, config.inference_data_path)
 
     data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
-
     if not config.auto_regression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
