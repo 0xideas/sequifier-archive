@@ -168,7 +168,9 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     f_sequence_ids_filter_subset, ["sequenceId", "subsequenceId"]
                 ]  # find sequence ids and subsequence ids that exist for both the original subsequence
                 # id and the target subsequence id
-                assert data.loc[f, str(offset)].shape[0] == f_preds.shape[0]
+                assert (
+                    data.loc[f, str(offset)].shape[0] == f_preds.shape[0]
+                ), f"{data.columns = }: {data.loc[f,:].values = }  != {f_preds.shape = }"
                 assert np.all(
                     data.loc[f, "sequenceId"].values
                     == f_data_subset["sequenceId"].values
