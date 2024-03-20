@@ -21,6 +21,7 @@ class Preprocessor(object):
         seed,
         target_column,
         return_targets,
+        n_cores,
         max_rows=None,
     ):
         self.project_path = project_path
@@ -67,7 +68,7 @@ class Preprocessor(object):
 
         data = data.sort_values(["sequenceId", "itemPosition"])
 
-        n_cores = multiprocessing.cpu_count()
+        n_cores = n_cores if n_cores is not None else multiprocessing.cpu_count()
 
         batch_limits = get_batch_limits(data, n_cores)
         batches = [

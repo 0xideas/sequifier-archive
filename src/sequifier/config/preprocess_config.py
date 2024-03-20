@@ -14,6 +14,7 @@ class PreprocessorModel(BaseModel):
     seed: int
     target_column: str
     return_targets: bool = True
+    n_cores: Optional[int]
 
     @validator("data_path")
     def validate_data_path(cls, v):
