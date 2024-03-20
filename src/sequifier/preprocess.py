@@ -90,7 +90,9 @@ class Preprocessor(object):
         with multiprocessing.Pool(processes=n_cores_used) as pool:
             pool.starmap(preprocess_batch, batches)
 
-        combine_multiprocessing_outputs(len(group_proportions), n_cores_used)
+        combine_multiprocessing_outputs(
+            project_path, len(group_proportions), n_cores_used, f"{self.data_name_root}"
+        )
 
     def export_metadata(self, id_maps, n_classes, col_types):
 
@@ -284,12 +286,23 @@ def get_batch_limits(data, n_batches):
     return list(zip(actual_limits[:-1], actual_limits[1:]))
 
 
-def combine_multiprocessing_outputs(n_splits, n_batches):
+def combine_multiprocessing_outputs(project_path, n_splits, n_batches, dataset_name):
     for split in range(n_splits):
-        files = [f"data/full-split{split}-{batch}.csv" for batch in range(n_batches)]
-        command = " ".join(["csvstack"] + files + [f"> data/full-split{split}.csv"])
+        files = [
+            os.path.join(
+                project_path, "data", f"{dataset_name}-split{split}-{batch}.csv"
+            )
+            for batch in range(n_batches)
+        ]
+        out_path = os.path.join(
+            project_path, "data", f"{dataset_name}-split{split}.csv"
+        )
+        command = " ".join(["csvstack"] + files + [f"> {out_path}"])
         os.system(command)
-        delete_command = f"rm data/full-split{split}-*"
+        delete_path = os.path.join(
+            project_path, "data", f"{dataset_name}-split{split}-"
+        )
+        delete_command = f"rm {delete_path}*"
         os.system(delete_command)
 
 
