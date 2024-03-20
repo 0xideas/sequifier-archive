@@ -43,6 +43,11 @@ def inference_config_path_real():
 
 
 @pytest.fixture(scope="session")
+def inference_config_path_real_autoregression():
+    return os.path.join("tests", "configs", "infer-test-real-autoregression.yaml")
+
+
+@pytest.fixture(scope="session")
 def remove_project_path_contents(project_path):
 
     if os.path.exists(project_path):
@@ -70,6 +75,7 @@ def format_configs_locally(
     training_config_path_real,
     inference_config_path_cat,
     inference_config_path_real,
+    inference_config_path_real_autoregression,
 ):
     config_paths = [
         preprocessing_config_path_cat,
@@ -78,6 +84,7 @@ def format_configs_locally(
         training_config_path_real,
         inference_config_path_cat,
         inference_config_path_real,
+        inference_config_path_real_autoregression,
     ]
     for config_path in config_paths:
         with open(config_path, "r") as f:
@@ -130,10 +137,54 @@ def run_preprocessing(
             f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real}"
         )
 
+    source_path = os.path.join(
+        "tests", "resources", "test_data_real_1-split2-autoregression.csv"
+    )
+
+    target_path = os.path.join(
+        "tests", "project_folder", "data", "test_data_real_1-split2-autoregression.csv"
+    )
+
+    shutil.copyfile(source_path, target_path)
+
+
+@pytest.fixture(scope="session")
+def delete_inference_target(
+    run_preprocessing,
+    project_path,
+):
+
+    inference_data_paths = [
+        os.path.join(
+            project_path, "data", f"test_data_{variant}_{model_number}-split2.csv"
+        )
+        for variant in ["categorical", "real"]
+        for model_number in [1, 3, 5]
+    ]
+
+    inference_data_paths.append(
+        os.path.join(
+            project_path, "data", f"test_data_real_1-split2-autoregression.csv"
+        )
+    )
+
+    for inference_data_path in inference_data_paths:
+
+        inference_data = pd.read_csv(
+            inference_data_path,
+            sep=",",
+            decimal=".",
+            index_col=None,
+        )
+
+        inference_data = inference_data.drop(columns=["target"])
+
+        inference_data.to_csv(inference_data_path, index=None, decimal=".", sep=",")
+
 
 @pytest.fixture(scope="session")
 def run_training(
-    run_preprocessing, training_config_path_cat, training_config_path_real
+    run_preprocessing, project_path, training_config_path_cat, training_config_path_real
 ):
     for model_number in [1, 3, 5]:
         ddconfig_path_cat = os.path.join(
@@ -152,33 +203,14 @@ def run_training(
             f"sequifier --train --on-preprocessed --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real}"
         )
 
+    source_path = os.path.join(
+        project_path, "models", "sequifier-model-real-1-best.onnx"
+    )
+    target_path = os.path.join(
+        project_path, "models", "sequifier-model-real-1-best-autoregression.onnx"
+    )
 
-@pytest.fixture(scope="session")
-def delete_inference_target(
-    run_preprocessing,
-    project_path,
-    inference_config_path_cat,
-    inference_config_path_real,
-):
-
-    for inference_config_path in [
-        inference_config_path_cat,
-        inference_config_path_real,
-    ]:
-        with open(inference_config_path, "r") as f:
-            config = yaml.safe_load(f)
-        inference_data_path = os.path.join(project_path, config["inference_data_path"])
-
-        inference_data = pd.read_csv(
-            inference_data_path,
-            sep=",",
-            decimal=".",
-            index_col=None,
-        )
-
-        inference_data = inference_data.drop(columns=["target"])
-
-        inference_data.to_csv(inference_data_path)
+    shutil.copy(source_path, target_path)
 
 
 @pytest.fixture(scope="session")
@@ -188,6 +220,7 @@ def run_inference(
     project_path,
     inference_config_path_cat,
     inference_config_path_real,
+    inference_config_path_real_autoregression,
 ):
     for model_number in [1, 3, 5]:
         inference_model_path_cat = os.path.join(
@@ -215,3 +248,7 @@ def run_inference(
         os.system(
             f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real}"
         )
+
+    os.system(
+        f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real_autoregression}"
+    )

@@ -8,20 +8,25 @@ import pytest
 
 @pytest.fixture()
 def predictions(run_inference, project_path):
-    preds = {}
-    for variant in ["categorical", "real"]:
-        preds[variant] = {}
-        for model_number in [1, 3, 5]:
-            model_name = f"model-{variant}-{model_number}"
-            prediction_path = os.path.join(
-                project_path,
-                "outputs",
-                "predictions",
-                f"sequifier-{model_name}-best_predictions.csv",
-            )
-            preds[variant][model_name] = pd.read_csv(
-                prediction_path, sep=",", decimal=".", index_col=None
-            ).values.flatten()
+    preds = {"categorical": {}, "real": {}}
+    model_names = [
+        f"model-{variant}-{model_number}-best"
+        for variant in ["categorical", "real"]
+        for model_number in [1, 3, 5]
+    ]
+    model_names.append("model-real-1-best-autoregression")
+    for model_name in model_names:
+        prediction_path = os.path.join(
+            project_path,
+            "outputs",
+            "predictions",
+            f"sequifier-{model_name}_predictions.csv",
+        )
+        variant = model_name.split("-")[1]
+        preds[variant][model_name] = pd.read_csv(
+            prediction_path, sep=",", decimal=".", index_col=None
+        ).values.flatten()
+
     return preds
 
 

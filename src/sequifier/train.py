@@ -87,8 +87,11 @@ class TransformerModel(nn.Module):
 
         self.iter_save = hparams.training_spec.iter_save
         self.continue_training = hparams.training_spec.continue_training
-        self.load_weights_conditional()
+        load_string = self.load_weights_conditional()
+        self.initialize_log_file()
+        self.log_file.write(load_string)
 
+    def initialize_log_file(self):
         os.makedirs(os.path.join(self.project_path, "logs"), exist_ok=True)
         open_mode = "w" if self.start_epoch == 1 else "a"
         self.log_file = LogFile(
@@ -340,14 +343,15 @@ class TransformerModel(nn.Module):
         latest_model_path = self.get_latest_model_name()
 
         if latest_model_path is not None and self.continue_training:
-            self.log_file.write(f"Loading model weights from {latest_model_path}")
             checkpoint = torch.load(latest_model_path)
             self.load_state_dict(checkpoint["model_state_dict"])
             self.start_epoch = (
                 int(re.findall("epoch-([0-9]+)", latest_model_path)[0]) + 1
             )
+            return f"Loading model weights from {latest_model_path}"
         else:
             self.start_epoch = 1
+            return "Initializing new model"
 
     def get_latest_model_name(self):
 
