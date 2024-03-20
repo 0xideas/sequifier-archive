@@ -20,7 +20,7 @@ def predictions(run_inference, project_path):
             project_path,
             "outputs",
             "predictions",
-            f"sequifier-{model_name}",
+            f"sequifier-{model_name}_predictions.csv",
         )
         variant = model_name.split("-")[1]
         preds[variant][model_name] = pd.read_csv(
