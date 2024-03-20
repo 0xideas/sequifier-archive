@@ -22,16 +22,12 @@ class Preprocessor(object):
         seed,
         target_column,
         return_targets,
-        process_id=0,
-        n_processes=1,
         max_rows=None,
+        process_id=0,
     ):
         self.project_path = project_path
         self.seed = seed
         np.random.seed(seed)
-
-        if max_rows is not None:
-            data = data.head(int(max_rows / n_processes))
 
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
 
@@ -222,11 +218,10 @@ class Preprocessor(object):
         return [pd.concat(dataset, axis=0) for dataset in datasets]
 
 
-def preprocess_batch(config, n_cores, process_id, batch):
+def preprocess_batch(config, process_id, batch):
     Preprocessor(
         **{
             "data": batch,
-            "n_processes": n_cores,
             "process_id": process_id,
             **config.dict(),
         }
@@ -274,15 +269,23 @@ def combine_multiprocessing_outputs(n_splits, n_batches):
 def preprocess(args, args_config):
     config = load_preprocessor_config(args.config_path, args_config)
     data = pd.read_csv(config.data_path, sep=",", decimal=".", index_col=None)
+
     n_cores = multiprocessing.cpu_count()
+    if config.max_rows is not None:
+        data = data.head(int(config.max_rows))
+
     batch_limits = get_batch_limits(data, n_cores)
     batches = [
-        (config, n_cores, i, data.iloc[start:end, :])
-        for i, (start, end) in enumerate(batch_limits)
+        (config, data.iloc[start:end, :])
+        for start, end in batch_limits
+        if (end - start) > 0
     ]
-    with multiprocessing.Pool(processes=n_cores) as pool:
+    batches = [(config, i, batch) for i, (config, batch) in enumerate(batches)]
+
+    n_cores_used = len(batches)
+    with multiprocessing.Pool(processes=n_cores_used) as pool:
         pool.starmap(preprocess_batch, batches)
 
-    combine_multiprocessing_outputs(len(config.group_proportions), n_cores)
+    combine_multiprocessing_outputs(len(config.group_proportions), n_cores_used)
 
     print("Preprocessing complete")
