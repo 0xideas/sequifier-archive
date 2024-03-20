@@ -1,5 +1,6 @@
 import json
 import math
+import multiprocessing
 import os
 from argparse import ArgumentParser
 from random import shuffle
@@ -15,28 +16,31 @@ class Preprocessor(object):
         self,
         project_path,
         data_path,
+        data,
         group_proportions,
         seq_length,
         seed,
         target_column,
         return_targets,
+        process_id=0,
+        n_processes=1,
         max_rows=None,
     ):
         self.project_path = project_path
         self.seed = seed
         np.random.seed(seed)
 
-        data = pd.read_csv(data_path, sep=",", decimal=".", index_col=None)
-
         if max_rows is not None:
-            data = data.head(int(max_rows))
+            data = data.head(int(max_rows / n_processes))
 
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
 
         self.data_name_root = os.path.split(data_path)[1].split(".")[0]
         self.split_paths = [
             os.path.join(
-                self.project_path, "data", f"{self.data_name_root}-split{i}.csv"
+                self.project_path,
+                "data",
+                f"{self.data_name_root}-split{i}-{process_id}.csv",
             )
             for i in range(len(group_proportions))
         ]
@@ -218,7 +222,67 @@ class Preprocessor(object):
         return [pd.concat(dataset, axis=0) for dataset in datasets]
 
 
+def preprocess_batch(config, n_cores, process_id, batch):
+    Preprocessor(
+        **{
+            "data": batch,
+            "n_processes": n_cores,
+            "process_id": process_id,
+            **config.dict(),
+        }
+    )
+
+
+def get_batch_limits(data, n_batches):
+    sequence_ids = data["sequenceId"].values
+
+    new_sequence_id_indices = np.concatenate(
+        [
+            [0],
+            np.where(
+                np.concatenate([[False], sequence_ids[1:] != sequence_ids[:-1]], axis=0)
+            )[0],
+        ]
+    )
+
+    ideal_step = math.ceil(data.shape[0] / n_batches)
+    ideal_limits = np.array(
+        [ideal_step * m for m in range(n_batches)] + [data.shape[0]]
+    )
+    distances = [
+        np.abs(new_sequence_id_indices - ideal_limit)
+        for ideal_limit in ideal_limits[:-1]
+    ]
+    actual_limit_indices = [
+        np.where(distance == np.min(distance))[0] for distance in distances
+    ]
+    actual_limits = [
+        new_sequence_id_indices[limit_index[0]] for limit_index in actual_limit_indices
+    ] + [data.shape[0]]
+    return list(zip(actual_limits[:-1], actual_limits[1:]))
+
+
+def combine_multiprocessing_outputs(n_splits, n_batches):
+    for split in range(n_splits):
+        files = [f"data/full-split{split}-{batch}.csv" for batch in range(n_batches)]
+        command = " ".join(["csvstack"] + files + [f"> data/full-split{split}.csv"])
+        os.system(command)
+        delete_command = f"rm data/full-split{split}-*"
+        os.system(delete_command)
+
+
 def preprocess(args, args_config):
     config = load_preprocessor_config(args.config_path, args_config)
-    Preprocessor(**config.dict())
+    data = pd.read_csv(config.data_path, sep=",", decimal=".", index_col=None)
+    n_cores = multiprocessing.cpu_count()
+    batch_limits = get_batch_limits(data, n_cores)
+    batches = [
+        (config, n_cores, i, data.iloc[start:end, :])
+        for i, (start, end) in enumerate(batch_limits)
+    ]
+    with multiprocessing.Pool(processes=n_cores) as pool:
+        pool.starmap(preprocess_batch, batches)
+
+    combine_multiprocessing_outputs(len(config.group_proportions), n_cores)
+
     print("Preprocessing complete")
