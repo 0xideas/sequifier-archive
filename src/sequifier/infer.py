@@ -128,17 +128,28 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
         if probs is not None:
             probs_list.append(probs)
 
-        for offset in range(1, data["subsequenceId"].max() - subsequence_id + 1):
-            if (subsequence_id + offset) in subsequence_ids:
-                target_subsequence_filter = data["subsequenceId"].values == (
-                    subsequence_id + offset
-                )  # filter all data on target subsequence id
-                data_col_filter = (
-                    data["inputCol"].values == config.target_column
-                )  # filter on the target column
-                f = np.logical_and(
-                    target_subsequence_filter, data_col_filter
-                )  # filter on target subsequence id and target column
+        for offset in range(1, int(list(data.columns)[3])):
+            target_subsequence_filter = data["subsequenceId"].values == (
+                subsequence_id + offset
+            )  # filter all data on target subsequence id
+            data_col_filter = (
+                data["inputCol"].values == config.target_column
+            )  # filter on the target column
+            data_subset_sequence_ids = sorted(
+                list(np.unique(data_subset["sequenceId"]))
+            )
+            sequence_filter = np.array(
+                [
+                    sequence_id in data_subset_sequence_ids
+                    for sequence_id in data["sequenceId"]
+                ]
+            )
+            f = np.logical_and(
+                np.logical_and(target_subsequence_filter, data_col_filter),
+                sequence_filter,
+            )  # filter on target subsequence id and target column and sequence ids in data_subset
+
+            if np.sum(f) > 0:
                 f_sequence_ids = sorted(
                     list(np.unique(data.loc[f, "sequenceId"]))
                 )  # sequence ids that exist in those rows
