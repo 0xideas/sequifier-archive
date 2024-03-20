@@ -74,8 +74,9 @@ def test_preprocessed_data_real(data_splits):
         assert len(data_splits[name]) == 3
 
         for i, data in enumerate(data_splits[name]):
+            number_expected_columns = 12 - int(i == 2)
             assert data.shape[1] == (
-                12 - int(i == 2)
+                number_expected_columns
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
             for sequenceId, group in data.groupby("sequenceId"):
 
@@ -91,8 +92,9 @@ def test_preprocessed_data_categorical(data_splits):
         assert len(data_splits[name]) == 3
 
         for i, data in enumerate(data_splits[name]):
+            number_expected_columns = 12 - int(i == 2)
             assert data.shape[1] == (
-                12 - int(i == 2)
+                number_expected_columns
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
 
             for sequenceId, group in data.groupby("sequenceId"):

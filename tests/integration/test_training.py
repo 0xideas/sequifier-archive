@@ -34,12 +34,15 @@ def test_model_files_exists(run_training, project_path):
         sorted(list(os.listdir(os.path.join(project_path, "models"))))
     )
     expected_items = np.array(
-        [
-            f"sequifier-model-{model_type}-{j}-{kind}.onnx"
-            for model_type in ["categorical", "real"]
-            for j in [1, 3, 5]
-            for kind in ["best", "last"]
-        ]
+        sorted(
+            [
+                f"sequifier-model-{model_type}-{j}-{kind}.onnx"
+                for model_type in ["categorical", "real"]
+                for j in [1, 3, 5]
+                for kind in ["best", "last"]
+            ]
+            + ["sequifier-model-real-1-best-autoregression.onnx"]
+        )
     )
 
     print(f"{expected_items = }")

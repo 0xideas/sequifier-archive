@@ -2,7 +2,7 @@ project_path: tests/project_folder
 target_column: itemValue
 target_column_type: real
 inference_data_path: data/test_data_real_1-split2-autoregression.csv
-model_path: models/sequifier-model-real-1-best.onnx
+model_path: models/sequifier-model-real-1-best-autoregression.onnx
 device: cpu
 seq_length: 8
 output_probabilities: false
