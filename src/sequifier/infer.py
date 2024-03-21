@@ -211,9 +211,14 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
 
 def get_probs_preds(config, inferer, data, column_types):
     X, _ = numpy_to_pytorch(
-        data, column_types, config.target_column, config.seq_length, config.device
+        data,
+        column_types,
+        config.target_column,
+        config.seq_length,
+        config.device,
+        to_device=False,
     )
-    X = {col: X_col.detach().cpu().numpy() for col, X_col in X.items()}
+    X = {col: X_col.numpy() for col, X_col in X.items()}
 
     del data
 
