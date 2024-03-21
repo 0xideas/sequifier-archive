@@ -196,7 +196,7 @@ class TransformerModel(nn.Module):
                 np.arange(num_batches), size=num_batches, replace=False
             ).flatten()
         )
-        for batch in batch_order:
+        for batch_count, batch in enumerate(batch_order):
             batch_start = batch * self.batch_size
             data, targets = self.get_batch(
                 X_train, y_train, batch_start, self.batch_size, to_device=False
@@ -217,7 +217,7 @@ class TransformerModel(nn.Module):
             self.optimizer.step()
 
             total_loss += loss.item()
-            if batch % self.log_interval == 0 and batch > 0:
+            if batch_count % self.log_interval == 0 and batch_count > 0:
                 lr = self.scheduler.get_last_lr()[0]
                 ms_per_batch = (time.time() - start_time) * 1000 / self.log_interval
                 cur_loss_normalized = (
@@ -225,7 +225,7 @@ class TransformerModel(nn.Module):
                 )
                 ppl = math.exp(cur_loss_normalized)
                 self.log_file.write(
-                    f"| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | "
+                    f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
                     f"loss {cur_loss_normalized :5.5f} | ppl {ppl:8.2f}"
                 )
