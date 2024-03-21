@@ -172,7 +172,7 @@ class TransformerModel(nn.Module):
                     col: X[col][i : i + batch_size, :].to(self.device)
                     for col in X.keys()
                 },
-                y[i : i + batch_size],
+                y[i : i + batch_size].to(self.device),
             )
         else:
             return (
