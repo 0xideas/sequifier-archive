@@ -165,19 +165,24 @@ class TransformerModel(nn.Module):
         output = self.decoder(concatenated)
         return output
 
-    def get_batch(self, X, y, i, batch_size, to_device):
+    def get_batch(self, X, y, batch_start, batch_size, to_device):
         if to_device:
             return (
                 {
-                    col: X[col][i : i + batch_size, :].to(self.device)
+                    col: X[col][batch_start : batch_start + batch_size, :].to(
+                        self.device
+                    )
                     for col in X.keys()
                 },
-                y[i : i + batch_size].to(self.device),
+                y[batch_start : batch_start + batch_size].to(self.device),
             )
         else:
             return (
-                {col: X[col][i : i + batch_size, :] for col in X.keys()},
-                y[i : i + batch_size],
+                {
+                    col: X[col][batch_start : batch_start + batch_size, :]
+                    for col in X.keys()
+                },
+                y[batch_start : batch_start + batch_size],
             )
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
@@ -186,11 +191,15 @@ class TransformerModel(nn.Module):
         start_time = time.time()
 
         num_batches = math.ceil(len(X_train[self.target_column]) / self.batch_size)
-        for batch, i in enumerate(
-            range(0, X_train[self.target_column].size(0) - 1, self.batch_size)
-        ):
+        batch_order = list(
+            np.random.choice(
+                np.arange(num_batches), size=num_batches, replace=False
+            ).flatten()
+        )
+        for batch in batch_order:
+            batch_start = batch * self.batch_size
             data, targets = self.get_batch(
-                X_train, y_train, i, self.batch_size, to_device=False
+                X_train, y_train, batch_start, self.batch_size, to_device=False
             )
             output = self(data)
             if self.target_column_type == "categorical":
@@ -272,9 +281,11 @@ class TransformerModel(nn.Module):
         self.eval()  # turn on evaluation mode
         total_loss = 0.0
         with torch.no_grad():
-            for i in range(0, X_valid[self.target_column].size(0), self.batch_size):
+            for batch_start in range(
+                0, X_valid[self.target_column].size(0), self.batch_size
+            ):
                 data, targets = self.get_batch(
-                    X_valid, y_valid, i, self.batch_size, to_device=False
+                    X_valid, y_valid, batch_start, self.batch_size, to_device=False
                 )
                 output = self(data)
                 if self.target_column_type == "categorical":
