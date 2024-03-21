@@ -252,8 +252,8 @@ class TransformerModel(nn.Module):
 
         model_name = self.hparams.model_name
 
-        self.export(self, "last")
-        self.export(best_model, "best")
+        self.export(self, "last", epoch)
+        self.export(best_model, "best", epoch)
         self.log_file.write("Training transformer complete")
         self.log_file.close()
 
@@ -288,7 +288,7 @@ class TransformerModel(nn.Module):
 
         return total_loss / (X_valid[self.target_column].size(0))
 
-    def export(self, model, suffix):
+    def export(self, model, suffix, epoch):
         self.eval()
         x_cat = {
             col: torch.randint(
@@ -308,7 +308,9 @@ class TransformerModel(nn.Module):
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
         # Export the model
         export_path = os.path.join(
-            self.project_path, "models", f"sequifier-{self.model_name}-{suffix}.onnx"
+            self.project_path,
+            "models",
+            f"sequifier-{self.model_name}-{suffix}-{epoch}.onnx",
         )
         torch.onnx.export(
             model,  # model being run

@@ -10,11 +10,11 @@ import pytest
 def predictions(run_inference, project_path):
     preds = {"categorical": {}, "real": {}}
     model_names = [
-        f"model-{variant}-{model_number}-best"
+        f"model-{variant}-{model_number}-best-3"
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
     ]
-    model_names.append("model-real-1-best-autoregression")
+    model_names.append("model-real-1-best-3-autoregression")
     for model_name in model_names:
         prediction_path = os.path.join(
             project_path,
@@ -39,7 +39,7 @@ def probabilities(run_inference, project_path):
             project_path,
             "outputs",
             "probabilities",
-            f"sequifier-{model_name}-best_probabilities.csv",
+            f"sequifier-{model_name}-best-3_probabilities.csv",
         )
         probs[model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None
