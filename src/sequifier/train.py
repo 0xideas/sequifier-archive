@@ -190,7 +190,7 @@ class TransformerModel(nn.Module):
             range(0, X_train[self.target_column].size(0) - 1, self.batch_size)
         ):
             data, targets = self.get_batch(
-                X_train, y_train, i, self.batch_size, to_device=True
+                X_train, y_train, i, self.batch_size, to_device=False
             )
             output = self(data)
             if self.target_column_type == "categorical":
@@ -427,7 +427,7 @@ def train(args, args_config):
         config.target_column,
         config.seq_length,
         config.training_spec.device,
-        to_device=False,
+        to_device=True,
     )
     del data_train
 
