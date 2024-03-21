@@ -165,17 +165,20 @@ class TransformerModel(nn.Module):
         output = self.decoder(concatenated)
         return output
 
-    def get_batch(
-        self,
-        X,
-        y,
-        i,
-        batch_size,
-    ):
-        return (
-            {col: X[col][i : i + batch_size, :] for col in X.keys()},
-            y[i : i + batch_size],
-        )
+    def get_batch(self, X, y, i, batch_size, to_device):
+        if to_device:
+            return (
+                {
+                    col: X[col][i : i + batch_size, :].to(self.device)
+                    for col in X.keys()
+                },
+                y[i : i + batch_size].to(self.device),
+            )
+        else:
+            return (
+                {col: X[col][i : i + batch_size, :] for col in X.keys()},
+                y[i : i + batch_size],
+            )
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
@@ -186,7 +189,9 @@ class TransformerModel(nn.Module):
         for batch, i in enumerate(
             range(0, X_train[self.target_column].size(0) - 1, self.batch_size)
         ):
-            data, targets = self.get_batch(X_train, y_train, i, self.batch_size)
+            data, targets = self.get_batch(
+                X_train, y_train, i, self.batch_size, to_device=False
+            )
             output = self(data)
             if self.target_column_type == "categorical":
                 output = output.view(-1, self.hparams.n_classes[self.target_column])
@@ -247,8 +252,8 @@ class TransformerModel(nn.Module):
 
         model_name = self.hparams.model_name
 
-        self.export(self, "last")
-        self.export(best_model, "best")
+        self.export(self, "last", epoch)
+        self.export(best_model, "best", epoch)
         self.log_file.write("Training transformer complete")
         self.log_file.close()
 
@@ -268,7 +273,9 @@ class TransformerModel(nn.Module):
         total_loss = 0.0
         with torch.no_grad():
             for i in range(0, X_valid[self.target_column].size(0), self.batch_size):
-                data, targets = self.get_batch(X_valid, y_valid, i, self.batch_size)
+                data, targets = self.get_batch(
+                    X_valid, y_valid, i, self.batch_size, to_device=False
+                )
                 output = self(data)
                 if self.target_column_type == "categorical":
                     output = output.view(-1, self.hparams.n_classes[self.target_column])
@@ -281,7 +288,7 @@ class TransformerModel(nn.Module):
 
         return total_loss / (X_valid[self.target_column].size(0))
 
-    def export(self, model, suffix):
+    def export(self, model, suffix, epoch):
         self.eval()
         x_cat = {
             col: torch.randint(
@@ -301,7 +308,9 @@ class TransformerModel(nn.Module):
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
         # Export the model
         export_path = os.path.join(
-            self.project_path, "models", f"sequifier-{self.model_name}-{suffix}.onnx"
+            self.project_path,
+            "models",
+            f"sequifier-{self.model_name}-{suffix}-{epoch}.onnx",
         )
         torch.onnx.export(
             model,  # model being run
@@ -420,8 +429,9 @@ def train(args, args_config):
         config.target_column,
         config.seq_length,
         config.training_spec.device,
+        to_device=True,
     )
-    # del data_train
+    del data_train
 
     data_valid = pd.read_csv(
         config.validation_data_path, sep=",", decimal=".", index_col=None
@@ -432,6 +442,7 @@ def train(args, args_config):
         config.target_column,
         config.seq_length,
         config.training_spec.device,
+        to_device=True,
     )
     del data_valid
 
