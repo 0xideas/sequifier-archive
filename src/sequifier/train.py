@@ -429,7 +429,7 @@ def train(args, args_config):
         config.training_spec.device,
         to_device=False,
     )
-    # del data_train
+    del data_train
 
     data_valid = pd.read_csv(
         config.validation_data_path, sep=",", decimal=".", index_col=None
