@@ -12,7 +12,7 @@ from sequifier.helpers import PANDAS_TO_TORCH_TYPES, numpy_to_pytorch
 class Inferer(object):
     def __init__(
         self,
-        model_path,
+        inference_model_path,
         project_path,
         id_map,
         map_to_id,
@@ -29,12 +29,12 @@ class Inferer(object):
             )
 
         self.map_to_id = map_to_id
-        model_path_load = os.path.join(project_path, model_path)
+        inference_model_path_load = os.path.join(project_path, inference_model_path)
         execution_providers = [
             "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
         ]
         self.ort_session = onnxruntime.InferenceSession(
-            model_path_load, providers=execution_providers
+            inference_model_path_load, providers=execution_providers
         )
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
@@ -254,7 +254,7 @@ def infer(args, args_config):
         id_maps = None
 
     inferer = Inferer(
-        config.model_path,
+        config.inference_model_path,
         config.project_path,
         id_maps,
         config.map_to_id,
@@ -271,7 +271,7 @@ def infer(args, args_config):
         for col in config.column_types
     }
 
-    model_id = os.path.split(config.model_path)[1].replace(".onnx", "")
+    model_id = os.path.split(config.inference_model_path)[1].replace(".onnx", "")
 
     print(f"Inferring for {model_id}")
 

@@ -9,7 +9,7 @@ from pydantic import BaseModel, validator
 class InfererModel(BaseModel):
     project_path: str
     inference_data_path: str
-    model_path: str
+    inference_model_path: str
     device: str
     seq_length: int
     ddconfig_path: Optional[str] = None

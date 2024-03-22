@@ -8,27 +8,13 @@ from sequifier.train import train
 
 
 def build_args_config(args):
-    args_config = {}
+    args_config = {k: v for k, v in vars(args).items() if v is not None}
+
     if args.randomize:
         seed = np.random.choice(np.arange(int(1e9)))
         args_config["seed"] = seed
     else:
         args_config["seed"] = 1010
-
-    if args.data_path is not None:
-        args_config["data_path"] = args.data_path
-
-    if args.ddconfig_path is not None:
-        args_config["ddconfig_path"] = args.ddconfig_path
-
-    if args.model_name is not None:
-        args_config["model_name"] = args.model_name
-
-    if args.inference_model_path is not None:
-        args_config["model_path"] = args.inference_model_path
-
-    if args.inference_data_path is not None:
-        args_config["inference_data_path"] = args.inference_data_path
 
     return args_config
 
