@@ -282,7 +282,7 @@ class TransformerModel(nn.Module):
                 if val_loss_normalized < best_val_loss:
                     best_val_loss = val_loss_normalized
                     best_model = self.copy_model()
-                    
+
                     n_epochs_no_improvemet = 0
                 else:
                     n_epochs_no_improvemet += 1
