@@ -12,7 +12,7 @@ class PreprocessorModel(BaseModel):
     group_proportions: List[float]
     max_rows: Optional[int]
     seed: int
-    selected_columns: list[str]
+    selected_columns: Optional[list[str]]
     target_column: str
     return_targets: bool = True
     n_cores: Optional[int]

@@ -16,7 +16,7 @@ class InfererModel(BaseModel):
     output_probabilities: bool = False
     map_to_id: bool = True
     seed: int
-    selected_columns: list[str]
+    selected_columns: Optional[list[str]]
     column_types: dict[str, str]
     categorical_columns: list[str]
     real_columns: list[str]

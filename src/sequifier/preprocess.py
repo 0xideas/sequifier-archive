@@ -34,7 +34,11 @@ class Preprocessor(object):
         data = pd.read_csv(data_path, sep=",", decimal=".", index_col=None)
 
         if selected_columns is not None:
-            selected_columns_filtered = [col for col in selected_columns if col not in ["sequenceId", "itemPosition"]]
+            selected_columns_filtered = [
+                col
+                for col in selected_columns
+                if col not in ["sequenceId", "itemPosition"]
+            ]
             data = data[["sequenceId", "itemPosition"] + selected_columns_filtered]
 
         if max_rows is not None:

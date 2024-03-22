@@ -6,6 +6,19 @@ import pandas as pd
 import pytest
 import yaml
 
+SELECTED_COLUMNS = {
+    "categorical": {
+        1: "itemId",
+        3: "itemId,sup1",
+        5: "itemId,sup1,sup2,sup4",
+    },
+    "real": {
+        1: "itemValue",
+        3: "itemValue,sup1,sup2",
+        5: "itemValue,sup1,sup2,sup3,sup4",
+    },
+}
+
 
 @pytest.fixture(scope="session")
 def project_path():
@@ -127,14 +140,14 @@ def run_preprocessing(
             "tests", "resources", f"test_data_categorical_{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat}"
+            f"sequifier --preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat} --selected-columns=None"
         )
 
         data_path_real = os.path.join(
             "tests", "resources", f"test_data_real_{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real}"
+            f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real} --selected-columns={SELECTED_COLUMNS['real'][data_number]}"
         )
 
     source_path = os.path.join(
@@ -192,7 +205,7 @@ def run_training(
         )
         model_name_cat = f"model-categorical-{model_number}"
         os.system(
-            f"sequifier --train --on-preprocessed --config-path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat}"
+            f"sequifier --train --on-preprocessed --config-path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
         )
 
         ddconfig_path_real = os.path.join(
@@ -200,7 +213,7 @@ def run_training(
         )
         model_name_real = f"model-real-{model_number}"
         os.system(
-            f"sequifier --train --on-preprocessed --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real}"
+            f"sequifier --train --on-preprocessed --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real} --selected-columns=None"
         )
 
     source_path = os.path.join(
@@ -233,7 +246,7 @@ def run_inference(
             "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat}"
+            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
         )
 
         inference_model_path_real = os.path.join(
@@ -246,9 +259,9 @@ def run_inference(
             "configs", "ddconfigs", f"test_data_real_{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real}"
+            f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real} --selected-columns=None"
         )
 
     os.system(
-        f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real_autoregression}"
+        f"sequifier --infer --on-preprocessed --config-path={inference_config_path_real_autoregression} --selected-columns={SELECTED_COLUMNS['real'][1]}"
     )
