@@ -148,6 +148,7 @@ class TransformerModel(BaseModel):
     target_column: str
     target_column_type: str
     log_interval: int
+    inference_batch_size: int
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
