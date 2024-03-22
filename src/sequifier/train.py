@@ -14,7 +14,8 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import PANDAS_TO_TORCH_TYPES, LogFile, numpy_to_pytorch
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
+                               numpy_to_pytorch, subset_to_selected_columns)
 
 
 class TransformerModel(nn.Module):
@@ -23,6 +24,18 @@ class TransformerModel(nn.Module):
         self.project_path = hparams.project_path
         self.target_column = hparams.target_column
         self.target_column_type = hparams.target_column_type
+        self.selected_columns = hparams.selected_columns
+        self.real_columns = [
+            col
+            for col in hparams.real_columns
+            if ((self.selected_columns is None) or (col in self.selected_columns))
+        ]
+        self.categorical_columns = [
+            col
+            for col in hparams.categorical_columns
+            if ((self.selected_columns is None) or (col in self.selected_columns))
+        ]
+
         self.inference_batch_size = hparams.inference_batch_size
         self.model_name = (
             hparams.model_name
@@ -31,21 +44,21 @@ class TransformerModel(nn.Module):
         )
         self.hparams = hparams
         self.real_columns_repetitions = self.get_real_columns_repetitions(
-            hparams.real_columns, hparams.model_spec.nhead
+            self.real_columns, hparams.model_spec.nhead
         )
         self.model_type = "Transformer"
         self.log_interval = hparams.log_interval
         self.encoder = ModuleDict()
         self.pos_encoder = ModuleDict()
         for col, n_classes in hparams.n_classes.items():
-            if col in hparams.categorical_columns:
+            if col in self.categorical_columns:
                 self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
                 self.pos_encoder[col] = PositionalEncoding(
                     hparams.model_spec.d_model, hparams.training_spec.dropout
                 )
 
         embedding_size = (
-            hparams.model_spec.d_model * len(hparams.categorical_columns)
+            hparams.model_spec.d_model * len(self.categorical_columns)
         ) + int(np.sum(list(self.real_columns_repetitions.values())))
 
         encoder_layers = TransformerEncoderLayer(
@@ -131,7 +144,7 @@ class TransformerModel(nn.Module):
 
     def init_weights(self) -> None:
         initrange = 0.1
-        for col in self.hparams.categorical_columns:
+        for col in self.categorical_columns:
             self.encoder[col].weight.data.uniform_(-initrange, initrange)
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
@@ -145,14 +158,14 @@ class TransformerModel(nn.Module):
         """
 
         srcs = []
-        for col in self.hparams.categorical_columns:
+        for col in self.categorical_columns:
             src_t = self.encoder[col](src[col].T) * math.sqrt(
                 self.hparams.model_spec.d_model
             )
             src_t = self.pos_encoder[col](src_t)
             srcs.append(src_t)
 
-        for col in self.hparams.real_columns:
+        for col in self.real_columns:
             srcs.append(
                 src[col].T.unsqueeze(2).repeat(1, 1, self.real_columns_repetitions[col])
             )
@@ -314,13 +327,13 @@ class TransformerModel(nn.Module):
                 self.hparams.n_classes[col],
                 (self.inference_batch_size, self.hparams.seq_length),
             ).to(self.device)
-            for col in self.hparams.categorical_columns
+            for col in self.categorical_columns
         }
         x_real = {
             col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(
                 self.device
             )
-            for col in self.hparams.real_columns
+            for col in self.real_columns
         }
 
         x = {"src": {**x_cat, **x_real}}
@@ -443,6 +456,8 @@ def train(args, args_config):
     data_train = pd.read_csv(
         config.training_data_path, sep=",", decimal=".", index_col=None
     )
+    if config.selected_columns is not None:
+        data_train = subset_to_selected_columns(data_train, config.selected_columns)
     X_train, y_train = numpy_to_pytorch(
         data_train,
         column_types,
@@ -456,6 +471,9 @@ def train(args, args_config):
     data_valid = pd.read_csv(
         config.validation_data_path, sep=",", decimal=".", index_col=None
     )
+    if config.selected_columns is not None:
+        data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
+
     X_valid, y_valid = numpy_to_pytorch(
         data_valid,
         column_types,

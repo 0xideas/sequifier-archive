@@ -6,7 +6,8 @@ import onnxruntime
 import pandas as pd
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import PANDAS_TO_TORCH_TYPES, numpy_to_pytorch
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
+                               subset_to_selected_columns)
 
 
 class Inferer(object):
@@ -278,6 +279,9 @@ def infer(args, args_config):
     inference_data_path = os.path.join(config.project_path, config.inference_data_path)
 
     data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
+    if config.selected_columns is not None:
+        data = subset_to_selected_columns(data, config.selected_columns)
+
     if not config.auto_regression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:

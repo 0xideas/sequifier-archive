@@ -16,6 +16,7 @@ class Preprocessor(object):
         self,
         project_path,
         data_path,
+        selected_columns,
         group_proportions,
         seq_length,
         seed,
@@ -31,6 +32,14 @@ class Preprocessor(object):
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
 
         data = pd.read_csv(data_path, sep=",", decimal=".", index_col=None)
+
+        if selected_columns is not None:
+            selected_columns_filtered = [
+                col
+                for col in selected_columns
+                if col not in ["sequenceId", "itemPosition"]
+            ]
+            data = data[["sequenceId", "itemPosition"] + selected_columns_filtered]
 
         if max_rows is not None:
             data = data.head(int(max_rows))

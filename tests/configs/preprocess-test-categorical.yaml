@@ -1,6 +1,7 @@
 project_path: tests/project_folder
 target_column: itemId
-data_path: tests/resources/test_data_categorical_1.csv
+selected_columns: null
+data_path: tests/resources/test_data_categorical_5.csv
 seq_length: 8
 group_proportions:
 - 0.6
