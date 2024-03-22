@@ -23,6 +23,7 @@ class TransformerModel(nn.Module):
         self.project_path = hparams.project_path
         self.target_column = hparams.target_column
         self.target_column_type = hparams.target_column_type
+        self.inference_batch_size = hparams.inference_batch_size
         self.model_name = (
             hparams.model_name
             if hparams.model_name is not None
@@ -310,7 +311,9 @@ class TransformerModel(nn.Module):
             for col in self.hparams.categorical_columns
         }
         x_real = {
-            col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(self.device)
+            col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(
+                self.device
+            )
             for col in self.hparams.real_columns
         }
 
