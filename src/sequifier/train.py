@@ -469,6 +469,6 @@ def train(args, args_config):
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
 
-    model = TransformerModel(config).to(config.training_spec.device)
+    model = torch.compile(TransformerModel(config).to(config.training_spec.device))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
