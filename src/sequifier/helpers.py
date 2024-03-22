@@ -2,8 +2,15 @@ import subprocess
 
 import torch
 from torch import tensor
+import numpy as np
 
 PANDAS_TO_TORCH_TYPES = {"int64": torch.int64, "float64": torch.float32}
+
+
+def subset_to_selected_columns(data, selected_columns):
+    column_filters = [(data["inputCol"].values  == input_col)for input_col in selected_columns]
+    filter_ = np.logical_or.reduce(column_filters)
+    return(data.loc[filter_,:])
 
 
 def numpy_to_pytorch(data, column_types, target_column, seq_length, device, to_device):

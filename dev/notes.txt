@@ -3,6 +3,7 @@ x more memory efficient preprocessing
 x shuffle data during training
 
 x replace batch resizing with dynamic axes -> not possible unless I give up dict as model input
+move preprocessing from __init__ method
 make underscore and dash usage consistent
 make query/loc consistent
 make tests smaller
@@ -17,7 +18,7 @@ file formats other than csv? -> yes, parquet, for compression
 
 
 x adding export batch size (only if dynamic axes is not working)
-add gradient accumulation
+x add gradient accumulation
 columns to use for training and inference as config parameters
-compile model using torch.compile or thunder (just released)
+x compile model using torch.compile or thunder (just released)
 

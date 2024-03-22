@@ -14,7 +14,7 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import PANDAS_TO_TORCH_TYPES, LogFile, numpy_to_pytorch
+from sequifier.helpers import PANDAS_TO_TORCH_TYPES, LogFile, numpy_to_pytorch, subset_to_selected_columns
 
 
 class TransformerModel(nn.Module):
@@ -430,6 +430,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
+
 def train(args, args_config):
     config = load_transformer_config(
         args.config_path, args_config, args.on_preprocessed
@@ -440,9 +441,11 @@ def train(args, args_config):
         for col in config.column_types
     }
 
+
     data_train = pd.read_csv(
         config.training_data_path, sep=",", decimal=".", index_col=None
     )
+    data_train = subset_to_selected_columns(data_train, config.selected_columns)
     X_train, y_train = numpy_to_pytorch(
         data_train,
         column_types,
@@ -456,6 +459,8 @@ def train(args, args_config):
     data_valid = pd.read_csv(
         config.validation_data_path, sep=",", decimal=".", index_col=None
     )
+    data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
+
     X_valid, y_valid = numpy_to_pytorch(
         data_valid,
         column_types,
