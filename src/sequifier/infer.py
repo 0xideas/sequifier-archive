@@ -20,7 +20,8 @@ class Inferer(object):
         real_columns,
         target_column,
         target_column_type,
-        batch_size,
+        inference_batch_size,
+        device,
     ):
         if target_column_type == "categorical":
             self.index_map = (
@@ -29,25 +30,34 @@ class Inferer(object):
 
         self.map_to_id = map_to_id
         model_path_load = os.path.join(project_path, model_path)
-        self.ort_session = onnxruntime.InferenceSession(model_path_load)
+        execution_providers = [
+            "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
+        ]
+        self.ort_session = onnxruntime.InferenceSession(
+            model_path_load, providers=execution_providers
+        )
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
         self.target_column = target_column
         self.target_column_type = target_column_type
-        self.batch_size = batch_size
+        self.inference_batch_size = inference_batch_size
 
     def prepare_inference_batches(self, x):
         size = x[self.target_column].shape[0]
-        if size == self.batch_size:
+        if size == self.inference_batch_size:
             return [x]
-        elif size < self.batch_size:
+        elif size < self.inference_batch_size:
             x_expanded = {
                 col: self.expand_to_batch_size(x_col) for col, x_col in x.items()
             }
             return [x_expanded]
         else:
-            starts = range(0, size, self.batch_size)
-            ends = range(self.batch_size, size + self.batch_size, self.batch_size)
+            starts = range(0, size, self.inference_batch_size)
+            ends = range(
+                self.inference_batch_size,
+                size + self.inference_batch_size,
+                self.inference_batch_size,
+            )
             xs = [
                 {col: x_col[start:end, :] for col, x_col in x.items()}
                 for start, end in zip(starts, ends)
@@ -69,8 +79,8 @@ class Inferer(object):
         ]
 
     def expand_to_batch_size(self, x):
-        repetitions = self.batch_size // x.shape[0]
-        filler = self.batch_size % x.shape[0]
+        repetitions = self.inference_batch_size // x.shape[0]
+        filler = self.inference_batch_size % x.shape[0]
         return np.concatenate(([x] * repetitions) + [x[0:filler, :]], axis=0)
 
     def infer_pure(self, x):
@@ -252,7 +262,8 @@ def infer(args, args_config):
         config.real_columns,
         config.target_column,
         config.target_column_type,
-        config.batch_size,
+        config.inference_batch_size,
+        config.device,
     )
 
     column_types = {

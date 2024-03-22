@@ -21,7 +21,7 @@ class InfererModel(BaseModel):
     real_columns: list[str]
     target_column: str
     target_column_type: str
-    batch_size: int
+    inference_batch_size: int
     auto_regression: bool
 
     @validator("inference_data_path")

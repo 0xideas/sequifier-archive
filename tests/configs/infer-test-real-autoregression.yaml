@@ -8,5 +8,5 @@ seq_length: 8
 output_probabilities: false
 ddconfig_path: configs/ddconfigs/test_data_real_1.json
 map_to_id: true
-batch_size: 20
+inference_batch_size: 10
 auto_regression: true
