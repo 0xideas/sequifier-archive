@@ -6,8 +6,11 @@ import onnxruntime
 import pandas as pd
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
-                               subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    numpy_to_pytorch,
+    subset_to_selected_columns,
+)
 
 
 class Inferer(object):
