@@ -48,11 +48,7 @@ class LogFile(object):
     def write(self, string):
         self._file.write(f"{string}\n")
         self._file.flush()
-        n_lines = string.count("\n")
-        output = subprocess.check_output(
-            f"tail -{n_lines} {self._path}", shell=True, text=True
-        )
-        print(output)
+        print(string)
 
     def close(self):
         self._file.close()
