@@ -1,0 +1,5 @@
+sequifier --preprocess --config-path=tests/configs/preprocess-test-categorical.yaml --data-path=tests/resources/test_data_categorical_3.csv
+
+sequifier --train --on-preprocessed --config-path=tests/configs/train-test-categorical.yaml --ddconfig-path=configs/ddconfigs/test_data_categorical_3.json --model-name=model-categorical-3
+
+sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-categorical.yaml --ddconfig-path=configs/ddconfigs/test_data_categorical_3.json --inference-model-path=models/sequifier-model-categorical-3-best-3.onnx --inference-data-path=data/test_data_categorical_3-split2.csv

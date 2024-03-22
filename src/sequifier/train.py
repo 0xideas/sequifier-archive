@@ -72,6 +72,7 @@ class TransformerModel(nn.Module):
 
         self.criterion = eval(f"torch.nn.{hparams.training_spec.criterion}()")
         self.batch_size = hparams.training_spec.batch_size
+        self.accumulation_steps = hparams.training_spec.accumulation_steps
         self.device = hparams.training_spec.device
 
         self.src_mask = self.generate_square_subsequent_mask(
@@ -211,11 +212,16 @@ class TransformerModel(nn.Module):
                 pass
 
             loss = self.criterion(output, targets)
-
-            self.optimizer.zero_grad()
             loss.backward()
+
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
-            self.optimizer.step()
+
+            if (
+                self.accumulation_steps is None
+                or (batch_count // self.batch_size + 1) % self.accumulation_steps == 0
+            ):
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
             total_loss += loss.item()
             if batch_count % self.log_interval == 0 and batch_count > 0:

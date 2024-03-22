@@ -87,6 +87,7 @@ class TrainingSpecModel(BaseModel):
     iter_save: int
     batch_size: int
     lr: float  # learning rate
+    accumulation_steps: Optional[int]
     dropout: float
     criterion: str
     optimizer: CustomValidation[DotDict]  # mandatory

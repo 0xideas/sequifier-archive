@@ -17,6 +17,7 @@ training_spec:
   iter_save: 1
   batch_size: 20
   lr: 0.003
+  accumulation_steps: 2
   dropout: 0.3
   criterion: CrossEntropyLoss
   optimizer:
