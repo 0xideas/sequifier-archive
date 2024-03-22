@@ -14,8 +14,12 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
-                               numpy_to_pytorch, subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    numpy_to_pytorch,
+    subset_to_selected_columns,
+)
 
 
 class TransformerModel(nn.Module):
@@ -46,6 +50,7 @@ class TransformerModel(nn.Module):
         self.real_columns_repetitions = self.get_real_columns_repetitions(
             self.real_columns, hparams.model_spec.nhead
         )
+        self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
         self.model_type = "Transformer"
         self.log_interval = hparams.log_interval
         self.encoder = ModuleDict()
@@ -254,35 +259,41 @@ class TransformerModel(nn.Module):
 
     def train_model(self, X_train, y_train, X_valid, y_valid):
         best_val_loss = float("inf")
-        best_model = None
-
+        n_epochs_no_improvemet = 0
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
-            epoch_start_time = time.time()
-            self.train_epoch(X_train, y_train, epoch)
-            val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
-            val_ppl = math.exp(val_loss_normalized)
-            elapsed = time.time() - epoch_start_time
-            self.log_file.write("-" * 89)
-            self.log_file.write(
-                f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
-            )
-            self.log_file.write("-" * 89)
+            if (
+                self.early_stopping_epochs is None
+                or n_epochs_no_improvemet < self.early_stopping_epochs
+            ):
+                epoch_start_time = time.time()
+                self.train_epoch(X_train, y_train, epoch)
+                val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
+                val_ppl = math.exp(val_loss_normalized)
+                elapsed = time.time() - epoch_start_time
+                self.log_file.write("-" * 89)
+                self.log_file.write(
+                    f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
+                    f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
+                )
+                self.log_file.write("-" * 89)
 
-            if val_loss_normalized < best_val_loss:
-                best_val_loss = val_loss_normalized
-                best_model = self.copy_model()
+                if val_loss_normalized < best_val_loss:
+                    best_val_loss = val_loss_normalized
+                    best_model = self.copy_model()
+                    
+                    n_epochs_no_improvemet = 0
+                else:
+                    n_epochs_no_improvemet += 1
 
-            self.scheduler.step()
-            if epoch % self.iter_save == 0:
-                self.save(epoch, val_loss_normalized)
+                self.scheduler.step()
+                if epoch % self.iter_save == 0:
+                    self.save(epoch, val_loss_normalized)
+                last_epoch = int(epoch)
 
-        model_name = self.hparams.model_name
-
-        self.export(self, "last", epoch)
-        self.export(best_model, "best", epoch)
+        self.export(self, "last", last_epoch)
+        self.export(best_model, "best", last_epoch)
         self.log_file.write("Training transformer complete")
         self.log_file.close()
 

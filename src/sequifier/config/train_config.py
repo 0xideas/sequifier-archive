@@ -84,6 +84,7 @@ VALID_SCHEDULERS = [
 class TrainingSpecModel(BaseModel):
     device: str
     epochs: int
+    early_stopping_epochs: Optional[int]
     iter_save: int
     batch_size: int
     lr: float  # learning rate
