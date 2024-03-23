@@ -452,9 +452,11 @@ class PositionalEncoding(nn.Module):
 
 
 def train(args, args_config):
-    config = load_transformer_config(
-        args.config_path, args_config, args.on_preprocessed
+    config_path = (
+        args.config_path if args.config_path is not None else "configs/train.yaml"
     )
+
+    config = load_transformer_config(config_path, args_config, args.on_preprocessed)
 
     column_types = {
         col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]

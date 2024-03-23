@@ -244,7 +244,11 @@ def get_probs_preds(config, inferer, data, column_types):
 
 
 def infer(args, args_config):
-    config = load_inferer_config(args.config_path, args_config, args.on_preprocessed)
+    config_path = (
+        args.config_path if args.config_path is not None else "configs/infer.yaml"
+    )
+
+    config = load_inferer_config(config_path, args_config, args.on_preprocessed)
 
     if config.map_to_id:
         assert (

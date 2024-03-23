@@ -11,7 +11,6 @@ def build_args_config(args):
     args_config = {
         k: v for k, v in vars(args).items() if v is not None and k != "randomize"
     }
-
     if args.randomize:
         seed = np.random.choice(np.arange(int(1e9)))
         args_config["seed"] = seed
