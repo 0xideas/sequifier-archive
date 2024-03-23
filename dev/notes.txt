@@ -22,5 +22,11 @@ use numpy reduce where possible
 
 
 
+add exporting to pickle and gpu inference/(make onnx a flag)
+add dynamic preprocessing on training
 
+make underscore and dash usage consistent
+make query/loc consistent
+systematize hparams or self access for hyperparameters in train.py
+use numpy reduce where possible
 

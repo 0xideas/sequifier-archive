@@ -6,6 +6,7 @@ import shutil
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from sequifier.config.preprocess_config import load_preprocessor_config
 from sequifier.helpers import read_data, write_data
@@ -268,6 +269,7 @@ def preprocess_batch(
     write_format,
 ):
     sequence_ids = sorted(list(np.unique(batch["sequenceId"])))
+    written_files = {i: [] for i, _ in enumerate(split_paths)}
     for i, sequence_id in enumerate(sequence_ids):
         data_subset = batch.loc[batch["sequenceId"] == sequence_id, :]
         sequences = extract_sequences(
@@ -277,22 +279,25 @@ def preprocess_batch(
         splits = extract_data_subsets(sequences, group_proportions)
         splits = [cast_columns_to_string(data) for data in splits]
 
-        for split_path, split in zip(split_paths, splits):
+        for j, (split_path, split) in enumerate(zip(split_paths, splits)):
+            split_path_batch_seq = split_path.replace(
+                f".{write_format}", f"-{process_id}-{i}.{write_format}"
+            )
+            split_path_batch_seq = insert_top_folder(split_path_batch_seq, "temp")
 
             if write_format == "csv":
-                split_path_batch_seq = split_path.replace(
-                    f".csv", f"-{process_id}-{i}.{write_format}"
-                )
-                split_path_batch_seq = insert_top_folder(split_path_batch_seq, "temp")
-
                 write_data(split, split_path_batch_seq, "csv", mode="w", header=True)
-
             if write_format == "parquet":
-                split_path_batch_seq = split_path.replace(
-                    f".parquet", f"-{process_id}-{i}.{write_format}"
-                )
-                split_path_batch_seq = insert_top_folder(split_path_batch_seq, "temp")
                 write_data(split, split_path_batch_seq, "parquet")
+
+            written_files[j] = written_files[j] + [split_path_batch_seq]
+
+    for j, split_path in enumerate(split_paths):
+        out_path = split_path.replace(
+            f".{write_format}", f"-{process_id}.{write_format}"
+        )
+        out_path = insert_top_folder(out_path, "temp")
+        combine_files(written_files[j], out_path)
 
     return len(sequence_ids)
 
@@ -351,12 +356,25 @@ def combine_multiprocessing_outputs(
             command = " ".join(["csvstack"] + files + [f"> {out_path}"])
             os.system(command)
         if write_format == "parquet":
-            import pyarrow.parquet as pq
 
-            schema = pq.ParquetFile(files[0]).schema_arrow
-            with pq.ParquetWriter(out_path, schema=schema) as writer:
-                for file in files:
-                    writer.write_table(pq.read_table(file, schema=schema))
+            files = [
+                os.path.join(
+                    project_path,
+                    "data",
+                    "temp",
+                    f"{dataset_name}-split{split}-{batch}.{write_format}",
+                )
+                for batch in range(n_batches)
+            ]
+
+            combine_files(files, out_path)
+
+
+def combine_files(files, out_path):
+    schema = pq.ParquetFile(files[0]).schema_arrow
+    with pq.ParquetWriter(out_path, schema=schema, compression="snappy") as writer:
+        for file in files:
+            writer.write_table(pq.read_table(file, schema=schema))
 
 
 def preprocess(args, args_config):
