@@ -103,8 +103,6 @@ class Preprocessor(object):
 
         n_cores_used = len(batches)
 
-        preprocess_batch(*batches[0])
-
         with multiprocessing.Pool(processes=n_cores_used) as pool:
             n_sequences_per_batch = pool.starmap(preprocess_batch, batches)
 
