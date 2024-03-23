@@ -351,8 +351,12 @@ def combine_multiprocessing_outputs(
             command = " ".join(["csvstack"] + files + [f"> {out_path}"])
             os.system(command)
         if write_format == "parquet":
-            data = pd.concat([read_data(path, write_format) for path in files], axis=0)
-            write_data(data, out_path, write_format)
+            import pyarrow.parquet as pq
+
+            schema = pq.ParquetFile(files[0]).schema_arrow
+            with pq.ParquetWriter(out_path, schema=schema) as writer:
+                for file in files:
+                    writer.write_table(pq.read_table(file, schema=schema))
 
 
 def preprocess(args, args_config):

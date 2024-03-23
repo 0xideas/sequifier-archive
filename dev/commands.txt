@@ -3,7 +3,7 @@ sequifier --preprocess --config-path=tests/configs/preprocess-test-categorical.y
 sequifier --train --on-preprocessed --config-path=tests/configs/train-test-categorical.yaml --ddconfig-path=configs/ddconfigs/test_data_categorical_3.json --model-name=model-categorical-3 --selected-columns=itemId,sup1,sup2
 
 
-sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-categorical.yaml --ddconfig-path=configs/ddconfigs/test_data_categorical_3.json --inference-model-path=models/sequifier-model-categorical-3-best-3.onnx --inference-data-path=data/test_data_categorical_3-split2.csv --selected-columns=itemId,sup1,sup2
+sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-categorical.yaml --ddconfig-path=configs/ddconfigs/test_data_categorical_3.json --inference-model-path=models/sequifier-model-categorical-3-best-3.onnx --inference-data-path=data/test_data_categorical_3-split2.parquet --selected-columns=itemId,sup1,sup2
 
 
 
