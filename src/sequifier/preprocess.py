@@ -360,6 +360,9 @@ def combine_multiprocessing_outputs(
 
 
 def preprocess(args, args_config):
-    config = load_preprocessor_config(args.config_path, args_config)
+    config_path = (
+        args.config_path if args.config_path is not None else "configs/preprocess.yaml"
+    )
+    config = load_preprocessor_config(config_path, args_config)
     Preprocessor(**config.dict())
     print("Preprocessing complete")
