@@ -6,11 +6,9 @@ import onnxruntime
 import pandas as pd
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    numpy_to_pytorch,
-    subset_to_selected_columns,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
+                               read_data, subset_to_selected_columns,
+                               write_data)
 
 
 class Inferer(object):
@@ -281,7 +279,7 @@ def infer(args, args_config):
 
     inference_data_path = os.path.join(config.project_path, config.inference_data_path)
 
-    data = pd.read_csv(inference_data_path, sep=",", decimal=".", index_col=None)
+    data = read_data(inference_data_path, config.read_format)
     if config.selected_columns is not None:
         data = subset_to_selected_columns(data, config.selected_columns)
 
@@ -295,9 +293,6 @@ def infer(args, args_config):
     os.makedirs(
         os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
     )
-    predictions_path = os.path.join(
-        config.project_path, "outputs", "predictions", f"{model_id}_predictions.csv"
-    )
 
     if config.output_probabilities:
         os.makedirs(
@@ -307,13 +302,18 @@ def infer(args, args_config):
             config.project_path,
             "outputs",
             "probabilities",
-            f"{model_id}_probabilities.csv",
+            f"{model_id}_probabilities.{config.write_format}",
         )
         print(f"Writing probabilities to {probabilities_path}")
-        pd.DataFrame(probs).to_csv(
-            probabilities_path, sep=",", decimal=".", index=False
-        )
+        write_data(pd.DataFrame(probs), probabilities_path, config.write_format)
+
+    predictions_path = os.path.join(
+        config.project_path,
+        "outputs",
+        "predictions",
+        f"{model_id}_predictions.{config.write_format}",
+    )
 
     print(f"Writing predictions to {predictions_path}")
-    pd.DataFrame(preds).to_csv(predictions_path, sep=",", decimal=".", index=False)
+    write_data(pd.DataFrame(preds), predictions_path, config.write_format)
     print("Inference complete")

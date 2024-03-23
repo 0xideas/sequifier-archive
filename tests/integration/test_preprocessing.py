@@ -29,7 +29,7 @@ def test_dd_config(dd_configs):
         ), list(dd_config.keys())
 
         assert len(dd_config["split_paths"]) == 3
-        assert dd_config["split_paths"][0].endswith("split0.csv")
+        assert dd_config["split_paths"][0].endswith("split0.parquet")
 
         if "itemId" in dd_config["n_classes"]:
             assert len(dd_config["id_maps"]["itemId"]) == 30
@@ -51,13 +51,10 @@ def test_dd_config(dd_configs):
 def data_splits(project_path):
     data_split_values = {
         f"{j}_{variant}": [
-            pd.read_csv(
+            pd.read_parquet(
                 os.path.join(
-                    project_path, "data", f"test_data_{variant}_{j}-split{i}.csv"
-                ),
-                sep=",",
-                decimal=".",
-                index_col=None,
+                    project_path, "data", f"test_data_{variant}_{j}-split{i}.parquet"
+                )
             )
             for i in range(3)
         ]

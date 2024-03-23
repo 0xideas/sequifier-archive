@@ -15,6 +15,9 @@ class PreprocessorModel(BaseModel):
     selected_columns: Optional[list[str]]
     target_column: str
     return_targets: bool = True
+    read_format: str = "csv"
+    write_format: str = "parquet"
+
     n_cores: Optional[int]
 
     @validator("data_path")
@@ -31,6 +34,22 @@ class PreprocessorModel(BaseModel):
             raise ValueError(
                 f"You need at least 3 splits of data, which correspond to training, validation and testing data"
             )
+        return v
+
+    @validator("read_format")
+    def validate_read_format(cls, v):
+        assert v in [
+            "csv",
+            "parquet",
+        ], "Currently only 'csv' and 'parquet' are supported"
+        return v
+
+    @validator("write_format")
+    def validate_write_format(cls, v):
+        assert v in [
+            "csv",
+            "parquet",
+        ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
 

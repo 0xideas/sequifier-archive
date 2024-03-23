@@ -152,6 +152,7 @@ class TransformerModel(BaseModel):
     target_column_type: str
     log_interval: int
     inference_batch_size: int
+    read_format: str = "parquet"
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
@@ -159,6 +160,14 @@ class TransformerModel(BaseModel):
     @validator("target_column_type")
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"]
+        return v
+
+    @validator("read_format")
+    def validate_read_format(cls, v):
+        assert v in [
+            "csv",
+            "parquet",
+        ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
     def __init__(self, **kwargs):

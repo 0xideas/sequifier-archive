@@ -24,6 +24,8 @@ class InfererModel(BaseModel):
     target_column_type: str
     inference_batch_size: int
     auto_regression: bool
+    read_format: str = "parquet"
+    write_format: str = "csv"
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):
@@ -37,6 +39,22 @@ class InfererModel(BaseModel):
     @validator("target_column_type")
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"], v
+        return v
+
+    @validator("read_format")
+    def validate_read_format(cls, v):
+        assert v in [
+            "csv",
+            "parquet",
+        ], "Currently only 'csv' and 'parquet' are supported"
+        return v
+
+    @validator("write_format")
+    def validate_write_format(cls, v):
+        assert v in [
+            "csv",
+            "parquet",
+        ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
     def __init__(self, **kwargs):

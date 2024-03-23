@@ -8,3 +8,5 @@ sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-categ
 
 
 sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-real-autoregression.yaml --selected-columns=itemId
+
+

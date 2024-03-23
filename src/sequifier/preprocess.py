@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from sequifier.config.preprocess_config import load_preprocessor_config
+from sequifier.helpers import read_data, write_data
 
 
 class Preprocessor(object):
@@ -22,6 +23,8 @@ class Preprocessor(object):
         seed,
         target_column,
         return_targets,
+        read_format,
+        write_format,
         n_cores,
         max_rows=None,
     ):
@@ -31,7 +34,7 @@ class Preprocessor(object):
 
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
 
-        data = pd.read_csv(data_path, sep=",", decimal=".", index_col=None)
+        data = read_data(data_path, read_format, columns=selected_columns)
 
         if selected_columns is not None:
             selected_columns_filtered = [
@@ -49,7 +52,7 @@ class Preprocessor(object):
             os.path.join(
                 self.project_path,
                 "data",
-                f"{self.data_name_root}-split{i}.csv",
+                f"{self.data_name_root}-split{i}.{write_format}",
             )
             for i in range(len(group_proportions))
         ]
@@ -89,6 +92,7 @@ class Preprocessor(object):
                 target_column,
                 return_targets,
                 group_proportions,
+                write_format,
             )
             for start, end in batch_limits
             if (end - start) > 0
@@ -96,11 +100,17 @@ class Preprocessor(object):
         batches = [(i, *v) for i, v in enumerate(batches)]
 
         n_cores_used = len(batches)
+        preprocess_batch(*batches[0])
         with multiprocessing.Pool(processes=n_cores_used) as pool:
-            pool.starmap(preprocess_batch, batches)
+            n_sequences_per_batch = pool.starmap(preprocess_batch, batches)
 
         combine_multiprocessing_outputs(
-            project_path, len(group_proportions), n_cores_used, f"{self.data_name_root}"
+            project_path,
+            len(group_proportions),
+            n_cores_used,
+            f"{self.data_name_root}",
+            write_format,
+            n_sequences_per_batch,
         )
 
     def export_metadata(self, id_maps, n_classes, col_types):
@@ -241,6 +251,7 @@ def preprocess_batch(
     target_column,
     return_targets,
     group_proportions,
+    write_format,
 ):
     sequence_ids = sorted(list(np.unique(batch["sequenceId"])))
     for i, sequence_id in enumerate(sequence_ids):
@@ -253,17 +264,25 @@ def preprocess_batch(
         splits = [cast_columns_to_string(data) for data in splits]
 
         for split_path, split in zip(split_paths, splits):
-            split_path_batch = split_path.replace(".csv", f"-{process_id}.csv")
-            write_mode = "w" if i == 0 else "a"
-            header = i == 0
-            split.to_csv(
-                split_path_batch,
-                mode=write_mode,
-                header=header,
-                sep=",",
-                decimal=".",
-                index=None,
-            )
+
+            if write_format == "csv":
+                write_mode = "w" if i == 0 else "a"
+                header = i == 0
+                split_path_batch = split_path.replace(
+                    ".csv", f"-{process_id}.{write_format}"
+                )
+                write_data(
+                    split, split_path_batch, "csv", mode=write_mode, header=header
+                )
+
+            if write_format == "parquet":
+                split_path_batch_seq = split_path.replace(
+                    f".parquet", f"-{process_id}-{i}.{write_format}"
+                )
+                write_data(split, split_path_batch_seq, "parquet")
+                split.to_parquet(split_path_batch_seq)
+
+    return len(sequence_ids)
 
 
 def get_batch_limits(data, n_batches):
@@ -295,19 +314,42 @@ def get_batch_limits(data, n_batches):
     return list(zip(actual_limits[:-1], actual_limits[1:]))
 
 
-def combine_multiprocessing_outputs(project_path, n_splits, n_batches, dataset_name):
+def combine_multiprocessing_outputs(
+    project_path, n_splits, n_batches, dataset_name, write_format, n_sequences_per_batch
+):
+    assert len(n_sequences_per_batch) == n_batches
     for split in range(n_splits):
         files = [
             os.path.join(
-                project_path, "data", f"{dataset_name}-split{split}-{batch}.csv"
+                project_path,
+                "data",
+                f"{dataset_name}-split{split}-{batch}.{write_format}",
             )
             for batch in range(n_batches)
         ]
+
         out_path = os.path.join(
-            project_path, "data", f"{dataset_name}-split{split}.csv"
+            project_path, "data", f"{dataset_name}-split{split}.{write_format}"
         )
-        command = " ".join(["csvstack"] + files + [f"> {out_path}"])
-        os.system(command)
+
+        if write_format == "csv":
+            command = " ".join(["csvstack"] + files + [f"> {out_path}"])
+            os.system(command)
+
+        if write_format == "parquet":
+            files = sum(
+                [
+                    [
+                        file.replace(f".{write_format}", f"-{i}.{write_format}")
+                        for i in range(n_sequences_per_batch[batch])
+                    ]
+                    for batch, file in enumerate(files)
+                ],
+                [],
+            )
+            data = pd.concat([pd.read_parquet(path) for path in files], axis=0)
+            data.to_parquet(out_path)
+
         delete_path = os.path.join(
             project_path, "data", f"{dataset_name}-split{split}-"
         )

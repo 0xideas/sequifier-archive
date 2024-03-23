@@ -1,10 +1,25 @@
 import subprocess
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import tensor
 
 PANDAS_TO_TORCH_TYPES = {"int64": torch.int64, "float64": torch.float32}
+
+
+def read_data(path, read_format, columns=None):
+    if read_format == "csv":
+        return pd.read_csv(path, sep=",", decimal=".", index_col=False)
+    if read_format == "parquet":
+        return pd.read_parquet(path, columns=columns)
+
+
+def write_data(data, path, write_format, **kwargs):
+    if write_format == "csv":
+        return data.to_csv(path, sep=",", decimal=".", index=False, **kwargs)
+    if write_format == "parquet":
+        return data.to_parquet(path)
 
 
 def subset_to_selected_columns(data, selected_columns):
