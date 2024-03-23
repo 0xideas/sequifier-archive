@@ -4,6 +4,7 @@ import multiprocessing
 import os
 from argparse import ArgumentParser
 from random import shuffle
+from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -33,6 +34,7 @@ class Preprocessor(object):
         np.random.seed(seed)
 
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
+        os.makedirs(os.path.join(self.project_path, "data", "temp"))
 
         data = read_data(data_path, read_format, columns=selected_columns)
 
@@ -100,7 +102,9 @@ class Preprocessor(object):
         batches = [(i, *v) for i, v in enumerate(batches)]
 
         n_cores_used = len(batches)
+
         preprocess_batch(*batches[0])
+
         with multiprocessing.Pool(processes=n_cores_used) as pool:
             n_sequences_per_batch = pool.starmap(preprocess_batch, batches)
 
@@ -112,6 +116,11 @@ class Preprocessor(object):
             write_format,
             n_sequences_per_batch,
         )
+
+        delete_path = os.path.join(project_path, "data", "temp")
+        assert len(delete_path) > 9
+        delete_command = f"rm -rf {delete_path}*"
+        os.system(delete_command)
 
     def export_metadata(self, id_maps, n_classes, col_types):
 
@@ -242,6 +251,12 @@ def extract_data_subsets(sequences, groups):
     return [pd.concat(dataset, axis=0) for dataset in datasets]
 
 
+def insert_top_folder(path, folder_name):
+    components = os.path.split(path)
+    new_components = list(components[:-1]) + [folder_name] + [components[-1]]
+    return os.path.join(*new_components)
+
+
 def preprocess_batch(
     process_id,
     batch,
@@ -271,6 +286,8 @@ def preprocess_batch(
                 split_path_batch = split_path.replace(
                     ".csv", f"-{process_id}.{write_format}"
                 )
+                split_path_batch = insert_top_folder(split_path_batch, "temp")
+
                 write_data(
                     split, split_path_batch, "csv", mode=write_mode, header=header
                 )
@@ -279,8 +296,8 @@ def preprocess_batch(
                 split_path_batch_seq = split_path.replace(
                     f".parquet", f"-{process_id}-{i}.{write_format}"
                 )
+                split_path_batch_seq = insert_top_folder(split_path_batch_seq, "temp")
                 write_data(split, split_path_batch_seq, "parquet")
-                split.to_parquet(split_path_batch_seq)
 
     return len(sequence_ids)
 
@@ -323,6 +340,7 @@ def combine_multiprocessing_outputs(
             os.path.join(
                 project_path,
                 "data",
+                "temp",
                 f"{dataset_name}-split{split}-{batch}.{write_format}",
             )
             for batch in range(n_batches)
@@ -349,12 +367,6 @@ def combine_multiprocessing_outputs(
             )
             data = pd.concat([pd.read_parquet(path) for path in files], axis=0)
             data.to_parquet(out_path)
-
-        delete_path = os.path.join(
-            project_path, "data", f"{dataset_name}-split{split}-"
-        )
-        delete_command = f"rm {delete_path}*"
-        os.system(delete_command)
 
 
 def preprocess(args, args_config):
