@@ -2,7 +2,9 @@ project_path: tests/project_folder
 target_column: itemId
 target_column_type: categorical
 selected_columns: null
-inference_data_path: data/test_data_categorical_5-split2.csv
+read_format: parquet
+write_format: csv
+inference_data_path: data/test_data_categorical_5-split2.parquet
 inference_model_path: models/sequifier-model-categorical-5-best-3.onnx
 device: cpu
 seq_length: 8

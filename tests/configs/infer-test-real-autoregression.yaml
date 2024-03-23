@@ -2,6 +2,8 @@ project_path: tests/project_folder
 target_column: itemValue
 target_column_type: real
 selected_columns: null
+read_format: csv
+write_format: csv
 inference_data_path: data/test_data_real_1-split2-autoregression.csv
 inference_model_path: models/sequifier-model-real-1-best-3-autoregression.onnx
 device: cpu

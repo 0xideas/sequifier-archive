@@ -5,13 +5,9 @@ x shuffle data during training
 x replace batch resizing with dynamic axes -> not possible unless I give up dict as model input
 make underscore and dash usage consistent
 make query/loc consistent
-make tests smaller
 systematize hparams or self access for hyperparameters in train.py
+use numpy reduce where possible
 
-
-file formats other than csv? -> yes, parquet, for compression
-make sure the commands can be run together: --preprocess, --train, --infer
-fix empty printing during training
 add exporting to pickle and gpu inference/(make onnx a flag)
 add dynamic preprocessing on training
 
@@ -21,5 +17,9 @@ x add gradient accumulation
 x columns to use for training and inference as config parameters
 x compile model using torch.compile or thunder (just released)
 x implement early stopping if validation error doesn't improve over x epochs
+x fix empty printing during training
+file formats other than csv? -> yes, parquet, for compression
+
+
 
 

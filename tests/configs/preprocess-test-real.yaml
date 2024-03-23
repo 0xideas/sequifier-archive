@@ -9,3 +9,5 @@ group_proportions:
 - 0.2
 max_rows: null
 return_targets: true
+read_format: csv
+write_format: parquet

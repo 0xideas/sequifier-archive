@@ -2,9 +2,10 @@ import os
 import shutil
 import time
 
-import pandas as pd
 import pytest
 import yaml
+
+from sequifier.helpers import read_data, write_data
 
 SELECTED_COLUMNS = {
     "categorical": {
@@ -169,7 +170,7 @@ def delete_inference_target(
 
     inference_data_paths = [
         os.path.join(
-            project_path, "data", f"test_data_{variant}_{model_number}-split2.csv"
+            project_path, "data", f"test_data_{variant}_{model_number}-split2.parquet"
         )
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
@@ -183,16 +184,12 @@ def delete_inference_target(
 
     for inference_data_path in inference_data_paths:
 
-        inference_data = pd.read_csv(
-            inference_data_path,
-            sep=",",
-            decimal=".",
-            index_col=None,
-        )
+        file_format = inference_data_path.split(".")[-1]
+        inference_data = read_data(inference_data_path, file_format)
 
         inference_data = inference_data.drop(columns=["target"])
 
-        inference_data.to_csv(inference_data_path, index=None, decimal=".", sep=",")
+        write_data(inference_data, inference_data_path, file_format)
 
 
 @pytest.fixture(scope="session")
@@ -240,7 +237,7 @@ def run_inference(
             "models", f"sequifier-model-categorical-{model_number}-best-3.onnx"
         )
         inference_data_path_cat = os.path.join(
-            "data", f"test_data_categorical_{model_number}-split2.csv"
+            "data", f"test_data_categorical_{model_number}-split2.parquet"
         )
         ddconfig_path_cat = os.path.join(
             "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
@@ -253,7 +250,7 @@ def run_inference(
             "models", f"sequifier-model-real-{model_number}-best-3.onnx"
         )
         inference_data_path_real = os.path.join(
-            "data", f"test_data_real_{model_number}-split2.csv"
+            "data", f"test_data_real_{model_number}-split2.parquet"
         )
         ddconfig_path_real = os.path.join(
             "configs", "ddconfigs", f"test_data_real_{model_number}.json"
