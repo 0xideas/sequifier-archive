@@ -280,16 +280,12 @@ def preprocess_batch(
         for split_path, split in zip(split_paths, splits):
 
             if write_format == "csv":
-                write_mode = "w" if i == 0 else "a"
-                header = i == 0
-                split_path_batch = split_path.replace(
-                    ".csv", f"-{process_id}.{write_format}"
+                split_path_batch_seq = split_path.replace(
+                    f".csv", f"-{process_id}-{i}.{write_format}"
                 )
-                split_path_batch = insert_top_folder(split_path_batch, "temp")
+                split_path_batch_seq = insert_top_folder(split_path_batch_seq, "temp")
 
-                write_data(
-                    split, split_path_batch, "csv", mode=write_mode, header=header
-                )
+                write_data(split, split_path_batch_seq, "csv", mode="w", header=True)
 
             if write_format == "parquet":
                 split_path_batch_seq = split_path.replace(
@@ -335,37 +331,28 @@ def combine_multiprocessing_outputs(
 ):
     assert len(n_sequences_per_batch) == n_batches
     for split in range(n_splits):
-        files = [
-            os.path.join(
-                project_path,
-                "data",
-                "temp",
-                f"{dataset_name}-split{split}-{batch}.{write_format}",
-            )
-            for batch in range(n_batches)
-        ]
 
         out_path = os.path.join(
             project_path, "data", f"{dataset_name}-split{split}.{write_format}"
         )
 
+        files = [
+            os.path.join(
+                project_path,
+                "data",
+                "temp",
+                f"{dataset_name}-split{split}-{batch}-{i}.{write_format}",
+            )
+            for batch, n_sequences_batch in enumerate(n_sequences_per_batch)
+            for i in range(n_sequences_batch)
+        ]
+
         if write_format == "csv":
             command = " ".join(["csvstack"] + files + [f"> {out_path}"])
             os.system(command)
-
         if write_format == "parquet":
-            files = sum(
-                [
-                    [
-                        file.replace(f".{write_format}", f"-{i}.{write_format}")
-                        for i in range(n_sequences_per_batch[batch])
-                    ]
-                    for batch, file in enumerate(files)
-                ],
-                [],
-            )
-            data = pd.concat([pd.read_parquet(path) for path in files], axis=0)
-            data.to_parquet(out_path)
+            data = pd.concat([read_data(path, write_format) for path in files], axis=0)
+            write_data(data, out_path, write_format)
 
 
 def preprocess(args, args_config):
