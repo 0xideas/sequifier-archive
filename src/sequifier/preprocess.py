@@ -2,9 +2,7 @@ import json
 import math
 import multiprocessing
 import os
-from argparse import ArgumentParser
-from random import shuffle
-from time import sleep
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -34,7 +32,10 @@ class Preprocessor(object):
         np.random.seed(seed)
 
         os.makedirs(os.path.join(project_path, "data"), exist_ok=True)
-        os.makedirs(os.path.join(self.project_path, "data", "temp"))
+        temp_path = os.path.join(self.project_path, "data", "temp")
+        if os.path.exists(temp_path):
+            shutil.rmtree(temp_path)
+        os.makedirs(temp_path)
 
         data = read_data(data_path, read_format, columns=selected_columns)
 
