@@ -297,7 +297,13 @@ def preprocess_batch(
             f".{write_format}", f"-{process_id}.{write_format}"
         )
         out_path = insert_top_folder(out_path, "temp")
-        combine_files(written_files[j], out_path)
+
+        if write_format == "csv":
+            command = " ".join(["csvstack"] + written_files[j] + [f"> {out_path}"])
+            os.system(command)
+
+        if write_format == "parquet":
+            combine_parquet_files(written_files[j], out_path)
 
     return len(sequence_ids)
 
@@ -346,31 +352,18 @@ def combine_multiprocessing_outputs(
                 project_path,
                 "data",
                 "temp",
-                f"{dataset_name}-split{split}-{batch}-{i}.{write_format}",
+                f"{dataset_name}-split{split}-{batch}.{write_format}",
             )
-            for batch, n_sequences_batch in enumerate(n_sequences_per_batch)
-            for i in range(n_sequences_batch)
+            for batch in range(n_batches)
         ]
-
         if write_format == "csv":
             command = " ".join(["csvstack"] + files + [f"> {out_path}"])
             os.system(command)
         if write_format == "parquet":
-
-            files = [
-                os.path.join(
-                    project_path,
-                    "data",
-                    "temp",
-                    f"{dataset_name}-split{split}-{batch}.{write_format}",
-                )
-                for batch in range(n_batches)
-            ]
-
-            combine_files(files, out_path)
+            combine_parquet_files(files, out_path)
 
 
-def combine_files(files, out_path):
+def combine_parquet_files(files, out_path):
     schema = pq.ParquetFile(files[0]).schema_arrow
     with pq.ParquetWriter(out_path, schema=schema, compression="snappy") as writer:
         for file in files:
