@@ -19,8 +19,3 @@ make query/loc consistent
 systematize hparams or self access for hyperparameters in train.py
 use numpy reduce where possible
 
-
-
-
-
-
