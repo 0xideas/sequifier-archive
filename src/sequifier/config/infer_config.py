@@ -26,6 +26,7 @@ class InfererModel(BaseModel):
     auto_regression: bool
     read_format: str = "parquet"
     write_format: str = "csv"
+    training_config_path: Optional[str] = None
 
     @validator("inference_data_path")
     def validate_inference_data_path(cls, v, values):

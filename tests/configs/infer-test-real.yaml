@@ -3,7 +3,7 @@ target_column: itemValue
 target_column_type: real
 selected_columns: null
 inference_data_path: data/test_data_real_5-split2.csv
-inference_model_path: models/sequifier-model-real-5-best-3.onnx
+inference_model_path: models/sequifier-model-real-5-best-3.pt
 device: cpu
 seq_length: 8
 output_probabilities: false

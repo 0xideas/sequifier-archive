@@ -4,11 +4,13 @@ import os
 import numpy as np
 import onnxruntime
 import pandas as pd
+import torch
 
 from sequifier.config.infer_config import load_inferer_config
 from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
                                read_data, subset_to_selected_columns,
                                write_data)
+from sequifier.train import infer_with_pt
 
 
 class Inferer(object):
@@ -24,6 +26,8 @@ class Inferer(object):
         target_column_type,
         inference_batch_size,
         device,
+        args_config,
+        training_config_path,
     ):
         if target_column_type == "categorical":
             self.index_map = (
@@ -31,28 +35,39 @@ class Inferer(object):
             )
 
         self.map_to_id = map_to_id
-        inference_model_path_load = os.path.join(project_path, inference_model_path)
-        execution_providers = [
-            "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
-        ]
-        self.ort_session = onnxruntime.InferenceSession(
-            inference_model_path_load, providers=execution_providers
-        )
+        self.device = device
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
         self.target_column = target_column
         self.target_column_type = target_column_type
         self.inference_batch_size = inference_batch_size
+        self.inference_model_type = inference_model_path.split(".")[-1]
+        self.inference_model_path_load = os.path.join(
+            project_path, inference_model_path
+        )
+        self.args_config = args_config
+        self.training_config_path = training_config_path
 
-    def prepare_inference_batches(self, x):
+        if self.inference_model_type == "onnx":
+            execution_providers = [
+                "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
+            ]
+            self.ort_session = onnxruntime.InferenceSession(
+                self.inference_model_path_load, providers=execution_providers
+            )
+
+    def prepare_inference_batches(self, x, pad_to_batch_size):
         size = x[self.target_column].shape[0]
         if size == self.inference_batch_size:
             return [x]
         elif size < self.inference_batch_size:
-            x_expanded = {
-                col: self.expand_to_batch_size(x_col) for col, x_col in x.items()
-            }
-            return [x_expanded]
+            if pad_to_batch_size:
+                x_expanded = {
+                    col: self.expand_to_batch_size(x_col) for col, x_col in x.items()
+                }
+                return [x_expanded]
+            else:
+                return [x]
         else:
             starts = range(0, size, self.inference_batch_size)
             ends = range(
@@ -68,17 +83,31 @@ class Inferer(object):
 
     def infer_probs_any_size(self, x):
         size = x[self.target_column].shape[0]
-        x_adjusted = self.prepare_inference_batches(x)
-        return np.concatenate([self.infer_probs(x_sub) for x_sub in x_adjusted], 0)[
-            :size, :
-        ]
+        if self.inference_model_type == "onnx":
+            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
+            logits = np.concatenate(
+                [self.infer_pure(x_sub) for x_sub in x_adjusted], 0
+            )[:size, :]
+        if self.inference_model_type == "pt":
+            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
+            logits = infer_with_pt(
+                x_adjusted, self.training_config_path, self.args_config, self.device
+            )
+        return self.normalize(logits)
 
     def infer_real_any_size(self, x):
         size = x[self.target_column].shape[0]
-        x_adjusted = self.prepare_inference_batches(x)
-        return np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
-            :size, :
-        ]
+        if self.inference_model_type == "onnx":
+            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
+            preds = np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
+                :size, :
+            ]
+        if self.inference_model_type == "pt":
+            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
+            preds = self.infer_with_pt(
+                x_adjusted, self.training_config_path, self.args_config, self.device
+            )
+        return preds
 
     def expand_to_batch_size(self, x):
         repetitions = self.inference_batch_size // x.shape[0]
@@ -97,13 +126,12 @@ class Inferer(object):
 
         return ort_outs
 
-    def infer_probs(self, x):
-        ort_outs = self.infer_pure(x)
+    def normalize(self, outs):
 
-        normalizer = np.repeat(
-            np.sum(np.exp(ort_outs), axis=1), ort_outs.shape[1]
-        ).reshape(ort_outs.shape)
-        probs = np.exp(ort_outs) / normalizer
+        normalizer = np.repeat(np.sum(np.exp(outs), axis=1), outs.shape[1]).reshape(
+            outs.shape
+        )
+        probs = np.exp(outs) / normalizer
         return probs
 
     def infer_categorical_any_size(self, x, probs=None):
@@ -117,10 +145,8 @@ class Inferer(object):
     def infer(self, x, probs=None):
         if self.target_column_type == "categorical":
             return self.infer_categorical_any_size(x, probs)
-        elif self.target_column_type == "real":
+        if self.target_column_type == "real":
             return self.infer_real_any_size(x)
-        else:
-            pass
 
 
 def get_probs_preds_auto_regression(config, inferer, data, column_types):
@@ -270,6 +296,8 @@ def infer(args, args_config):
         config.target_column_type,
         config.inference_batch_size,
         config.device,
+        args_config=args_config,
+        training_config_path=config.training_config_path,
     )
 
     column_types = {

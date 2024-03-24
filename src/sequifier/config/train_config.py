@@ -153,8 +153,8 @@ class TransformerModel(BaseModel):
     log_interval: int
     inference_batch_size: int
     read_format: str = "parquet"
-    export_pt: bool = True
     export_onnx: bool = True
+    export_pt: bool = False
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]

@@ -508,3 +508,25 @@ def train(args, args_config):
     model = torch.compile(TransformerModel(config).to(config.training_spec.device))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
+
+
+def infer_with_pt(x, training_config_path, args_config, device):
+
+    training_config = load_transformer_config(
+        training_config_path, args_config, args_config["on_preprocessed"]
+    )
+
+    model = torch.compile(TransformerModel(training_config).to(device))
+
+    outs = np.concatenate(
+        [
+            model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
+            .cpu()
+            .detach()
+            .numpy()
+            for x_sub in x
+        ],
+        axis=0,
+    )
+
+    return outs
