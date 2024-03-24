@@ -33,6 +33,10 @@ class Inferer(object):
             self.index_map = (
                 {v: k for k, v in id_map[target_column].items()} if map_to_id else None
             )
+            if isinstance(list(self.index_map.values())[0], str):
+                self.index_map[0] = "unknown"
+            else:
+                self.index_map[0] = np.min(self.index_map.values()) - 1
 
         self.map_to_id = map_to_id
         self.device = device

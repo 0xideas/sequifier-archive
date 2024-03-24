@@ -13,8 +13,12 @@ x replace batch resizing with dynamic axes -> not possible unless I give up dict
 
 add exporting to pickle and gpu inference/(make onnx a flag)
 
+
 address non identical outputs on inference????
-off by one error on category for inference????
+
+add sampling from distribution
+
+invert --on-preprocessed arg
 make underscore and dash usage consistent
 make query/loc consistent
 systematize hparams or self access for hyperparameters in train.py
