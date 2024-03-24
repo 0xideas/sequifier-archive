@@ -36,10 +36,11 @@ def test_model_files_exists(run_training, project_path):
     expected_items = np.array(
         sorted(
             [
-                f"sequifier-model-{model_type}-{j}-{kind}-3.onnx"
+                f"sequifier-model-{model_type}-{j}-{kind}-3.{export_format}"
                 for model_type in ["categorical", "real"]
                 for j in [1, 3, 5]
                 for kind in ["best", "last"]
+                for export_format in ["onnx", "pt"]
             ]
             + ["sequifier-model-real-1-best-3-autoregression.onnx"]
         )
