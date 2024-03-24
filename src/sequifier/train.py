@@ -520,6 +520,8 @@ def load_inference_model(model_path, training_config_path, args_config, device):
     model_state = torch.load(model_path)
     model.load_state_dict(model_state["model_state_dict"])
 
+    model.eval()
+
     model = torch.compile(model).to(device)
 
     return model
