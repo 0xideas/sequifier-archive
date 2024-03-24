@@ -148,7 +148,7 @@ class Inferer(object):
     def infer_categorical_any_size(self, x, probs=None):
         if probs is None:
             probs = self.infer_probs_any_size(x)
-        preds = probs.argmax(1)
+        preds = probs.argmax(1) + 1
         if self.map_to_id:
             preds = np.array([self.index_map[i] for i in preds])
         return preds
