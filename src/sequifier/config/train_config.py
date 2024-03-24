@@ -153,16 +153,18 @@ class TransformerModel(BaseModel):
     log_interval: int
     inference_batch_size: int
     read_format: str = "parquet"
+    export_onnx: bool = True
+    export_pt: bool = False
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
 
-    @validator("target_column_type")
+    @validator("target_column_type", always=True)
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"]
         return v
 
-    @validator("read_format")
+    @validator("read_format", always=True)
     def validate_read_format(cls, v):
         assert v in [
             "csv",

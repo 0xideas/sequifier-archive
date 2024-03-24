@@ -214,10 +214,10 @@ def run_training(
         )
 
     source_path = os.path.join(
-        project_path, "models", "sequifier-model-real-1-best-3.onnx"
+        project_path, "models", "sequifier-model-real-1-best-3.pt"
     )
     target_path = os.path.join(
-        project_path, "models", "sequifier-model-real-1-best-3-autoregression.onnx"
+        project_path, "models", "sequifier-model-real-1-best-3-autoregression.pt"
     )
 
     shutil.copy(source_path, target_path)
@@ -247,7 +247,7 @@ def run_inference(
         )
 
         inference_model_path_real = os.path.join(
-            "models", f"sequifier-model-real-{model_number}-best-3.onnx"
+            "models", f"sequifier-model-real-{model_number}-best-3.pt"
         )
         inference_data_path_real = os.path.join(
             "data", f"test_data_real_{model_number}-split2.parquet"

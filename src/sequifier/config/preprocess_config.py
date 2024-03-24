@@ -20,13 +20,13 @@ class PreprocessorModel(BaseModel):
 
     n_cores: Optional[int]
 
-    @validator("data_path")
+    @validator("data_path", always=True)
     def validate_data_path(cls, v):
         if not os.path.exists(v):
             raise ValueError(f"{v} does not exist")
         return v
 
-    @validator("group_proportions")
+    @validator("group_proportions", always=True)
     def validate_group_proportions(cls, v):
         if abs(sum(v) - 1) > 1e-10:
             raise ValueError(f"does not sum to 1: {v} - {sum(v)}")
@@ -36,7 +36,7 @@ class PreprocessorModel(BaseModel):
             )
         return v
 
-    @validator("read_format")
+    @validator("read_format", always=True)
     def validate_read_format(cls, v):
         assert v in [
             "csv",
@@ -44,7 +44,7 @@ class PreprocessorModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-    @validator("write_format")
+    @validator("write_format", always=True)
     def validate_write_format(cls, v):
         assert v in [
             "csv",

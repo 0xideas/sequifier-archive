@@ -26,8 +26,9 @@ class InfererModel(BaseModel):
     auto_regression: bool
     read_format: str = "parquet"
     write_format: str = "csv"
+    training_config_path: Optional[str] = None
 
-    @validator("inference_data_path")
+    @validator("inference_data_path", always=True)
     def validate_inference_data_path(cls, v, values):
         path = os.path.join(values["project_path"], v)
 
@@ -36,12 +37,12 @@ class InfererModel(BaseModel):
 
         return v
 
-    @validator("target_column_type")
+    @validator("target_column_type", always=True)
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"], v
         return v
 
-    @validator("read_format")
+    @validator("read_format", always=True)
     def validate_read_format(cls, v):
         assert v in [
             "csv",
@@ -49,7 +50,12 @@ class InfererModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-    @validator("write_format")
+    @validator("training_config_path", always=True)
+    def validate_training_config_path(cls, v, values):
+        assert v is not None or values["inference_model_path"].endswith(".onnx")
+        return v
+
+    @validator("write_format", always=True)
     def validate_write_format(cls, v):
         assert v in [
             "csv",

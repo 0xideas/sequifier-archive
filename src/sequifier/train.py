@@ -48,6 +48,8 @@ class TransformerModel(nn.Module):
             self.real_columns, hparams.model_spec.nhead
         )
         self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
+        self.export_onnx = hparams.export_onnx
+        self.export_pt = hparams.export_pt
         self.model_type = "Transformer"
         self.log_interval = hparams.log_interval
         self.encoder = ModuleDict()
@@ -329,44 +331,53 @@ class TransformerModel(nn.Module):
 
     def export(self, model, suffix, epoch):
         self.eval()
-        x_cat = {
-            col: torch.randint(
-                0,
-                self.hparams.n_classes[col],
-                (self.inference_batch_size, self.hparams.seq_length),
-            ).to(self.device)
-            for col in self.categorical_columns
-        }
-        x_real = {
-            col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(
-                self.device
-            )
-            for col in self.real_columns
-        }
-
-        x = {"src": {**x_cat, **x_real}}
-
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
-        # Export the model
-        export_path = os.path.join(
-            self.project_path,
-            "models",
-            f"sequifier-{self.model_name}-{suffix}-{epoch}.onnx",
-        )
-        torch.onnx.export(
-            model,  # model being run
-            x,  # model input (or a tuple for multiple inputs)
-            export_path,  # where to save the model (can be a file or file-like object)
-            export_params=True,  # store the trained parameter weights inside the model file
-            opset_version=14,  # the ONNX version to export the model to
-            do_constant_folding=True,  # whether to execute constant folding for optimization
-            input_names=["input"],  # the model's input names
-            output_names=["output"],  # the model's output names
-            dynamic_axes={
-                "input": {0: "batch_size"},  # variable length axes
-                "output": {0: "batch_size"},
-            },
-        )
+
+        if self.export_onnx:
+            x_cat = {
+                col: torch.randint(
+                    0,
+                    self.hparams.n_classes[col],
+                    (self.inference_batch_size, self.hparams.seq_length),
+                ).to(self.device)
+                for col in self.categorical_columns
+            }
+            x_real = {
+                col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(
+                    self.device
+                )
+                for col in self.real_columns
+            }
+
+            x = {"src": {**x_cat, **x_real}}
+
+            # Export the model
+            export_path = os.path.join(
+                self.project_path,
+                "models",
+                f"sequifier-{self.model_name}-{suffix}-{epoch}.onnx",
+            )
+            torch.onnx.export(
+                model,  # model being run
+                x,  # model input (or a tuple for multiple inputs)
+                export_path,  # where to save the model (can be a file or file-like object)
+                export_params=True,  # store the trained parameter weights inside the model file
+                opset_version=14,  # the ONNX version to export the model to
+                do_constant_folding=True,  # whether to execute constant folding for optimization
+                input_names=["input"],  # the model's input names
+                output_names=["output"],  # the model's output names
+                dynamic_axes={
+                    "input": {0: "batch_size"},  # variable length axes
+                    "output": {0: "batch_size"},
+                },
+            )
+        if self.export_pt:
+            export_path = os.path.join(
+                self.project_path,
+                "models",
+                f"sequifier-{self.model_name}-{suffix}-{epoch}.pt",
+            )
+            torch.save({"model_state_dict": self.state_dict()}, export_path)
 
     def save(self, epoch, val_loss):
         os.makedirs(os.path.join(self.project_path, "checkpoints"), exist_ok=True)
@@ -497,3 +508,36 @@ def train(args, args_config):
     model = torch.compile(TransformerModel(config).to(config.training_spec.device))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
+
+
+def load_inference_model(model_path, training_config_path, args_config, device):
+    training_config = load_transformer_config(
+        training_config_path, args_config, args_config["on_preprocessed"]
+    )
+
+    model = TransformerModel(training_config)
+    model.log_file.write(f"Loading model weights from {model_path}")
+    model_state = torch.load(model_path)
+    model.load_state_dict(model_state["model_state_dict"])
+
+    model.eval()
+
+    model = torch.compile(model).to(device)
+
+    return model
+
+
+def infer_with_model(model, x, device):
+
+    outs = np.concatenate(
+        [
+            model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
+            .cpu()
+            .detach()
+            .numpy()
+            for x_sub in x
+        ],
+        axis=0,
+    )
+
+    return outs

@@ -12,10 +12,17 @@ x make sequifier usable in one go if config_paths are default
 x replace batch resizing with dynamic axes -> not possible unless I give up dict as model input
 
 add exporting to pickle and gpu inference/(make onnx a flag)
-add dynamic preprocessing on training
 
+address non identical outputs on inference????
+off by one error on category for inference????
 make underscore and dash usage consistent
 make query/loc consistent
 systematize hparams or self access for hyperparameters in train.py
 use numpy reduce where possible
+remove unnecessary n_sequences return value from starmap
+address torch depreciation warning
+reorder config and class attributes logically
+reorder functions and methods logically
 
+
+add dynamic preprocessing on training -> less necessary now that parquet is the default

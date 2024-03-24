@@ -5,7 +5,8 @@ selected_columns: null
 read_format: parquet
 write_format: csv
 inference_data_path: data/test_data_categorical_5-split2.parquet
-inference_model_path: models/sequifier-model-categorical-5-best-3.onnx
+inference_model_path: models/sequifier-model-categorical-5-best-3.pt
+training_config_path: tests/configs/train-test-categorical.yaml
 device: cpu
 seq_length: 8
 output_probabilities: true

@@ -5,7 +5,7 @@ selected_columns: null
 read_format: csv
 write_format: csv
 inference_data_path: data/test_data_real_1-split2-autoregression.csv
-inference_model_path: models/sequifier-model-real-1-best-3-autoregression.onnx
+inference_model_path: models/sequifier-model-real-1-best-3-autoregression.pt
 device: cpu
 seq_length: 8
 output_probabilities: false
@@ -13,3 +13,4 @@ ddconfig_path: configs/ddconfigs/test_data_real_1.json
 map_to_id: true
 inference_batch_size: 10
 auto_regression: true
+training_config_path: tests/configs/train-test-real.yaml

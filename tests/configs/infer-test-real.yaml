@@ -3,7 +3,7 @@ target_column: itemValue
 target_column_type: real
 selected_columns: null
 inference_data_path: data/test_data_real_5-split2.csv
-inference_model_path: models/sequifier-model-real-5-best-3.onnx
+inference_model_path: models/sequifier-model-real-5-best-3.pt
 device: cpu
 seq_length: 8
 output_probabilities: false
@@ -11,3 +11,4 @@ ddconfig_path: configs/ddconfigs/test_data_real_5.json
 map_to_id: true
 inference_batch_size: 10
 auto_regression: false
+training_config_path: tests/configs/train-test-real.yaml
