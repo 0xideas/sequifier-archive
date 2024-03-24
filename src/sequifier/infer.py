@@ -10,7 +10,7 @@ from sequifier.config.infer_config import load_inferer_config
 from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
                                read_data, subset_to_selected_columns,
                                write_data)
-from sequifier.train import infer_with_pt
+from sequifier.train import infer_with_model, load_inference_model
 
 
 class Inferer(object):
@@ -55,6 +55,13 @@ class Inferer(object):
             self.ort_session = onnxruntime.InferenceSession(
                 self.inference_model_path_load, providers=execution_providers
             )
+        if self.inference_model_type == "pt":
+            self.inference_model = load_inference_model(
+                self.inference_model_path_load,
+                self.training_config_path,
+                self.args_config,
+                self.device,
+            )
 
     def prepare_inference_batches(self, x, pad_to_batch_size):
         size = x[self.target_column].shape[0]
@@ -90,11 +97,9 @@ class Inferer(object):
             )[:size, :]
         if self.inference_model_type == "pt":
             x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            logits = infer_with_pt(
+            logits = infer_with_model(
+                self.inference_model,
                 x_adjusted,
-                self.inference_model_path_load,
-                self.training_config_path,
-                self.args_config,
                 self.device,
             )
         return self.normalize(logits)
@@ -108,11 +113,9 @@ class Inferer(object):
             ]
         if self.inference_model_type == "pt":
             x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            preds = infer_with_pt(
+            preds = infer_with_model(
+                self.inference_model,
                 x_adjusted,
-                self.inference_model_path_load,
-                self.training_config_path,
-                self.args_config,
                 self.device,
             )
         return preds

@@ -510,8 +510,7 @@ def train(args, args_config):
     model.train_model(X_train, y_train, X_valid, y_valid)
 
 
-def infer_with_pt(x, model_path, training_config_path, args_config, device):
-
+def load_inference_model(model_path, training_config_path, args_config, device):
     training_config = load_transformer_config(
         training_config_path, args_config, args_config["on_preprocessed"]
     )
@@ -522,6 +521,11 @@ def infer_with_pt(x, model_path, training_config_path, args_config, device):
     model.load_state_dict(model_state["model_state_dict"])
 
     model = torch.compile(model).to(device)
+
+    return model
+
+
+def infer_with_model(model, x, device):
 
     outs = np.concatenate(
         [
