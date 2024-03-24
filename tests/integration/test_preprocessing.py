@@ -65,7 +65,7 @@ def data_splits(project_path):
     return data_split_values
 
 
-def test_preprocessed_data_real(data_splits):
+def test_preprocessed_data_real(delete_inference_target, data_splits):
     for j in [1, 3, 5]:
         name = f"{j}_real"
         assert len(data_splits[name]) == 3

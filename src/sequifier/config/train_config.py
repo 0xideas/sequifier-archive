@@ -159,12 +159,12 @@ class TransformerModel(BaseModel):
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
 
-    @validator("target_column_type")
+    @validator("target_column_type", always=True)
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"]
         return v
 
-    @validator("read_format")
+    @validator("read_format", always=True)
     def validate_read_format(cls, v):
         assert v in [
             "csv",

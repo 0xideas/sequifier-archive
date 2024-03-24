@@ -91,7 +91,11 @@ class Inferer(object):
         if self.inference_model_type == "pt":
             x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
             logits = infer_with_pt(
-                x_adjusted, self.training_config_path, self.args_config, self.device
+                x_adjusted,
+                self.inference_model_path_load,
+                self.training_config_path,
+                self.args_config,
+                self.device,
             )
         return self.normalize(logits)
 
@@ -104,8 +108,12 @@ class Inferer(object):
             ]
         if self.inference_model_type == "pt":
             x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            preds = self.infer_with_pt(
-                x_adjusted, self.training_config_path, self.args_config, self.device
+            preds = infer_with_pt(
+                x_adjusted,
+                self.inference_model_path_load,
+                self.training_config_path,
+                self.args_config,
+                self.device,
             )
         return preds
 
@@ -305,7 +313,9 @@ def infer(args, args_config):
         for col in config.column_types
     }
 
-    model_id = os.path.split(config.inference_model_path)[1].replace(".onnx", "")
+    model_id = os.path.split(config.inference_model_path)[1].replace(
+        f".{inferer.inference_model_type}", ""
+    )
 
     print(f"Inferring for {model_id}")
 

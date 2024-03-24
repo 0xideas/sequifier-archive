@@ -13,4 +13,6 @@ sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-real-
 
 
 
+sequifier --infer --on-preprocessed --config-path=tests/configs/infer-test-real.yaml --ddconfig-path=configs/ddconfigs/test_data_real_3.json --inference-model-path=models/sequifier-model-real-3-best-3.pt --inference-data-path=data/test_data_real_3-split2.parquet --selected-columns=itemId,sup1,sup2
+
 

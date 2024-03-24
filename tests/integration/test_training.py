@@ -41,7 +41,7 @@ def test_model_files_exists(run_training, project_path):
                 for j in [1, 3, 5]
                 for kind in ["best", "last"]
             ]
-            + ["sequifier-model-real-1-best-3-autoregression.onnx"]
+            + ["sequifier-model-real-1-best-3-autoregression.pt"]
         )
     )
 

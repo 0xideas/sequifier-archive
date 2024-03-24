@@ -510,13 +510,18 @@ def train(args, args_config):
     model.train_model(X_train, y_train, X_valid, y_valid)
 
 
-def infer_with_pt(x, training_config_path, args_config, device):
+def infer_with_pt(x, model_path, training_config_path, args_config, device):
 
     training_config = load_transformer_config(
         training_config_path, args_config, args_config["on_preprocessed"]
     )
 
-    model = torch.compile(TransformerModel(training_config).to(device))
+    model = TransformerModel(training_config)
+    model.log_file.write(f"Loading model weights from {model_path}")
+    model_state = torch.load(model_path)
+    model.load_state_dict(model_state["model_state_dict"])
+
+    model = torch.compile(model).to(device)
 
     outs = np.concatenate(
         [

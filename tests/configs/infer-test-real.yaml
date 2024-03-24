@@ -11,3 +11,4 @@ ddconfig_path: configs/ddconfigs/test_data_real_5.json
 map_to_id: true
 inference_batch_size: 10
 auto_regression: false
+training_config_path: tests/configs/train-test-real.yaml
