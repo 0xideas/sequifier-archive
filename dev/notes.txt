@@ -11,8 +11,7 @@ x file formats other than csv? -> yes, parquet, for compression
 x make sequifier usable in one go if config_paths are default
 x replace batch resizing with dynamic axes -> not possible unless I give up dict as model input
 
-add exporting to pickle and gpu inference/(make onnx a flag)
-
+x add exporting to pickle and gpu inference/(make onnx a flag)
 
 address non identical outputs on inference????
 
