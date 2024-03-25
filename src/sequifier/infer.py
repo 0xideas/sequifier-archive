@@ -122,7 +122,7 @@ class Inferer(object):
                 x_adjusted,
                 self.device,
             )
-        return preds
+        return preds.flatten()
 
     def expand_to_batch_size(self, x):
         repetitions = self.inference_batch_size // x.shape[0]
@@ -281,6 +281,7 @@ def get_probs_preds(config, inferer, data, column_types):
     else:
         probs = None
         preds = inferer.infer(X)
+
     return (probs, preds)
 
 
