@@ -106,7 +106,7 @@ class Preprocessor(object):
         n_cores_used = len(batches)
 
         with multiprocessing.Pool(processes=n_cores_used) as pool:
-            n_sequences_per_batch = pool.starmap(preprocess_batch, batches)
+            pool.starmap(preprocess_batch, batches)
 
         combine_multiprocessing_outputs(
             project_path,
@@ -114,7 +114,6 @@ class Preprocessor(object):
             n_cores_used,
             f"{self.data_name_root}",
             write_format,
-            n_sequences_per_batch,
         )
 
         delete_path = os.path.join(project_path, "data", "temp")
@@ -305,8 +304,6 @@ def preprocess_batch(
         if write_format == "parquet":
             combine_parquet_files(written_files[j], out_path)
 
-    return len(sequence_ids)
-
 
 def get_batch_limits(data, n_batches):
     sequence_ids = data["sequenceId"].values
@@ -338,9 +335,8 @@ def get_batch_limits(data, n_batches):
 
 
 def combine_multiprocessing_outputs(
-    project_path, n_splits, n_batches, dataset_name, write_format, n_sequences_per_batch
+    project_path, n_splits, n_batches, dataset_name, write_format
 ):
-    assert len(n_sequences_per_batch) == n_batches
     for split in range(n_splits):
 
         out_path = os.path.join(

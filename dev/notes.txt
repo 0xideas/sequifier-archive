@@ -16,11 +16,12 @@ x address non identical outputs on inference --|> doesn't seem to be the case no
 x make autoregression true by default
 x invert --on-preprocessed arg
 x use numpy reduce where possible
+x remove unnecessary n_sequences return value from starmap
+
 
 add sampling from distribution
 add dropout option on inference when using pt model
 
-remove unnecessary n_sequences return value from starmap
 
 make underscore and dash usage consistent
 make query/loc consistent
