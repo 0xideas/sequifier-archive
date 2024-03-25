@@ -467,7 +467,7 @@ def train(args, args_config):
         args.config_path if args.config_path is not None else "configs/train.yaml"
     )
 
-    config = load_transformer_config(config_path, args_config, args.on_preprocessed)
+    config = load_transformer_config(config_path, args_config, args.on_unprocessed)
 
     column_types = {
         col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
@@ -512,7 +512,7 @@ def train(args, args_config):
 
 def load_inference_model(model_path, training_config_path, args_config, device):
     training_config = load_transformer_config(
-        training_config_path, args_config, args_config["on_preprocessed"]
+        training_config_path, args_config, args_config["on_unprocessed"]
     )
 
     model = TransformerModel(training_config)

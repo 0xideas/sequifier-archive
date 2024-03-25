@@ -290,7 +290,7 @@ def infer(args, args_config):
         args.config_path if args.config_path is not None else "configs/infer.yaml"
     )
 
-    config = load_inferer_config(config_path, args_config, args.on_preprocessed)
+    config = load_inferer_config(config_path, args_config, args.on_unprocessed)
 
     if config.map_to_id:
         assert (
