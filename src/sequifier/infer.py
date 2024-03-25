@@ -197,9 +197,12 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     for sequence_id in data["sequenceId"]
                 ]
             )
-            f = np.logical_and(
-                np.logical_and(target_subsequence_filter, data_col_filter),
-                sequence_filter,
+            f = np.logical_and.reduce(
+                [
+                    target_subsequence_filter,
+                    data_col_filter,
+                    sequence_filter,
+                ]
             )  # filter on target subsequence id and target column and sequence ids in data_subset
 
             if np.sum(f) > 0:

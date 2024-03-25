@@ -7,7 +7,7 @@ sequifier --infer --config-path=tests/configs/infer-test-categorical.yaml --ddco
 
 
 
-sequifier --infer --config-path=tests/configs/infer-test-real-autoregression.yaml --selected-columns=itemId
+sequifier --infer --config-path=tests/configs/infer-test-real-autoregression.yaml --selected-columns=itemValue
 
 
 
