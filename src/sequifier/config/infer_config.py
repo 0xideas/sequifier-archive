@@ -23,7 +23,7 @@ class InfererModel(BaseModel):
     target_column: str
     target_column_type: str
     inference_batch_size: int
-    auto_regression: bool
+    auto_regression: bool = True
     read_format: str = "parquet"
     write_format: str = "csv"
     training_config_path: Optional[str] = None

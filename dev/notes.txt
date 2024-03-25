@@ -16,7 +16,7 @@ x address non identical outputs on inference --|> doesn't seem to be the case no
 add sampling from distribution
 
 invert --on-preprocessed arg
-make autoregression true by default
+x make autoregression true by default
 
 make underscore and dash usage consistent
 make query/loc consistent
