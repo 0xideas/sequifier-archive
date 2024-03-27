@@ -17,10 +17,12 @@ x make autoregression true by default
 x invert --on-preprocessed arg
 x use numpy reduce where possible
 x remove unnecessary n_sequences return value from starmap
+x add sampling from distribution for categorical target variables
 
+add dropout option on inference
+add decoder only architecture
+learnable positional encoding
 
-add sampling from distribution
-add dropout option on inference when using pt model
 
 
 make underscore and dash usage consistent

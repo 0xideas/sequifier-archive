@@ -515,14 +515,16 @@ def load_inference_model(model_path, training_config_path, args_config, device):
         training_config_path, args_config, args_config["on_unprocessed"]
     )
 
-    model = TransformerModel(training_config)
-    model.log_file.write(f"Loading model weights from {model_path}")
-    model_state = torch.load(model_path)
-    model.load_state_dict(model_state["model_state_dict"])
+    with torch.no_grad():
 
-    model.eval()
+        model = TransformerModel(training_config)
+        model.log_file.write(f"Loading model weights from {model_path}")
+        model_state = torch.load(model_path)
+        model.load_state_dict(model_state["model_state_dict"])
 
-    model = torch.compile(model).to(device)
+        model.eval()
+
+        model = torch.compile(model).to(device)
 
     return model
 

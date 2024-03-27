@@ -22,6 +22,7 @@ class InfererModel(BaseModel):
     real_columns: list[str]
     target_column: str
     target_column_type: str
+    sample_from_distribution: Optional[bool] = False
     inference_batch_size: int
     auto_regression: bool = True
     read_format: str = "parquet"
@@ -34,6 +35,16 @@ class InfererModel(BaseModel):
 
         if not os.path.exists(path):
             raise ValueError(f"{path} does not exist")
+
+        return v
+
+    @validator("sample_from_distribution", always=True)
+    def validate_sample_from_distribution(cls, v, values):
+
+        if v and values["target_column_type"] == "real":
+            raise ValueError(
+                "sample_from_distribution can only be set to true for categorical target variables"
+            )
 
         return v
 
