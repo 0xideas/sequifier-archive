@@ -531,7 +531,7 @@ def load_inference_model(
     )
 
     with torch.no_grad():
-
+      
         model = TransformerModel(training_config)
         model.log_file.write(f"Loading model weights from {model_path}")
         model_state = torch.load(model_path)

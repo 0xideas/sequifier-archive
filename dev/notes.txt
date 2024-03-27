@@ -19,7 +19,6 @@ x use numpy reduce where possible
 x remove unnecessary n_sequences return value from starmap
 x add sampling from distribution for categorical target variables
 x add dropout option on inference
-
 add decoder only architecture
 learnable positional encoding
 

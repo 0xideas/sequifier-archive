@@ -24,6 +24,7 @@ class InfererModel(BaseModel):
     target_column_type: str
     sample_from_distribution: bool = False
     infer_with_dropout: bool = False
+    sample_from_distribution: Optional[bool] = False
     inference_batch_size: int
     auto_regression: bool = True
     read_format: str = "parquet"
