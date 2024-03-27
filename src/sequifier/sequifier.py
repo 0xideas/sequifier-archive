@@ -38,7 +38,7 @@ def main():
     )
     parser.add_argument("-p", "--preprocess", action="store_true")
     parser.add_argument("-t", "--train", action="store_true")
-    parser.add_argument("-op", "--on-preprocessed", action="store_true")
+    parser.add_argument("-op", "--on-unprocessed", action="store_true")
     parser.add_argument("-i", "--infer", action="store_true")
     parser.add_argument("-r", "--randomize", action="store_true")
     parser.add_argument("-dp", "--data-path", type=str)

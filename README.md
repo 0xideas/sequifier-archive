@@ -42,7 +42,7 @@ sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml
 6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train-on-preprocessed.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`and set `project_path` to `PROJECT PATH` in both configs
 7. run
 ```console
-sequifier --train --on-preprocessed --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml
+sequifier --train --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml
 ```
 8. adapt `inference_data_path` in `infer.yaml`
 9. run
@@ -92,10 +92,10 @@ The training step is executed with the command:
 sequifier --train --config_path=[CONFIG PATH]
 ```
 
-If the data on which the model is trained comes from the preprocessing step, the flag
+If the data on which the model is trained DOES NOT come from the preprocessing step, the flag
 
 ```console
---on-preprocessed
+--on-unprocessed
 ```
 
 should also be added.

@@ -184,13 +184,13 @@ class TransformerModel(BaseModel):
         self.training_spec = TrainingSpecModel(**kwargs.get("training_spec"))
 
 
-def load_transformer_config(config_path, args_config, on_preprocessed):
+def load_transformer_config(config_path, args_config, on_unprocessed):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
 
     config_values.update(args_config)
 
-    if on_preprocessed:
+    if not on_unprocessed:
         dd_config_path = os.path.join(
             config_values["project_path"], config_values.pop("ddconfig_path")
         )

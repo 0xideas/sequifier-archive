@@ -122,7 +122,7 @@ class Inferer(object):
                 x_adjusted,
                 self.device,
             )
-        return preds
+        return preds.flatten()
 
     def expand_to_batch_size(self, x):
         repetitions = self.inference_batch_size // x.shape[0]
@@ -197,9 +197,12 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     for sequence_id in data["sequenceId"]
                 ]
             )
-            f = np.logical_and(
-                np.logical_and(target_subsequence_filter, data_col_filter),
-                sequence_filter,
+            f = np.logical_and.reduce(
+                [
+                    target_subsequence_filter,
+                    data_col_filter,
+                    sequence_filter,
+                ]
             )  # filter on target subsequence id and target column and sequence ids in data_subset
 
             if np.sum(f) > 0:
@@ -281,6 +284,7 @@ def get_probs_preds(config, inferer, data, column_types):
     else:
         probs = None
         preds = inferer.infer(X)
+
     return (probs, preds)
 
 
@@ -289,7 +293,7 @@ def infer(args, args_config):
         args.config_path if args.config_path is not None else "configs/infer.yaml"
     )
 
-    config = load_inferer_config(config_path, args_config, args.on_preprocessed)
+    config = load_inferer_config(config_path, args_config, args.on_unprocessed)
 
     if config.map_to_id:
         assert (
