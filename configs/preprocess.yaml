@@ -1,5 +1,0 @@
-project_path:
-data_path: "/home/leon/data/genome/chr8.subst.csv"
-seq_length: 50 # length of extracted subsequences
-group_proportions: [0.7, 0.1, 0.1, 0.1] # group share of total cases: train set share, validation set share, test set 1 share, test set 2 share,...(min one test set)
-max_rows: 5000000 # maximum number of rows written out, all rows are written out if max_rows is None

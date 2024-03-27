@@ -12,21 +12,30 @@ from sequifier.config.preprocess_config import load_preprocessor_config
 from sequifier.helpers import read_data, write_data
 
 
+def preprocess(args, args_config):
+    config_path = (
+        args.config_path if args.config_path is not None else "configs/preprocess.yaml"
+    )
+    config = load_preprocessor_config(config_path, args_config)
+    Preprocessor(**config.dict())
+    print("Preprocessing complete")
+
+
 class Preprocessor(object):
     def __init__(
         self,
         project_path,
         data_path,
-        selected_columns,
-        group_proportions,
-        seq_length,
-        seed,
-        target_column,
-        return_targets,
         read_format,
         write_format,
+        selected_columns,
+        return_targets,
+        target_column,
+        group_proportions,
+        seq_length,
+        max_rows,
+        seed,
         n_cores,
-        max_rows=None,
     ):
         self.project_path = project_path
         self.seed = seed
@@ -142,11 +151,6 @@ class Preprocessor(object):
             f.write(json.dumps(data_driven_config))
 
 
-def cast_columns_to_string(data):
-    data.columns = [str(col) for col in data.columns]
-    return data
-
-
 def replace_ids(data, column):
     ids = sorted(
         [int(x) if not isinstance(x, str) else x for x in np.unique(data[column])]
@@ -156,104 +160,33 @@ def replace_ids(data, column):
     return (data, id_map)
 
 
-def extract_subsequences(
-    in_seq, seq_length, data_columns, target_column, return_targets
-):
+def get_batch_limits(data, n_batches):
+    sequence_ids = data["sequenceId"].values
 
-    if return_targets:
-        nseq = max(
-            len(in_seq[target_column]) - seq_length - 1,
-            min(1, len(in_seq[target_column])),
-        )
-
-        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
-    else:
-        nseq = max(
-            len(in_seq[target_column]) - seq_length,
-            min(1, len(in_seq[target_column])),
-        )
-        targets = [np.nan for _ in range(nseq)]
-
-    seqs = {}
-    for data_col in data_columns:
-        seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
-
-    if len(seqs[target_column]) == 1:
-        seqs = {
-            col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
-            for col in data_columns
-        }
-
-    return (seqs, targets)
-
-
-def extract_sequences(data, seq_length, data_columns, target_column, return_targets):
-    raw_sequences = (
-        data.groupby("sequenceId")
-        .agg({col: list for col in data_columns})
-        .reset_index(drop=False)
+    new_sequence_id_indices = np.concatenate(
+        [
+            [0],
+            np.where(
+                np.concatenate([[False], sequence_ids[1:] != sequence_ids[:-1]], axis=0)
+            )[0],
+        ]
     )
 
-    rows = []
-    for _, in_row in raw_sequences.iterrows():
-        seqs, targets = extract_subsequences(
-            in_row[data_columns],
-            seq_length,
-            data_columns,
-            target_column,
-            return_targets,
-        )
-        for i, target in enumerate(targets):
-            subsequence_id = i
-            for data_col, data_col_seqs in seqs.items():
-                rows.append(
-                    [in_row["sequenceId"]]
-                    + [subsequence_id, data_col]
-                    + data_col_seqs[i]
-                    + [target if data_col == target_column else None]
-                )
-
-    sequences = pd.DataFrame(
-        rows,
-        columns=["sequenceId", "subsequenceId", "inputCol"]
-        + list(range(seq_length, 0, -1))
-        + ["target"],
+    ideal_step = math.ceil(data.shape[0] / n_batches)
+    ideal_limits = np.array(
+        [ideal_step * m for m in range(n_batches)] + [data.shape[0]]
     )
-    return sequences
-
-
-def get_subset_groups(sequence_data, groups, n_cols):
-    n_cases = int(sequence_data.shape[0] / n_cols)
-    subset_groups = [
-        ([i] * math.floor(n_cases * size)) for i, size in enumerate(groups)
+    distances = [
+        np.abs(new_sequence_id_indices - ideal_limit)
+        for ideal_limit in ideal_limits[:-1]
     ]
-    subset_groups = [inner for outer in subset_groups for inner in outer]
-    diff = n_cases - len(subset_groups)
-    subset_groups = ([0] * diff) + subset_groups
-    return subset_groups
-
-
-def extract_data_subsets(sequences, groups):
-    assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
-
-    datasets = [[] for _ in range(len(groups))]
-    n_cols = len(np.unique(sequences["inputCol"]))
-    for _, sequence_data in sequences.groupby("sequenceId"):
-        subset_groups = get_subset_groups(sequence_data, groups, n_cols)
-        assert len(subset_groups) * n_cols == sequence_data.shape[0]
-        for i, group in enumerate(subset_groups):
-            case_start = i * n_cols
-            datasets[group].append(
-                sequence_data.iloc[case_start : case_start + n_cols, :]
-            )
-
-    return [pd.concat(dataset, axis=0) for dataset in datasets]
-
-
-def insert_top_folder(path, folder_name):
-    components = os.path.split(path)
-    new_components = list(components[:-1]) + [folder_name] + [components[-1]]
-    return os.path.join(*new_components)
+    actual_limit_indices = [
+        np.where(distance == np.min(distance))[0] for distance in distances
+    ]
+    actual_limits = [
+        new_sequence_id_indices[limit_index[0]] for limit_index in actual_limit_indices
+    ] + [data.shape[0]]
+    return list(zip(actual_limits[:-1], actual_limits[1:]))
 
 
 def preprocess_batch(
@@ -305,33 +238,109 @@ def preprocess_batch(
             combine_parquet_files(written_files[j], out_path)
 
 
-def get_batch_limits(data, n_batches):
-    sequence_ids = data["sequenceId"].values
-
-    new_sequence_id_indices = np.concatenate(
-        [
-            [0],
-            np.where(
-                np.concatenate([[False], sequence_ids[1:] != sequence_ids[:-1]], axis=0)
-            )[0],
-        ]
+def extract_sequences(data, seq_length, data_columns, target_column, return_targets):
+    raw_sequences = (
+        data.groupby("sequenceId")
+        .agg({col: list for col in data_columns})
+        .reset_index(drop=False)
     )
 
-    ideal_step = math.ceil(data.shape[0] / n_batches)
-    ideal_limits = np.array(
-        [ideal_step * m for m in range(n_batches)] + [data.shape[0]]
+    rows = []
+    for _, in_row in raw_sequences.iterrows():
+        seqs, targets = extract_subsequences(
+            in_row[data_columns],
+            seq_length,
+            data_columns,
+            target_column,
+            return_targets,
+        )
+        for i, target in enumerate(targets):
+            subsequence_id = i
+            for data_col, data_col_seqs in seqs.items():
+                rows.append(
+                    [in_row["sequenceId"]]
+                    + [subsequence_id, data_col]
+                    + data_col_seqs[i]
+                    + [target if data_col == target_column else None]
+                )
+
+    sequences = pd.DataFrame(
+        rows,
+        columns=["sequenceId", "subsequenceId", "inputCol"]
+        + list(range(seq_length, 0, -1))
+        + ["target"],
     )
-    distances = [
-        np.abs(new_sequence_id_indices - ideal_limit)
-        for ideal_limit in ideal_limits[:-1]
+    return sequences
+
+
+def extract_subsequences(
+    in_seq, seq_length, data_columns, target_column, return_targets
+):
+
+    if return_targets:
+        nseq = max(
+            len(in_seq[target_column]) - seq_length - 1,
+            min(1, len(in_seq[target_column])),
+        )
+
+        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
+    else:
+        nseq = max(
+            len(in_seq[target_column]) - seq_length,
+            min(1, len(in_seq[target_column])),
+        )
+        targets = [np.nan for _ in range(nseq)]
+
+    seqs = {}
+    for data_col in data_columns:
+        seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
+
+    if len(seqs[target_column]) == 1:
+        seqs = {
+            col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
+            for col in data_columns
+        }
+
+    return (seqs, targets)
+
+
+def insert_top_folder(path, folder_name):
+    components = os.path.split(path)
+    new_components = list(components[:-1]) + [folder_name] + [components[-1]]
+    return os.path.join(*new_components)
+
+
+def extract_data_subsets(sequences, groups):
+    assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
+
+    datasets = [[] for _ in range(len(groups))]
+    n_cols = len(np.unique(sequences["inputCol"]))
+    for _, sequence_data in sequences.groupby("sequenceId"):
+        subset_groups = get_subset_groups(sequence_data, groups, n_cols)
+        assert len(subset_groups) * n_cols == sequence_data.shape[0]
+        for i, group in enumerate(subset_groups):
+            case_start = i * n_cols
+            datasets[group].append(
+                sequence_data.iloc[case_start : case_start + n_cols, :]
+            )
+
+    return [pd.concat(dataset, axis=0) for dataset in datasets]
+
+
+def get_subset_groups(sequence_data, groups, n_cols):
+    n_cases = int(sequence_data.shape[0] / n_cols)
+    subset_groups = [
+        ([i] * math.floor(n_cases * size)) for i, size in enumerate(groups)
     ]
-    actual_limit_indices = [
-        np.where(distance == np.min(distance))[0] for distance in distances
-    ]
-    actual_limits = [
-        new_sequence_id_indices[limit_index[0]] for limit_index in actual_limit_indices
-    ] + [data.shape[0]]
-    return list(zip(actual_limits[:-1], actual_limits[1:]))
+    subset_groups = [inner for outer in subset_groups for inner in outer]
+    diff = n_cases - len(subset_groups)
+    subset_groups = ([0] * diff) + subset_groups
+    return subset_groups
+
+
+def cast_columns_to_string(data):
+    data.columns = [str(col) for col in data.columns]
+    return data
 
 
 def combine_multiprocessing_outputs(
@@ -364,12 +373,3 @@ def combine_parquet_files(files, out_path):
     with pq.ParquetWriter(out_path, schema=schema, compression="snappy") as writer:
         for file in files:
             writer.write_table(pq.read_table(file, schema=schema))
-
-
-def preprocess(args, args_config):
-    config_path = (
-        args.config_path if args.config_path is not None else "configs/preprocess.yaml"
-    )
-    config = load_preprocessor_config(config_path, args_config)
-    Preprocessor(**config.dict())
-    print("Preprocessing complete")
