@@ -4,15 +4,14 @@ ddconfig_path: configs/ddconfigs/test_data_real_5.json
 inference_model_path: models/sequifier-model-real-5-best-3.pt
 inference_data_path: data/test_data_real_5-split2.csv
 
+selected_columns: null
+target_column: itemValue
+target_column_type: real
+
 output_probabilities: false
 map_to_id: false
 device: cpu
 seq_length: 8
 inference_batch_size: 10
 
-selected_columns: null
-target_column: itemValue
-target_column_type: real
 auto_regression: false
-
-

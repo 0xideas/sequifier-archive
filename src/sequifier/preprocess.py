@@ -26,16 +26,16 @@ class Preprocessor(object):
         self,
         project_path,
         data_path,
+        read_format,
+        write_format,
         selected_columns,
+        return_targets,
         target_column,
         group_proportions,
         seq_length,
         max_rows,
         seed,
         n_cores,
-        return_targets,
-        read_format,
-        write_format,
     ):
         self.project_path = project_path
         self.seed = seed

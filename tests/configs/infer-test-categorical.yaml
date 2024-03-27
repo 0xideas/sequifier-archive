@@ -6,16 +6,15 @@ inference_data_path: data/test_data_categorical_5-split2.parquet
 read_format: parquet
 write_format: csv
 
+selected_columns: null
+target_column: itemId
+target_column_type: categorical
+
 output_probabilities: true
 map_to_id: true
 device: cpu
 seq_length: 8
 inference_batch_size: 10
 
-selected_columns: null
-target_column: itemId
-target_column_type: categorical
-
 sample_from_distribution: true
 auto_regression: false
-

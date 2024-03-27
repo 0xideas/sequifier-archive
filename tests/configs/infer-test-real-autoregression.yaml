@@ -6,17 +6,16 @@ inference_data_path: data/test_data_real_1-split2-autoregression.csv
 read_format: csv
 write_format: csv
 
-output_probabilities: false
-map_to_id: true
-device: cpu
-seq_length: 8
-inference_batch_size: 10
-
 selected_columns: null
 target_column: itemValue
 target_column_type: real
 
-sample_from_distribution: true
+output_probabilities: false
+map_to_id: false
+device: cpu
+seq_length: 8
+inference_batch_size: 10
+
+sample_from_distribution: false
 infer_with_dropout: true
 auto_regression: true
-

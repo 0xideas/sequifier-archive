@@ -40,19 +40,19 @@ class InfererModel(BaseModel):
     read_format: str = "parquet"
     write_format: str = "csv"
 
-    output_probabilities: bool = False
-    map_to_id: bool = True
-    seed: int
-    device: str
-    seq_length: int
-    inference_batch_size: int
-
     selected_columns: Optional[list[str]]
     categorical_columns: list[str]
     real_columns: list[str]
     target_column: str
     column_types: dict[str, str]
     target_column_type: str
+
+    output_probabilities: bool = False
+    map_to_id: bool = True
+    seed: int
+    device: str
+    seq_length: int
+    inference_batch_size: int
 
     sample_from_distribution: bool = False
     infer_with_dropout: bool = False
@@ -65,6 +65,7 @@ class InfererModel(BaseModel):
 
     @validator("inference_data_path", always=True)
     def validate_inference_data_path(cls, v, values):
+
         path = os.path.join(values["project_path"], v)
 
         if not os.path.exists(path):
@@ -88,17 +89,20 @@ class InfererModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-    @validator("inference_data_path", always=True)
-    def validate_map_to_id(cls, v, values):
-        assert (
-            v == False or values["target_column_type"] == "categorical"
-        ), "map_to_id can only be True if the target variable is categorical"
-        return v
 
     @validator("target_column_type", always=True)
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"], v
         return v
+    
+
+    @validator("map_to_id", always=True)
+    def validate_map_to_id(cls, v, values):
+        assert (
+            v == False or values["target_column_type"] == "categorical"
+        ), "map_to_id can only be True if the target variable is categorical"
+        return v
+    
 
     @validator("sample_from_distribution", always=True)
     def validate_sample_from_distribution(cls, v, values):

@@ -19,15 +19,16 @@ x use numpy reduce where possible
 x remove unnecessary n_sequences return value from starmap
 x add sampling from distribution for categorical target variables
 x add dropout option on inference
-add decoder only architecture
-learnable positional encoding
-
-
 x reorder functions and methods logically
 x systematize hparams or self access for hyperparameters in train.py
 
 
 reorder config and class attributes logically
 make underscore and dash usage consistent
+
+
+add decoder only architecture
+learnable positional encoding
 address torch depreciation warning
+
 
