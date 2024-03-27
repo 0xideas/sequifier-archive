@@ -21,6 +21,8 @@ x remove unnecessary n_sequences return value from starmap
 
 add sampling from distribution
 add dropout option on inference when using pt model
+add decoder only architecture
+
 
 
 make underscore and dash usage consistent
