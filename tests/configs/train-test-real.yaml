@@ -8,8 +8,9 @@ seq_length: 8
 log_interval: 200
 inference_batch_size: 10
 read_format: parquet
-export_onnx: false
+export_onnx: true
 export_pt: true
+export_with_dropout: true
 model_spec:
   d_model: 10
   nhead: 2

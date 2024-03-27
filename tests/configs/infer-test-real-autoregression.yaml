@@ -10,6 +10,7 @@ device: cpu
 seq_length: 8
 output_probabilities: false
 ddconfig_path: configs/ddconfigs/test_data_real_1.json
+infer_with_dropout: true
 map_to_id: true
 inference_batch_size: 10
 auto_regression: true

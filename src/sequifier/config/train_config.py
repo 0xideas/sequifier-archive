@@ -155,6 +155,7 @@ class TransformerModel(BaseModel):
     read_format: str = "parquet"
     export_onnx: bool = True
     export_pt: bool = False
+    export_with_dropout: bool = False
 
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]

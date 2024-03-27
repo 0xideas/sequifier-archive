@@ -1,5 +1,6 @@
 import json
 import os
+import warnings
 
 import numpy as np
 import onnxruntime
@@ -25,6 +26,7 @@ class Inferer(object):
         target_column,
         target_column_type,
         sample_from_distribution,
+        infer_with_dropout,
         inference_batch_size,
         device,
         args_config,
@@ -46,6 +48,7 @@ class Inferer(object):
         self.target_column = target_column
         self.target_column_type = target_column_type
         self.sample_from_distribution = sample_from_distribution
+        self.infer_with_dropout = infer_with_dropout
         self.inference_batch_size = inference_batch_size
         self.inference_model_type = inference_model_path.split(".")[-1]
         self.inference_model_path_load = os.path.join(
@@ -58,8 +61,16 @@ class Inferer(object):
             execution_providers = [
                 "CUDAExecutionProvider" if device == "cuda" else "CPUExecutionProvider"
             ]
+            kwargs = {}
+            if self.infer_with_dropout:
+                kwargs["disabled_optimizers"] = ["EliminateDropout"]
+
+                warnings.warn(
+                    "For inference with onnx, 'infer_with_dropout==True' is only effective if 'export_with_dropout==True' in training"
+                )
+
             self.ort_session = onnxruntime.InferenceSession(
-                self.inference_model_path_load, providers=execution_providers
+                self.inference_model_path_load, providers=execution_providers, **kwargs
             )
         if self.inference_model_type == "pt":
             self.inference_model = load_inference_model(
@@ -67,6 +78,7 @@ class Inferer(object):
                 self.training_config_path,
                 self.args_config,
                 self.device,
+                self.infer_with_dropout,
             )
 
     def prepare_inference_batches(self, x, pad_to_batch_size):
@@ -326,6 +338,7 @@ def infer(args, args_config):
         config.target_column,
         config.target_column_type,
         config.sample_from_distribution,
+        config.infer_with_dropout,
         config.inference_batch_size,
         config.device,
         args_config=args_config,
