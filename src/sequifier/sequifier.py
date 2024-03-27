@@ -41,12 +41,12 @@ def main():
     parser.add_argument("-op", "--on-unprocessed", action="store_true")
     parser.add_argument("-i", "--infer", action="store_true")
     parser.add_argument("-r", "--randomize", action="store_true")
-    parser.add_argument("-dp", "--data-path", type=str)
-    parser.add_argument("-ddcp", "--ddconfig-path", type=str)
     parser.add_argument("-mn", "--model-name", type=str)
+    parser.add_argument("-dp", "--data-path", type=str)
+    parser.add_argument("-sc", "--selected-columns", type=str)
+    parser.add_argument("-ddcp", "--ddconfig-path", type=str)
     parser.add_argument("-imp", "--inference-model-path", type=str)
     parser.add_argument("-idp", "--inference-data-path", type=str)
-    parser.add_argument("-sc", "--selected-columns", type=str)
 
     args = parser.parse_args()
 

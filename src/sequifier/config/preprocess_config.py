@@ -5,6 +5,15 @@ import yaml
 from pydantic import BaseModel, validator
 
 
+def load_preprocessor_config(config_path, args_config):
+    with open(config_path, "r") as f:
+        config_values = yaml.safe_load(f)
+
+    config_values.update(args_config)
+
+    return PreprocessorModel(**config_values)
+
+
 class PreprocessorModel(BaseModel):
     project_path: str
     data_path: str
@@ -51,12 +60,3 @@ class PreprocessorModel(BaseModel):
             "parquet",
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
-
-
-def load_preprocessor_config(config_path, args_config):
-    with open(config_path, "r") as f:
-        config_values = yaml.safe_load(f)
-
-    config_values.update(args_config)
-
-    return PreprocessorModel(**config_values)

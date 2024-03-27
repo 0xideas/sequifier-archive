@@ -10,18 +10,34 @@ from pydantic import BaseModel, validator
 ANYTYPE = Union[str, int, float]
 
 
-class DotDict(dict):
-    """dot.notation access to dictionary attributes"""
+def load_transformer_config(config_path, args_config, on_unprocessed):
+    with open(config_path, "r") as f:
+        config_values = yaml.safe_load(f)
 
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+    config_values.update(args_config)
 
-    def __deepcopy__(self, memo=None):
-        return DotDict(copy.deepcopy(dict(self), memo=memo))
+    if not on_unprocessed:
+        dd_config_path = os.path.join(
+            config_values["project_path"], config_values.pop("ddconfig_path")
+        )
+        with open(dd_config_path, "r") as f:
+            dd_config = json.loads(f.read())
 
+        config_values["column_types"] = dd_config["column_types"]
+        config_values["categorical_columns"] = [
+            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
+        ]
+        config_values["real_columns"] = [
+            col
+            for col, type_ in dd_config["column_types"].items()
+            if type_ == "float64"
+        ]
+        config_values["n_classes"] = dd_config["n_classes"]
+        config_values["training_data_path"] = dd_config["split_paths"][0]
+        config_values["validation_data_path"] = dd_config["split_paths"][1]
 
-CustomValidation = Optional
+    return TransformerModel(**config_values)
+
 
 VALID_LOSS_FUNCTIONS = [
     "L1Loss",
@@ -78,6 +94,20 @@ VALID_SCHEDULERS = [
     "OneCycleLR",
     "CosineAnnealingWarmRestarts",
 ]
+
+
+class DotDict(dict):
+    """dot.notation access to dictionary attributes"""
+
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+    def __deepcopy__(self, memo=None):
+        return DotDict(copy.deepcopy(dict(self), memo=memo))
+
+
+CustomValidation = Optional
 
 
 @dataclass
@@ -183,32 +213,3 @@ class TransformerModel(BaseModel):
         )
         self.model_spec = ModelSpecModel(**kwargs.get("model_spec"))
         self.training_spec = TrainingSpecModel(**kwargs.get("training_spec"))
-
-
-def load_transformer_config(config_path, args_config, on_unprocessed):
-    with open(config_path, "r") as f:
-        config_values = yaml.safe_load(f)
-
-    config_values.update(args_config)
-
-    if not on_unprocessed:
-        dd_config_path = os.path.join(
-            config_values["project_path"], config_values.pop("ddconfig_path")
-        )
-        with open(dd_config_path, "r") as f:
-            dd_config = json.loads(f.read())
-
-        config_values["column_types"] = dd_config["column_types"]
-        config_values["categorical_columns"] = [
-            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
-        ]
-        config_values["real_columns"] = [
-            col
-            for col, type_ in dd_config["column_types"].items()
-            if type_ == "float64"
-        ]
-        config_values["n_classes"] = dd_config["n_classes"]
-        config_values["training_data_path"] = dd_config["split_paths"][0]
-        config_values["validation_data_path"] = dd_config["split_paths"][1]
-
-    return TransformerModel(**config_values)

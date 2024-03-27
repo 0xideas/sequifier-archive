@@ -19,6 +19,54 @@ from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
                                subset_to_selected_columns)
 
 
+def train(args, args_config):
+    config_path = (
+        args.config_path if args.config_path is not None else "configs/train.yaml"
+    )
+
+    config = load_transformer_config(config_path, args_config, args.on_unprocessed)
+
+    column_types = {
+        col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
+        for col in config.column_types
+    }
+
+    data_train = read_data(config.training_data_path, config.read_format)
+    if config.selected_columns is not None:
+        data_train = subset_to_selected_columns(data_train, config.selected_columns)
+    X_train, y_train = numpy_to_pytorch(
+        data_train,
+        column_types,
+        config.target_column,
+        config.seq_length,
+        config.training_spec.device,
+        to_device=True,
+    )
+    del data_train
+
+    data_valid = read_data(config.validation_data_path, config.read_format)
+
+    if config.selected_columns is not None:
+        data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
+
+    X_valid, y_valid = numpy_to_pytorch(
+        data_valid,
+        column_types,
+        config.target_column,
+        config.seq_length,
+        config.training_spec.device,
+        to_device=True,
+    )
+    del data_valid
+
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
+
+    model = torch.compile(TransformerModel(config).to(config.training_spec.device))
+
+    model.train_model(X_train, y_train, X_valid, y_valid)
+
+
 class TransformerModel(nn.Module):
     def __init__(self, hparams):
         super().__init__()
@@ -111,14 +159,6 @@ class TransformerModel(nn.Module):
         self.initialize_log_file()
         self.log_file.write(load_string)
 
-    def initialize_log_file(self):
-        os.makedirs(os.path.join(self.project_path, "logs"), exist_ok=True)
-        open_mode = "w" if self.start_epoch == 1 else "a"
-        self.log_file = LogFile(
-            os.path.join(self.project_path, "logs", f"sequifier-{self.model_name}.txt"),
-            open_mode,
-        )
-
     def get_real_columns_repetitions(self, real_columns, nhead):
         real_columns_repetitions = {col: 1 for col in real_columns}
         column_index = dict(enumerate(real_columns))
@@ -130,22 +170,12 @@ class TransformerModel(nn.Module):
 
         return real_columns_repetitions
 
+    def generate_square_subsequent_mask(self, sz: int) -> Tensor:
+        """Generates an upper-triangular matrix of -inf, with zeros on diag."""
+        return torch.triu(torch.ones(sz, sz) * float("-inf"), diagonal=1)
+
     def filter_key(self, dict_, key):
         return {k: v for k, v in dict_.items() if k != key}
-
-    def get_optimizer(self, **kwargs):
-        optimizer_class = eval(
-            f"torch.optim.{self.hparams.training_spec.optimizer.name}"
-        )
-        return optimizer_class(
-            self.parameters(), lr=self.hparams.training_spec.lr, **kwargs
-        )
-
-    def get_scheduler(self, **kwargs):
-        scheduler_class = eval(
-            f"torch.optim.lr_scheduler.{self.hparams.training_spec.scheduler.name}"
-        )
-        return scheduler_class(self.optimizer, **kwargs)
 
     def init_weights(self) -> None:
         initrange = 0.1
@@ -185,25 +215,45 @@ class TransformerModel(nn.Module):
         output = self.decoder(concatenated)
         return output
 
-    def get_batch(self, X, y, batch_start, batch_size, to_device):
-        if to_device:
-            return (
-                {
-                    col: X[col][batch_start : batch_start + batch_size, :].to(
-                        self.device
-                    )
-                    for col in X.keys()
-                },
-                y[batch_start : batch_start + batch_size].to(self.device),
-            )
-        else:
-            return (
-                {
-                    col: X[col][batch_start : batch_start + batch_size, :]
-                    for col in X.keys()
-                },
-                y[batch_start : batch_start + batch_size],
-            )
+    def train_model(self, X_train, y_train, X_valid, y_valid):
+        best_val_loss = float("inf")
+        n_epochs_no_improvemet = 0
+        for epoch in range(
+            self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
+        ):
+            if (
+                self.early_stopping_epochs is None
+                or n_epochs_no_improvemet < self.early_stopping_epochs
+            ):
+                epoch_start_time = time.time()
+                self.train_epoch(X_train, y_train, epoch)
+                val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
+                val_ppl = math.exp(val_loss_normalized)
+                elapsed = time.time() - epoch_start_time
+                self.log_file.write("-" * 89)
+                self.log_file.write(
+                    f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
+                    f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
+                )
+                self.log_file.write("-" * 89)
+
+                if val_loss_normalized < best_val_loss:
+                    best_val_loss = val_loss_normalized
+                    best_model = self.copy_model()
+
+                    n_epochs_no_improvemet = 0
+                else:
+                    n_epochs_no_improvemet += 1
+
+                self.scheduler.step()
+                if epoch % self.iter_save == 0:
+                    self.save(epoch, val_loss_normalized)
+                last_epoch = int(epoch)
+
+        self.export(self, "last", last_epoch)
+        self.export(best_model, "best", last_epoch)
+        self.log_file.write("Training transformer complete")
+        self.log_file.close()
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
         self.train()  # turn on train mode
@@ -257,56 +307,12 @@ class TransformerModel(nn.Module):
                 total_loss = 0.0
                 start_time = time.time()
 
-    def train_model(self, X_train, y_train, X_valid, y_valid):
-        best_val_loss = float("inf")
-        n_epochs_no_improvemet = 0
-        for epoch in range(
-            self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
-        ):
-            if (
-                self.early_stopping_epochs is None
-                or n_epochs_no_improvemet < self.early_stopping_epochs
-            ):
-                epoch_start_time = time.time()
-                self.train_epoch(X_train, y_train, epoch)
-                val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
-                val_ppl = math.exp(val_loss_normalized)
-                elapsed = time.time() - epoch_start_time
-                self.log_file.write("-" * 89)
-                self.log_file.write(
-                    f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
-                )
-                self.log_file.write("-" * 89)
-
-                if val_loss_normalized < best_val_loss:
-                    best_val_loss = val_loss_normalized
-                    best_model = self.copy_model()
-
-                    n_epochs_no_improvemet = 0
-                else:
-                    n_epochs_no_improvemet += 1
-
-                self.scheduler.step()
-                if epoch % self.iter_save == 0:
-                    self.save(epoch, val_loss_normalized)
-                last_epoch = int(epoch)
-
-        self.export(self, "last", last_epoch)
-        self.export(best_model, "best", last_epoch)
-        self.log_file.write("Training transformer complete")
-        self.log_file.close()
-
     def copy_model(self):
         log_file = self.log_file
         del self.log_file
         model_copy = copy.deepcopy(self)
         self.log_file = log_file
         return model_copy
-
-    def generate_square_subsequent_mask(self, sz: int) -> Tensor:
-        """Generates an upper-triangular matrix of -inf, with zeros on diag."""
-        return torch.triu(torch.ones(sz, sz) * float("-inf"), diagonal=1)
 
     def evaluate(self, X_valid, y_valid) -> float:
         self.eval()  # turn on evaluation mode
@@ -329,6 +335,26 @@ class TransformerModel(nn.Module):
                 total_loss += self.criterion(output, targets).item()
 
         return total_loss / (X_valid[self.target_column].size(0))
+
+    def get_batch(self, X, y, batch_start, batch_size, to_device):
+        if to_device:
+            return (
+                {
+                    col: X[col][batch_start : batch_start + batch_size, :].to(
+                        self.device
+                    )
+                    for col in X.keys()
+                },
+                y[batch_start : batch_start + batch_size].to(self.device),
+            )
+        else:
+            return (
+                {
+                    col: X[col][batch_start : batch_start + batch_size, :]
+                    for col in X.keys()
+                },
+                y[batch_start : batch_start + batch_size],
+            )
 
     def export(self, model, suffix, epoch):
         self.eval()
@@ -412,6 +438,28 @@ class TransformerModel(nn.Module):
         )
         self.log_file.write(f"Saved model to {output_path}")
 
+    def get_optimizer(self, **kwargs):
+        optimizer_class = eval(
+            f"torch.optim.{self.hparams.training_spec.optimizer.name}"
+        )
+        return optimizer_class(
+            self.parameters(), lr=self.hparams.training_spec.lr, **kwargs
+        )
+
+    def get_scheduler(self, **kwargs):
+        scheduler_class = eval(
+            f"torch.optim.lr_scheduler.{self.hparams.training_spec.scheduler.name}"
+        )
+        return scheduler_class(self.optimizer, **kwargs)
+
+    def initialize_log_file(self):
+        os.makedirs(os.path.join(self.project_path, "logs"), exist_ok=True)
+        open_mode = "w" if self.start_epoch == 1 else "a"
+        self.log_file = LogFile(
+            os.path.join(self.project_path, "logs", f"sequifier-{self.model_name}.txt"),
+            open_mode,
+        )
+
     def load_weights_conditional(self):
 
         latest_model_path = self.get_latest_model_name()
@@ -475,54 +523,6 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-def train(args, args_config):
-    config_path = (
-        args.config_path if args.config_path is not None else "configs/train.yaml"
-    )
-
-    config = load_transformer_config(config_path, args_config, args.on_unprocessed)
-
-    column_types = {
-        col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
-        for col in config.column_types
-    }
-
-    data_train = read_data(config.training_data_path, config.read_format)
-    if config.selected_columns is not None:
-        data_train = subset_to_selected_columns(data_train, config.selected_columns)
-    X_train, y_train = numpy_to_pytorch(
-        data_train,
-        column_types,
-        config.target_column,
-        config.seq_length,
-        config.training_spec.device,
-        to_device=True,
-    )
-    del data_train
-
-    data_valid = read_data(config.validation_data_path, config.read_format)
-
-    if config.selected_columns is not None:
-        data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
-
-    X_valid, y_valid = numpy_to_pytorch(
-        data_valid,
-        column_types,
-        config.target_column,
-        config.seq_length,
-        config.training_spec.device,
-        to_device=True,
-    )
-    del data_valid
-
-    torch.manual_seed(config.seed)
-    np.random.seed(config.seed)
-
-    model = torch.compile(TransformerModel(config).to(config.training_spec.device))
-
-    model.train_model(X_train, y_train, X_valid, y_valid)
-
-
 def load_inference_model(
     model_path, training_config_path, args_config, device, infer_with_dropout
 ):
@@ -531,7 +531,7 @@ def load_inference_model(
     )
 
     with torch.no_grad():
-      
+
         model = TransformerModel(training_config)
         model.log_file.write(f"Loading model weights from {model_path}")
         model_state = torch.load(model_path)

@@ -23,12 +23,12 @@ add decoder only architecture
 learnable positional encoding
 
 
+x reorder functions and methods logically
+
+
+reorder config and class attributes logically
 
 make underscore and dash usage consistent
-make query/loc consistent
 systematize hparams or self access for hyperparameters in train.py
 address torch depreciation warning
-reorder config and class attributes logically
-reorder functions and methods logically
-
 
