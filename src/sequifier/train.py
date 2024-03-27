@@ -5,7 +5,7 @@ import os
 import re
 import time
 import uuid
-from argparse import ArgumentParser
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -48,6 +48,7 @@ class TransformerModel(nn.Module):
             self.real_columns, hparams.model_spec.nhead
         )
         self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
+        self.export_with_dropout = hparams.export_with_dropout
         self.export_onnx = hparams.export_onnx
         self.export_pt = hparams.export_pt
         self.model_type = "Transformer"
@@ -331,8 +332,8 @@ class TransformerModel(nn.Module):
 
     def export(self, model, suffix, epoch):
         self.eval()
-        os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
 
+        os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
         if self.export_onnx:
             x_cat = {
                 col: torch.randint(
@@ -357,6 +358,11 @@ class TransformerModel(nn.Module):
                 "models",
                 f"sequifier-{self.model_name}-{suffix}-{epoch}.onnx",
             )
+            training_mode = (
+                torch._C._onnx.TrainingMode.TRAINING
+                if self.export_with_dropout
+                else torch._C._onnx.TrainingMode.EVAL
+            )
             torch.onnx.export(
                 model,  # model being run
                 x,  # model input (or a tuple for multiple inputs)
@@ -370,6 +376,7 @@ class TransformerModel(nn.Module):
                     "input": {0: "batch_size"},  # variable length axes
                     "output": {0: "batch_size"},
                 },
+                training=training_mode,
             )
         if self.export_pt:
             export_path = os.path.join(
@@ -377,7 +384,13 @@ class TransformerModel(nn.Module):
                 "models",
                 f"sequifier-{self.model_name}-{suffix}-{epoch}.pt",
             )
-            torch.save({"model_state_dict": self.state_dict()}, export_path)
+            torch.save(
+                {
+                    "model_state_dict": self.state_dict(),
+                    "export_with_dropout": self.export_with_dropout,
+                },
+                export_path,
+            )
 
     def save(self, epoch, val_loss):
         os.makedirs(os.path.join(self.project_path, "checkpoints"), exist_ok=True)
@@ -510,7 +523,9 @@ def train(args, args_config):
     model.train_model(X_train, y_train, X_valid, y_valid)
 
 
-def load_inference_model(model_path, training_config_path, args_config, device):
+def load_inference_model(
+    model_path, training_config_path, args_config, device, infer_with_dropout
+):
     training_config = load_transformer_config(
         training_config_path, args_config, args_config["on_unprocessed"]
     )
@@ -523,6 +538,15 @@ def load_inference_model(model_path, training_config_path, args_config, device):
         model.load_state_dict(model_state["model_state_dict"])
 
         model.eval()
+
+        if infer_with_dropout:
+            if not model_state["export_with_dropout"]:
+                warnings.warn(
+                    "Model was exported with 'export_with_dropout'==False. By setting 'infer_with_dropout' to True, you are overriding this configuration"
+                )
+            for module in model.modules():
+                if isinstance(module, torch.nn.Dropout):
+                    module.train()
 
         model = torch.compile(model).to(device)
 
