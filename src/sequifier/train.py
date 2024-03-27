@@ -14,9 +14,13 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+)
 
 
 def train(args, args_config):
@@ -71,38 +75,37 @@ class TransformerModel(nn.Module):
     def __init__(self, hparams):
         super().__init__()
         self.project_path = hparams.project_path
-        self.target_column = hparams.target_column
-        self.target_column_type = hparams.target_column_type
-        self.selected_columns = hparams.selected_columns
-        self.real_columns = [
-            col
-            for col in hparams.real_columns
-            if ((self.selected_columns is None) or (col in self.selected_columns))
-        ]
-        self.categorical_columns = [
-            col
-            for col in hparams.categorical_columns
-            if ((self.selected_columns is None) or (col in self.selected_columns))
-        ]
-
-        self.seq_length = hparams.seq_length
-        self.inference_batch_size = hparams.inference_batch_size
-        self.n_classes = hparams.n_classes  
+        self.model_type = "Transformer"
         self.model_name = (
             hparams.model_name
             if hparams.model_name is not None
             else uuid.uuid4().hex[:8]
         )
-        self.hparams = hparams
-        self.real_columns_repetitions = self.get_real_columns_repetitions(
-            self.real_columns, hparams.model_spec.nhead
-        )
-        self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
-        self.export_with_dropout = hparams.export_with_dropout
+        self.selected_columns = hparams.selected_columns
+        self.categorical_columns = [
+            col
+            for col in hparams.categorical_columns
+            if ((self.selected_columns is None) or (col in self.selected_columns))
+        ]
+        self.real_columns = [
+            col
+            for col in hparams.real_columns
+            if ((self.selected_columns is None) or (col in self.selected_columns))
+        ]
+
+        self.target_column = hparams.target_column
+        self.target_column_type = hparams.target_column_type
+
+        self.seq_length = hparams.seq_length
+        self.n_classes = hparams.n_classes
+        self.inference_batch_size = hparams.inference_batch_size
+        self.log_interval = hparams.log_interval
         self.export_onnx = hparams.export_onnx
         self.export_pt = hparams.export_pt
-        self.model_type = "Transformer"
-        self.log_interval = hparams.log_interval
+        self.export_with_dropout = hparams.export_with_dropout
+        self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
+        self.hparams = hparams
+
         self.encoder = ModuleDict()
         self.pos_encoder = ModuleDict()
         for col, n_classes in self.n_classes.items():
@@ -111,6 +114,11 @@ class TransformerModel(nn.Module):
                 self.pos_encoder[col] = PositionalEncoding(
                     hparams.model_spec.d_model, hparams.training_spec.dropout
                 )
+
+
+        self.real_columns_repetitions = self.get_real_columns_repetitions(
+            self.real_columns, hparams.model_spec.nhead
+        )
 
         embedding_size = (
             hparams.model_spec.d_model * len(self.categorical_columns)
@@ -143,9 +151,9 @@ class TransformerModel(nn.Module):
         self.accumulation_steps = hparams.training_spec.accumulation_steps
         self.device = hparams.training_spec.device
 
-        self.src_mask = self.generate_square_subsequent_mask(
-            self.seq_length
-        ).to(self.device)
+        self.src_mask = self.generate_square_subsequent_mask(self.seq_length).to(
+            self.device
+        )
 
         self.init_weights()
         self.optimizer = self.get_optimizer(
