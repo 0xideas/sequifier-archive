@@ -14,13 +14,9 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    LogFile,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns)
 
 
 class TransformerModel(nn.Module):
@@ -335,7 +331,6 @@ class TransformerModel(nn.Module):
 
     def export(self, model, suffix, epoch):
         self.eval()
-        self.no_grad()
         os.makedirs(os.path.join(self.project_path, "models"), exist_ok=True)
 
         if self.export_onnx:
@@ -520,15 +515,16 @@ def load_inference_model(model_path, training_config_path, args_config, device):
         training_config_path, args_config, args_config["on_unprocessed"]
     )
 
-    model = TransformerModel(training_config)
-    model.log_file.write(f"Loading model weights from {model_path}")
-    model_state = torch.load(model_path)
-    model.load_state_dict(model_state["model_state_dict"])
+    with torch.no_grad():
 
-    model.eval()
-    model.no_grad()
+        model = TransformerModel(training_config)
+        model.log_file.write(f"Loading model weights from {model_path}")
+        model_state = torch.load(model_path)
+        model.load_state_dict(model_state["model_state_dict"])
 
-    model = torch.compile(model).to(device)
+        model.eval()
+
+        model = torch.compile(model).to(device)
 
     return model
 

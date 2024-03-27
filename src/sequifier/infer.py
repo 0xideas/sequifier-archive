@@ -7,13 +7,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
+                               read_data, subset_to_selected_columns,
+                               write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -28,6 +24,7 @@ class Inferer(object):
         real_columns,
         target_column,
         target_column_type,
+        sample_from_distribution,
         inference_batch_size,
         device,
         args_config,
@@ -48,6 +45,7 @@ class Inferer(object):
         self.real_columns = real_columns
         self.target_column = target_column
         self.target_column_type = target_column_type
+        self.sample_from_distribution = sample_from_distribution
         self.inference_batch_size = inference_batch_size
         self.inference_model_type = inference_model_path.split(".")[-1]
         self.inference_model_path_load = os.path.join(
@@ -156,7 +154,10 @@ class Inferer(object):
     def infer_categorical_any_size(self, x, probs=None):
         if probs is None:
             probs = self.infer_probs_any_size(x)
-        preds = probs.argmax(1)
+        if self.sample_from_distribution is False:
+            preds = probs.argmax(1)
+        else:
+            preds = sample_with_cumsum(probs)
         if self.map_to_id:
             preds = np.array([self.index_map[i] for i in preds])
         return preds
@@ -166,6 +167,13 @@ class Inferer(object):
             return self.infer_categorical_any_size(x, probs)
         if self.target_column_type == "real":
             return self.infer_real_any_size(x)
+
+
+def sample_with_cumsum(probs):
+    cumulative_probs = np.cumsum(probs, axis=1)
+    random_threshold = np.random.rand(cumulative_probs.shape[0], 1)
+    random_threshold = np.repeat(random_threshold, probs.shape[1], axis=1)
+    return (random_threshold < cumulative_probs).argmax(axis=1)
 
 
 def get_probs_preds_auto_regression(config, inferer, data, column_types):
@@ -317,6 +325,7 @@ def infer(args, args_config):
         config.real_columns,
         config.target_column,
         config.target_column_type,
+        config.sample_from_distribution,
         config.inference_batch_size,
         config.device,
         args_config=args_config,
@@ -372,5 +381,9 @@ def infer(args, args_config):
     )
 
     print(f"Writing predictions to {predictions_path}")
-    write_data(pd.DataFrame(preds), predictions_path, config.write_format)
+    write_data(
+        pd.DataFrame(preds, columns=["model_output"]),
+        predictions_path,
+        config.write_format,
+    )
     print("Inference complete")

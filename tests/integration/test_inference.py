@@ -23,8 +23,9 @@ def predictions(run_inference, project_path):
             f"sequifier-{model_name}_predictions.csv",
         )
         variant = model_name.split("-")[1]
+        dtype = {"model_output": str} if "categorical" in model_name else None
         preds[variant][model_name] = pd.read_csv(
-            prediction_path, sep=",", decimal=".", index_col=None
+            prediction_path, sep=",", decimal=".", index_col=None, dtype=dtype
         ).values.flatten()
 
     return preds
@@ -53,9 +54,9 @@ def test_predictions_real(predictions):
 
 
 def test_predictions_cat(predictions):
-    valid_values = np.arange(100, 130)
+    valid_values = [str(x) for x in np.arange(100, 130)] + ["unknown"]
     for model_name, model_predictions in predictions["categorical"].items():
-        assert np.all([v in valid_values for v in model_predictions])
+        assert np.all([v in valid_values for v in model_predictions]), model_predictions
 
 
 def test_probabilities(probabilities):
