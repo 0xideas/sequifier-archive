@@ -21,9 +21,8 @@ x add sampling from distribution for categorical target variables
 x add dropout option on inference
 x reorder functions and methods logically
 x systematize hparams or self access for hyperparameters in train.py
+x reorder config and class attributes logically
 
-
-reorder config and class attributes logically
 make underscore and dash usage consistent
 
 
