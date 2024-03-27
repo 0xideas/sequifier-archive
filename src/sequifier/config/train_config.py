@@ -171,6 +171,7 @@ class TransformerModel(BaseModel):
     model_name: Optional[str]
     training_data_path: str
     validation_data_path: str
+    read_format: str = "parquet"
 
     selected_columns: Optional[list[str]]
     column_types: dict[str, str]
@@ -184,7 +185,6 @@ class TransformerModel(BaseModel):
     inference_batch_size: int
     seed: int
     log_interval: int
-    read_format: str = "parquet"
 
     export_onnx: bool = True
     export_pt: bool = False
