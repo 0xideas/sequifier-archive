@@ -1,14 +1,18 @@
 project_path: tests/project_folder
-target_column: itemValue
-target_column_type: real
-selected_columns: null
-inference_data_path: data/test_data_real_5-split2.csv
+training_config_path: tests/configs/train-test-real.yaml
+ddconfig_path: configs/ddconfigs/test_data_real_5.json
 inference_model_path: models/sequifier-model-real-5-best-3.pt
+inference_data_path: data/test_data_real_5-split2.csv
+
+output_probabilities: false
+map_to_id: false
 device: cpu
 seq_length: 8
-output_probabilities: false
-ddconfig_path: configs/ddconfigs/test_data_real_5.json
-map_to_id: true
 inference_batch_size: 10
+
+selected_columns: null
+target_column: itemValue
+target_column_type: real
 auto_regression: false
-training_config_path: tests/configs/train-test-real.yaml
+
+

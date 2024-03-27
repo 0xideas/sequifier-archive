@@ -37,7 +37,6 @@ class InfererModel(BaseModel):
     ddconfig_path: Optional[str] = None
     inference_model_path: str
     inference_data_path: str
-    seq_length: int
     read_format: str = "parquet"
     write_format: str = "csv"
 
@@ -45,6 +44,7 @@ class InfererModel(BaseModel):
     map_to_id: bool = True
     seed: int
     device: str
+    seq_length: int
     inference_batch_size: int
 
     selected_columns: Optional[list[str]]
@@ -86,6 +86,13 @@ class InfererModel(BaseModel):
             "csv",
             "parquet",
         ], "Currently only 'csv' and 'parquet' are supported"
+        return v
+
+    @validator("inference_data_path", always=True)
+    def validate_map_to_id(cls, v, values):
+        assert (
+            v == False or values["target_column_type"] == "categorical"
+        ), "map_to_id can only be True if the target variable is categorical"
         return v
 
     @validator("target_column_type", always=True)
