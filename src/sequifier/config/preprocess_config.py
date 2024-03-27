@@ -20,14 +20,14 @@ class PreprocessorModel(BaseModel):
     read_format: str = "csv"
     write_format: str = "parquet"
     selected_columns: Optional[list[str]]
-    target_column: str
-    group_proportions: List[float]
+    target_column: Optional[str]
+    return_targets: bool = True
 
+    group_proportions: List[float]
     seq_length: int
     max_rows: Optional[int]
     seed: int
     n_cores: Optional[int]
-    return_targets: bool = True
 
     @validator("data_path", always=True)
     def validate_data_path(cls, v):
@@ -59,4 +59,14 @@ class PreprocessorModel(BaseModel):
             "csv",
             "parquet",
         ], "Currently only 'csv' and 'parquet' are supported"
+        return v
+
+    @validator("return_targets", always=True)
+    def validate_return_targets(cls, v, values):
+        assert (
+            v is False or values["target_column"] is not None
+        ), "Either return_targets is False or target_column is not None"
+        assert not (
+            values["target_column"] is not None and v is False
+        ), "If return_targets is False, target_column has to be None"
         return v

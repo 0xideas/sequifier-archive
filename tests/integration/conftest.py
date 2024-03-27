@@ -91,42 +91,51 @@ def format_configs_locally(
     inference_config_path_real,
     inference_config_path_real_autoregression,
 ):
-    config_paths = [
-        preprocessing_config_path_cat,
-        preprocessing_config_path_real,
-        training_config_path_cat,
-        training_config_path_real,
-        inference_config_path_cat,
-        inference_config_path_real,
-        inference_config_path_real_autoregression,
-    ]
-    for config_path in config_paths:
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
+    from sys import platform
 
-        assert config is not None, config_path
+    if platform == "windows":
+        config_paths = [
+            preprocessing_config_path_cat,
+            preprocessing_config_path_real,
+            training_config_path_cat,
+            training_config_path_real,
+            inference_config_path_cat,
+            inference_config_path_real,
+            inference_config_path_real_autoregression,
+        ]
+        for config_path in config_paths:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
 
-        config_formatted = {
-            attr: reformat_parameter(attr, param, "linux->local")
-            for attr, param in config.items()
-        }
+            assert config is not None, config_path
 
-        with open(config_path, "w") as f:
-            yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
+            config_formatted = {
+                attr: reformat_parameter(attr, param, "linux->local")
+                for attr, param in config.items()
+            }
 
-    yield
+            with open(config_path, "w") as f:
+                yaml.dump(
+                    config_formatted, f, default_flow_style=False, sort_keys=False
+                )
 
-    for config_path in config_paths:
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
+        yield
 
-        config_formatted = {
-            attr: reformat_parameter(attr, param, "local->linux")
-            for attr, param in config.items()
-        }
+        for config_path in config_paths:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
 
-        with open(config_path, "w") as f:
-            yaml.dump(config_formatted, f, default_flow_style=False, sort_keys=False)
+            config_formatted = {
+                attr: reformat_parameter(attr, param, "local->linux")
+                for attr, param in config.items()
+            }
+
+            with open(config_path, "w") as f:
+                yaml.dump(
+                    config_formatted, f, default_flow_style=False, sort_keys=False
+                )
+    else:
+        yield
 
 
 @pytest.fixture(scope="session")
