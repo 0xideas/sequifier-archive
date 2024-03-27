@@ -89,12 +89,10 @@ class InfererModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-
     @validator("target_column_type", always=True)
     def validate_target_column_type(cls, v):
         assert v in ["categorical", "real"], v
         return v
-    
 
     @validator("map_to_id", always=True)
     def validate_map_to_id(cls, v, values):
@@ -102,7 +100,6 @@ class InfererModel(BaseModel):
             v == False or values["target_column_type"] == "categorical"
         ), "map_to_id can only be True if the target variable is categorical"
         return v
-    
 
     @validator("sample_from_distribution", always=True)
     def validate_sample_from_distribution(cls, v, values):

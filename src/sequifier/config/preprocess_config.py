@@ -17,6 +17,8 @@ def load_preprocessor_config(config_path, args_config):
 class PreprocessorModel(BaseModel):
     project_path: str
     data_path: str
+    read_format: str = "csv"
+    write_format: str = "parquet"
     selected_columns: Optional[list[str]]
     target_column: str
     group_proportions: List[float]
@@ -26,8 +28,6 @@ class PreprocessorModel(BaseModel):
     seed: int
     n_cores: Optional[int]
     return_targets: bool = True
-    read_format: str = "csv"
-    write_format: str = "parquet"
 
     @validator("data_path", always=True)
     def validate_data_path(cls, v):
