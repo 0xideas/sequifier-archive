@@ -87,7 +87,7 @@ class TransformerModel(nn.Module):
 
         self.seq_length = hparams.seq_length
         self.inference_batch_size = hparams.inference_batch_size
-        self.n_classes = hparams.n_classes
+        self.n_classes = hparams.n_classes  
         self.model_name = (
             hparams.model_name
             if hparams.model_name is not None
@@ -143,9 +143,9 @@ class TransformerModel(nn.Module):
         self.accumulation_steps = hparams.training_spec.accumulation_steps
         self.device = hparams.training_spec.device
 
-        self.src_mask = self.generate_square_subsequent_mask(self.seq_length).to(
-            self.device
-        )
+        self.src_mask = self.generate_square_subsequent_mask(
+            self.seq_length
+        ).to(self.device)
 
         self.init_weights()
         self.optimizer = self.get_optimizer(

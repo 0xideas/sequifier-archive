@@ -24,11 +24,10 @@ learnable positional encoding
 
 
 x reorder functions and methods logically
+x systematize hparams or self access for hyperparameters in train.py
 
 
 reorder config and class attributes logically
-
 make underscore and dash usage consistent
-systematize hparams or self access for hyperparameters in train.py
 address torch depreciation warning
 
