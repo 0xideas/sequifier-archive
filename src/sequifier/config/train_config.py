@@ -171,18 +171,21 @@ class TransformerModel(BaseModel):
     model_name: Optional[str]
     training_data_path: str
     validation_data_path: str
+
     selected_columns: Optional[list[str]]
     column_types: dict[str, str]
     categorical_columns: list[str]
     real_columns: list[str]
     target_column: str
     target_column_type: str
+
     seq_length: int
     n_classes: dict[str, int]
     inference_batch_size: int
     seed: int
     log_interval: int
     read_format: str = "parquet"
+
     export_onnx: bool = True
     export_pt: bool = False
     export_with_dropout: bool = False

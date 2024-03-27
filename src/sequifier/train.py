@@ -115,7 +115,6 @@ class TransformerModel(nn.Module):
                     hparams.model_spec.d_model, hparams.training_spec.dropout
                 )
 
-
         self.real_columns_repetitions = self.get_real_columns_repetitions(
             self.real_columns, hparams.model_spec.nhead
         )

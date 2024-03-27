@@ -17,17 +17,17 @@ def load_preprocessor_config(config_path, args_config):
 class PreprocessorModel(BaseModel):
     project_path: str
     data_path: str
-    seq_length: int
-    group_proportions: List[float]
-    max_rows: Optional[int]
-    seed: int
     selected_columns: Optional[list[str]]
     target_column: str
+    group_proportions: List[float]
+
+    seq_length: int
+    max_rows: Optional[int]
+    seed: int
+    n_cores: Optional[int]
     return_targets: bool = True
     read_format: str = "csv"
     write_format: str = "parquet"
-
-    n_cores: Optional[int]
 
     @validator("data_path", always=True)
     def validate_data_path(cls, v):

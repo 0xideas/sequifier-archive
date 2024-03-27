@@ -27,15 +27,15 @@ class Preprocessor(object):
         project_path,
         data_path,
         selected_columns,
+        target_column,
         group_proportions,
         seq_length,
+        max_rows,
         seed,
-        target_column,
+        n_cores,
         return_targets,
         read_format,
         write_format,
-        n_cores,
-        max_rows=None,
     ):
         self.project_path = project_path
         self.seed = seed
