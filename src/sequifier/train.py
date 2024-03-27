@@ -85,7 +85,9 @@ class TransformerModel(nn.Module):
             if ((self.selected_columns is None) or (col in self.selected_columns))
         ]
 
+        self.seq_length = hparams.seq_length
         self.inference_batch_size = hparams.inference_batch_size
+        self.n_classes = hparams.n_classes
         self.model_name = (
             hparams.model_name
             if hparams.model_name is not None
@@ -103,7 +105,7 @@ class TransformerModel(nn.Module):
         self.log_interval = hparams.log_interval
         self.encoder = ModuleDict()
         self.pos_encoder = ModuleDict()
-        for col, n_classes in hparams.n_classes.items():
+        for col, n_classes in self.n_classes.items():
             if col in self.categorical_columns:
                 self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
                 self.pos_encoder[col] = PositionalEncoding(
@@ -126,11 +128,11 @@ class TransformerModel(nn.Module):
 
         if self.target_column_type == "categorical":
             self.decoder = nn.Linear(
-                embedding_size * hparams.seq_length,
-                hparams.n_classes[self.target_column],
+                embedding_size * self.seq_length,
+                self.n_classes[self.target_column],
             )
         elif self.target_column_type == "real":
-            self.decoder = nn.Linear(embedding_size * hparams.seq_length, 1)
+            self.decoder = nn.Linear(embedding_size * self.seq_length, 1)
         else:
             raise Exception(
                 f"{self.target_column_type = } not in ['categorical', 'real']"
@@ -141,9 +143,9 @@ class TransformerModel(nn.Module):
         self.accumulation_steps = hparams.training_spec.accumulation_steps
         self.device = hparams.training_spec.device
 
-        self.src_mask = self.generate_square_subsequent_mask(
-            self.hparams.seq_length
-        ).to(self.device)
+        self.src_mask = self.generate_square_subsequent_mask(self.seq_length).to(
+            self.device
+        )
 
         self.init_weights()
         self.optimizer = self.get_optimizer(
@@ -273,7 +275,7 @@ class TransformerModel(nn.Module):
             )
             output = self(data)
             if self.target_column_type == "categorical":
-                output = output.view(-1, self.hparams.n_classes[self.target_column])
+                output = output.view(-1, self.n_classes[self.target_column])
             elif self.target_column_type == "real":
                 output = output.flatten()
             else:
@@ -326,7 +328,7 @@ class TransformerModel(nn.Module):
                 )
                 output = self(data)
                 if self.target_column_type == "categorical":
-                    output = output.view(-1, self.hparams.n_classes[self.target_column])
+                    output = output.view(-1, self.n_classes[self.target_column])
                 elif self.target_column_type == "real":
                     output = output.flatten()
                 else:
@@ -364,13 +366,13 @@ class TransformerModel(nn.Module):
             x_cat = {
                 col: torch.randint(
                     0,
-                    self.hparams.n_classes[col],
-                    (self.inference_batch_size, self.hparams.seq_length),
+                    self.n_classes[col],
+                    (self.inference_batch_size, self.seq_length),
                 ).to(self.device)
                 for col in self.categorical_columns
             }
             x_real = {
-                col: torch.rand(self.inference_batch_size, self.hparams.seq_length).to(
+                col: torch.rand(self.inference_batch_size, self.seq_length).to(
                     self.device
                 )
                 for col in self.real_columns
