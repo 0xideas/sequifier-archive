@@ -198,8 +198,11 @@ class TransformerModel(BaseModel):
     training_spec: CustomValidation[TrainingSpecModel]
 
     @validator("target_column_types", always=True)
-    def validate_target_column_types(cls, v):
+    def validate_target_column_types(cls, v, values):
         assert np.all([vv in ["categorical", "real"] for vv in v.values()])
+        assert np.all(
+            np.array(list(v.keys())) == np.array(values["target_columns"])
+        ), "target_columns and target_column_types must contain the same values/keys in the same order"
         return v
 
     @validator("read_format", always=True)
@@ -220,3 +223,8 @@ class TransformerModel(BaseModel):
         )
         self.model_spec = ModelSpecModel(**kwargs.get("model_spec"))
         self.training_spec = TrainingSpecModel(**kwargs.get("training_spec"))
+
+        assert np.all(
+            np.array(self.target_columns)
+            == np.array(list(self.training_spec.criterion.keys()))
+        ), "target_columns and criterion must contain the same values/keys in the same order"

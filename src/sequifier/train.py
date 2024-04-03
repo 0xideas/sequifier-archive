@@ -251,12 +251,11 @@ class TransformerModel(nn.Module):
                 epoch_start_time = time.time()
                 self.train_epoch(X_train, y_train, epoch)
                 val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
-                val_ppl = math.exp(val_loss_normalized)
                 elapsed = time.time() - epoch_start_time
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
+                    f"valid loss {val_loss_normalized:5.5f}"
                 )
                 self.log_file.write("-" * 89)
 
@@ -334,6 +333,7 @@ class TransformerModel(nn.Module):
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
+
                 output[target_column] = output[target_column].flatten()
             else:
                 pass
