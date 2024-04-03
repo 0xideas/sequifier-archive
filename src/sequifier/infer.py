@@ -250,7 +250,8 @@ class Inferer(object):
         args_config,
         training_config_path,
     ):
-        if target_column_type == "categorical":
+        self.map_to_id = map_to_id
+        if target_column_type == "categorical" and self.map_to_id:
             self.index_map = (
                 {v: k for k, v in id_map[target_column].items()} if map_to_id else None
             )
@@ -259,7 +260,6 @@ class Inferer(object):
             else:
                 self.index_map[0] = np.min(self.index_map.values()) - 1
 
-        self.map_to_id = map_to_id
         self.device = device
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns

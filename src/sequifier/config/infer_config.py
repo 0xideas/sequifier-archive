@@ -33,10 +33,10 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
 
 class InfererModel(BaseModel):
     project_path: str
-    training_config_path: Optional[str] = None
     ddconfig_path: Optional[str] = None
     inference_model_path: str
     inference_data_path: str
+    training_config_path: Optional[str] = None
     read_format: str = "parquet"
     write_format: str = "csv"
 
