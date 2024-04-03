@@ -3,7 +3,7 @@ data_path: tests/resources/test_data_5.csv
 read_format: csv
 write_format: parquet
 selected_columns: null
-target_column: itemValue
+target_columns: [itemValue]
 return_targets: true
 
 group_proportions:

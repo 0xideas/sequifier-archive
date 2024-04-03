@@ -20,7 +20,7 @@ class PreprocessorModel(BaseModel):
     read_format: str = "csv"
     write_format: str = "parquet"
     selected_columns: Optional[list[str]]
-    target_column: Optional[str]
+    target_columns: Optional[list[str]]
     return_targets: bool = True
 
     group_proportions: List[float]
@@ -64,9 +64,9 @@ class PreprocessorModel(BaseModel):
     @validator("return_targets", always=True)
     def validate_return_targets(cls, v, values):
         assert (
-            v is False or values["target_column"] is not None
-        ), "Either return_targets is False or target_column is not None"
+            v is False or values["target_columns"] is not None
+        ), "Either return_targets is False or target_columns is not None"
         assert not (
-            values["target_column"] is not None and v is False
-        ), "If return_targets is False, target_column has to be None"
+            values["target_columns"] is not None and v is False
+        ), "If return_targets is False, target_columns has to be None"
         return v
