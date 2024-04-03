@@ -250,17 +250,26 @@ class TransformerModel(nn.Module):
             ):
                 epoch_start_time = time.time()
                 self.train_epoch(X_train, y_train, epoch)
-                val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
+                total_loss, total_losses = self.evaluate(X_valid, y_valid)
                 elapsed = time.time() - epoch_start_time
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {val_loss_normalized:5.5f}"
+                    f"valid loss {(total_loss * 1000):5.5f}"
                 )
+                if len(total_losses) > 1:
+                    self.log_file.write(
+                        " - ".join(
+                            [
+                                f"{target_column} loss: {(tloss*1000):5.2f}"
+                                for target_column, tloss in total_losses.items()
+                            ]
+                        )
+                    )
                 self.log_file.write("-" * 89)
 
-                if val_loss_normalized < best_val_loss:
-                    best_val_loss = val_loss_normalized
+                if total_loss < best_val_loss:
+                    best_val_loss = total_loss
                     best_model = self.copy_model()
 
                     n_epochs_no_improvemet = 0
@@ -269,7 +278,7 @@ class TransformerModel(nn.Module):
 
                 self.scheduler.step()
                 if epoch % self.iter_save == 0:
-                    self.save(epoch, val_loss_normalized)
+                    self.save(epoch, total_loss)
                 last_epoch = int(epoch)
 
         self.export(self, "last", last_epoch)
@@ -296,9 +305,10 @@ class TransformerModel(nn.Module):
                 X_train, y_train, batch_start, self.batch_size, to_device=False
             )
             output = self(data)
-            loss, _ = self.calculate_loss(output, targets)
+            loss, losses = self.calculate_loss(output, targets)
 
-            loss.backward()
+            for target_column, target_loss in losses.items():
+                target_loss.backward(retain_graph=True)
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
 
@@ -341,9 +351,9 @@ class TransformerModel(nn.Module):
                 output[target_column], targets[target_column]
             )
 
-        losses = list(losses.items())
-        loss = losses[0][1]
-        for _, subloss in losses[1:]:
+        losses_items = list(losses.items())
+        loss = losses_items[0][1]
+        for _, subloss in losses_items[1:]:
             loss = loss + subloss
         return (loss, losses)
 
@@ -357,6 +367,7 @@ class TransformerModel(nn.Module):
     def evaluate(self, X_valid, y_valid) -> float:
         self.eval()  # turn on evaluation mode
         total_loss = 0.0
+        total_losses = {target_column: 0.0 for target_column in y_valid.keys()}
         with torch.no_grad():
             for batch_start in range(
                 0,
@@ -368,12 +379,17 @@ class TransformerModel(nn.Module):
                 )
                 output = self(data)
                 loss, losses = self.calculate_loss(output, targets)
-
+                for target_column, bloss in losses.items():
+                    total_losses[target_column] += bloss
                 total_loss += loss
 
-        return total_loss / (
-            X_valid[self.target_columns[0]].size(0)
-        )  # any column will do
+        denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
+        total_loss = total_loss / denominator
+        total_losses = {
+            target_column: tloss / denominator
+            for target_column, tloss in total_losses.items()
+        }
+        return total_loss, total_losses
 
     def get_batch(self, X, y, batch_start, batch_size, to_device):
         if to_device:
