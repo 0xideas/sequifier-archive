@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
+import numpy as np
 import yaml
 from pydantic import BaseModel, validator
 
@@ -120,7 +121,7 @@ class TrainingSpecModel(BaseModel):
     lr: float  # learning rate
     accumulation_steps: Optional[int]
     dropout: float
-    criterion: str
+    criterion: dict[str, str]
     optimizer: CustomValidation[DotDict]  # mandatory
     scheduler: CustomValidation[DotDict]  # mandatory
     continue_training: bool
@@ -140,8 +141,11 @@ class TrainingSpecModel(BaseModel):
 
     @validator("criterion")
     def validate_criterion(cls, v):
-        if v not in VALID_LOSS_FUNCTIONS:
-            raise ValueError(f"criterion must be in {VALID_LOSS_FUNCTIONS}")
+        for vv in v.values():
+            if vv not in VALID_LOSS_FUNCTIONS:
+                raise ValueError(
+                    f"criterion must be in {VALID_LOSS_FUNCTIONS}, {vv} isn't"
+                )
         return v
 
     @staticmethod
@@ -177,8 +181,8 @@ class TransformerModel(BaseModel):
     column_types: dict[str, str]
     categorical_columns: list[str]
     real_columns: list[str]
-    target_column: str
-    target_column_type: str
+    target_columns: list[str]
+    target_column_types: dict[str, str]
 
     seq_length: int
     n_classes: dict[str, int]
@@ -193,9 +197,9 @@ class TransformerModel(BaseModel):
     model_spec: CustomValidation[ModelSpecModel]
     training_spec: CustomValidation[TrainingSpecModel]
 
-    @validator("target_column_type", always=True)
-    def validate_target_column_type(cls, v):
-        assert v in ["categorical", "real"]
+    @validator("target_column_types", always=True)
+    def validate_target_column_types(cls, v):
+        assert np.all([vv in ["categorical", "real"] for vv in v.values()])
         return v
 
     @validator("read_format", always=True)

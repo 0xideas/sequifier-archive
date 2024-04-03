@@ -4,8 +4,10 @@ read_format: parquet
 ddconfig_path: configs/ddconfigs/test_data_real_1.json
 
 selected_columns: null
-target_column: itemValue
-target_column_type: real
+target_columns: [itemValue]
+target_column_types:
+  itemValue: real
+
 
 seq_length: 8
 inference_batch_size: 10
@@ -28,7 +30,8 @@ training_spec:
   lr: 0.003
   accumulation_steps: null
   dropout: 0.3
-  criterion: MSELoss
+  criterion:
+    itemValue: MSELoss
   optimizer:
     name: Adam
   scheduler:
