@@ -2,6 +2,7 @@ import json
 import os
 from typing import Optional
 
+import numpy as np
 import yaml
 from pydantic import BaseModel, validator
 
@@ -43,9 +44,9 @@ class InfererModel(BaseModel):
     selected_columns: Optional[list[str]]
     categorical_columns: list[str]
     real_columns: list[str]
-    target_column: str
+    target_columns: list[str]
     column_types: dict[str, str]
-    target_column_type: str
+    target_column_types: dict[str, str]
 
     output_probabilities: bool = False
     map_to_id: bool = True
@@ -89,29 +90,34 @@ class InfererModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-    @validator("target_column_type", always=True)
-    def validate_target_column_type(cls, v):
-        assert v in ["categorical", "real"], v
+    @validator("target_column_types", always=True)
+    def validate_target_column_types(cls, v, values):
+        assert np.all([vv in ["categorical", "real"] for vv in v.values()])
+        assert np.all(
+            np.array(list(v.keys())) == np.array(values["target_columns"])
+        ), "target_columns and target_column_types must contain the same values/keys in the same order"
         return v
 
     @validator("map_to_id", always=True)
     def validate_map_to_id(cls, v, values):
-        assert (
-            v == False or values["target_column_type"] == "categorical"
-        ), "map_to_id can only be True if the target variable is categorical"
+        assert v == False or np.max(
+            np.array(list(values["target_column_types"].values())) == "categorical"
+        ), f"map_to_id can only be True if at least one target variable is categorical: {np.array(values['target_column_types'].values()) == 'categorical'}"
         return v
 
     @validator("sample_from_distribution", always=True)
     def validate_sample_from_distribution(cls, v, values):
 
-        if v and values["target_column_type"] == "real":
+        if (
+            v
+            and np.max(np.array(list(values["target_column_types"].values())) == "real")
+            == 1
+        ):
             raise ValueError(
-                "sample_from_distribution can only be set to true for categorical target variables"
+                "sample_from_distribution can only be used when all target columns are categorical"
             )
 
         return v
 
     def __init__(self, **kwargs):
         super().__init__(**{k: v for k, v in kwargs.items()})
-        if self.target_column_type == "real":
-            assert not self.output_probabilities

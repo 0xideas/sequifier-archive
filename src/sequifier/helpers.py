@@ -43,6 +43,8 @@ def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_
             else:
                 target = None
             targets[target_column] = target
+    else:
+        targets = None
 
     sequence = {}
     for col in column_types.keys():

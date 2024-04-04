@@ -8,13 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
+                               read_data, subset_to_selected_columns,
+                               write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -41,8 +37,8 @@ def infer(args, args_config):
         config.map_to_id,
         config.categorical_columns,
         config.real_columns,
-        config.target_column,
-        config.target_column_type,
+        config.target_columns,
+        config.target_column_types,
         config.sample_from_distribution,
         config.infer_with_dropout,
         config.inference_batch_size,
@@ -83,28 +79,35 @@ def infer(args, args_config):
         os.makedirs(
             os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True
         )
-        probabilities_path = os.path.join(
+        for target_column in inferer.target_columns:
+            if inferer.target_column_types[target_column] == "categorical":
+
+                probabilities_path = os.path.join(
+                    config.project_path,
+                    "outputs",
+                    "probabilities",
+                    f"{model_id}_{target_column}_probabilities.{config.write_format}",
+                )
+                print(f"Writing probabilities to {probabilities_path}")
+                write_data(
+                    pd.DataFrame(probs[target_column]),
+                    probabilities_path,
+                    config.write_format,
+                )
+
+    for target_column in inferer.target_columns:
+        predictions_path = os.path.join(
             config.project_path,
             "outputs",
-            "probabilities",
-            f"{model_id}_probabilities.{config.write_format}",
+            "predictions",
+            f"{model_id}_{target_column}_predictions.{config.write_format}",
         )
-        print(f"Writing probabilities to {probabilities_path}")
-        write_data(pd.DataFrame(probs), probabilities_path, config.write_format)
-
-    predictions_path = os.path.join(
-        config.project_path,
-        "outputs",
-        "predictions",
-        f"{model_id}_predictions.{config.write_format}",
-    )
-
-    print(f"Writing predictions to {predictions_path}")
-    write_data(
-        pd.DataFrame(preds, columns=["model_output"]),
-        predictions_path,
-        config.write_format,
-    )
+        print(f"Writing predictions to {predictions_path}")
+        write_data(
+            pd.DataFrame(preds[target_column], columns=["model_output"]),
+            predictions_path,
+            config.write_format,
+        )
     print("Inference complete")
 
 
@@ -112,7 +115,7 @@ def get_probs_preds(config, inferer, data, column_types):
     X, _ = numpy_to_pytorch(
         data,
         column_types,
-        config.target_column,
+        config.target_columns,
         config.seq_length,
         config.device,
         to_device=False,
@@ -122,7 +125,7 @@ def get_probs_preds(config, inferer, data, column_types):
     del data
 
     if config.output_probabilities:
-        probs = inferer.infer_probs_any_size(X)
+        probs = normalize(inferer.infer(X, return_probs=True))
         preds = inferer.infer(None, probs)
     else:
         probs = None
@@ -241,8 +244,8 @@ class Inferer(object):
         map_to_id,
         categorical_columns,
         real_columns,
-        target_column,
-        target_column_type,
+        target_columns,
+        target_column_types,
         sample_from_distribution,
         infer_with_dropout,
         inference_batch_size,
@@ -251,20 +254,26 @@ class Inferer(object):
         training_config_path,
     ):
         self.map_to_id = map_to_id
-        if target_column_type == "categorical" and self.map_to_id:
-            self.index_map = (
-                {v: k for k, v in id_map[target_column].items()} if map_to_id else None
-            )
-            if isinstance(list(self.index_map.values())[0], str):
-                self.index_map[0] = "unknown"
-            else:
-                self.index_map[0] = np.min(self.index_map.values()) - 1
+        if self.map_to_id:
+            self.index_map = {}
+            for target_column in target_columns:
+                if target_column_types[target_column] == "categorical":
+                    map_ = (
+                        {v: k for k, v in id_map[target_column].items()}
+                        if map_to_id
+                        else None
+                    )
+                    if isinstance(list(map_.values())[0], str):
+                        map_[0] = "unknown"
+                    else:
+                        map_[0] = np.min(map_.values()) - 1
+                    self.index_map[target_column] = map_
 
         self.device = device
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
-        self.target_column = target_column
-        self.target_column_type = target_column_type
+        self.target_columns = target_columns
+        self.target_column_types = target_column_types
         self.sample_from_distribution = sample_from_distribution
         self.infer_with_dropout = infer_with_dropout
         self.inference_batch_size = inference_batch_size
@@ -299,57 +308,57 @@ class Inferer(object):
                 self.infer_with_dropout,
             )
 
-    def infer(self, x, probs=None):
-        if self.target_column_type == "categorical":
-            return self.infer_categorical_any_size(x, probs)
-        if self.target_column_type == "real":
-            return self.infer_real_any_size(x)
-
-    def infer_categorical_any_size(self, x, probs=None):
-        if probs is None:
-            probs = self.infer_probs_any_size(x)
-        if self.sample_from_distribution is False:
-            preds = probs.argmax(1)
+    def infer(
+        self, x, probs=None, return_probs=False
+    ):  # probs are of type Optional[dict[str, np.ndarray]]
+        if probs is None or (
+            x is not None and len(set(x.keys()).difference(set(probs.keys()))) > 0
+        ):
+            size = x[self.target_columns[0]].shape[0]
+            if (
+                probs is not None
+                and len(set(x.keys()).difference(set(probs.keys()))) > 0
+            ):
+                warnings.warn(
+                    f"not all keys in x are in probs - {x.keys() = } != {probs.keys() = }. This is why full inference is executed"
+                )
+            if self.inference_model_type == "onnx":
+                x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
+                out_subs = [
+                    dict(zip(self.target_columns, self.infer_pure(x_sub)))
+                    for x_sub in x_adjusted
+                ]
+                outs = {
+                    target_column: np.concatenate(
+                        [out_sub[target_column] for out_sub in out_subs], axis=0
+                    )[:size, :]
+                    for target_column in self.target_columns
+                }
+            if self.inference_model_type == "pt":
+                x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
+                outs = infer_with_model(
+                    self.inference_model, x_adjusted, self.device, size
+                )
+            if return_probs:
+                return normalize(outs)
         else:
-            preds = sample_with_cumsum(probs)
-        if self.map_to_id:
-            preds = np.array([self.index_map[i] for i in preds])
-        return preds
+            outs = probs
 
-    def infer_probs_any_size(self, x):
-        size = x[self.target_column].shape[0]
-        if self.inference_model_type == "onnx":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
-            logits = np.concatenate(
-                [self.infer_pure(x_sub) for x_sub in x_adjusted], 0
-            )[:size, :]
-        if self.inference_model_type == "pt":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            logits = infer_with_model(
-                self.inference_model,
-                x_adjusted,
-                self.device,
-            )
-        return normalize(logits)
+        for target_column in self.target_columns:
+            if self.target_column_types[target_column] == "categorical":
+                if self.sample_from_distribution is False:
+                    outs[target_column] = outs[target_column].argmax(1)
+                else:
+                    outs[target_column] = sample_with_cumsum(outs[target_column])
+                if self.map_to_id:
+                    outs[target_column] = np.array(
+                        [self.index_map[target_column][i] for i in outs[target_column]]
+                    )
 
-    def infer_real_any_size(self, x):
-        size = x[self.target_column].shape[0]
-        if self.inference_model_type == "onnx":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
-            preds = np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
-                :size, :
-            ]
-        if self.inference_model_type == "pt":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            preds = infer_with_model(
-                self.inference_model,
-                x_adjusted,
-                self.device,
-            )
-        return preds.flatten()
+        return outs
 
     def prepare_inference_batches(self, x, pad_to_batch_size):
-        size = x[self.target_column].shape[0]
+        size = x[self.target_columns[0]].shape[0]
         if size == self.inference_batch_size:
             return [x]
         elif size < self.inference_batch_size:
@@ -381,7 +390,7 @@ class Inferer(object):
                 self.categorical_columns + self.real_columns,
             )
         }
-        ort_outs = self.ort_session.run(None, ort_inputs)[0]
+        ort_outs = self.ort_session.run(None, ort_inputs)
 
         return ort_outs
 
@@ -392,11 +401,16 @@ class Inferer(object):
 
 
 def normalize(outs):
-
-    normalizer = np.repeat(np.sum(np.exp(outs), axis=1), outs.shape[1]).reshape(
-        outs.shape
-    )
-    probs = np.exp(outs) / normalizer
+    normalizer = {
+        target_column: np.repeat(
+            np.sum(np.exp(target_values), axis=1), target_values.shape[1]
+        ).reshape(target_values.shape)
+        for target_column, target_values in outs.items()
+    }
+    probs = {
+        target_column: np.exp(target_values) / normalizer[target_column]
+        for target_column, target_values in outs.items()
+    }
     return probs
 
 

@@ -14,13 +14,9 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    LogFile,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns)
 
 
 def train(args, args_config):
@@ -618,7 +614,7 @@ def load_inference_model(
     return model
 
 
-def infer_with_model(model, x, device):
+def infer_with_model(model, x, device, size):
 
     outs0 = [
         model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
@@ -631,7 +627,7 @@ def infer_with_model(model, x, device):
         target_column: np.concatenate(
             [o[target_column] for o in outs2],
             axis=0,
-        )
+        )[:size, :]
     }
 
     return outs
