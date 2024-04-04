@@ -1,7 +1,7 @@
 project_path: tests/project_folder
 model_name: default
 read_format: parquet
-ddconfig_path: configs/ddconfigs/test_data_categorical_5.json
+ddconfig_path: configs/ddconfigs/test_data_categorical_multitarget_5.json
 
 selected_columns: null
 target_columns: [itemId, sup1, sup3]

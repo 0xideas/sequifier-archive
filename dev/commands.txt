@@ -6,6 +6,15 @@ sequifier --infer --config-path=tests/configs/infer-test-categorical.yaml --ddco
 
 
 
+sequifier --preprocess --config-path=tests/configs/preprocess-test-categorical-multitarget.yaml
+
+sequifier --train --config-path=tests/configs/train-test-categorical-multitarget.yaml --model-name=model-categorical-5-multitarget
+
+sequifier --infer --config-path=tests/configs/infer-test-categorical-multitarget.yaml
+
+
+
+
 sequifier --preprocess --config-path=tests/configs/preprocess-test-real.yaml --data-path=tests/resources/test_data_real_1.csv --selected-columns=itemValue
 
 sequifier --train --config-path=tests/configs/train-test-real.yaml --ddconfig-path=configs/ddconfigs/test_data_real_1.json --model-name=model-real-1 --selected-columns=itemValue
