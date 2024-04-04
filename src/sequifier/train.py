@@ -14,9 +14,13 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+)
 
 
 def train(args, args_config):
@@ -32,8 +36,10 @@ def train(args, args_config):
     }
 
     data_train = read_data(config.training_data_path, config.read_format)
+    check_target_validity(data_train, config.target_columns)
     if config.selected_columns is not None:
         data_train = subset_to_selected_columns(data_train, config.selected_columns)
+
     X_train, y_train = numpy_to_pytorch(
         data_train,
         column_types,
@@ -45,7 +51,7 @@ def train(args, args_config):
     del data_train
 
     data_valid = read_data(config.validation_data_path, config.read_format)
-
+    check_target_validity(data_valid, config.target_columns)
     if config.selected_columns is not None:
         data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
 
@@ -65,6 +71,15 @@ def train(args, args_config):
     model = torch.compile(TransformerModel(config).to(config.training_spec.device))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
+
+
+def check_target_validity(data, target_columns):
+    target_column_filter = np.logical_or.reduce(
+        [data["inputCol"] == target_column for target_column in target_columns]
+    )
+    assert np.all(
+        np.isnan(data.loc[target_column_filter, "target"].values) == False
+    ), "Some target values are NaN"
 
 
 class TransformerModel(nn.Module):

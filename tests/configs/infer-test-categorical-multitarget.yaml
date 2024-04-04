@@ -1,0 +1,24 @@
+project_path: tests/project_folder
+training_config_path: tests/configs/train-test-categorical.yaml
+ddconfig_path: configs/ddconfigs/test_data_categorical_5.json
+inference_model_path: models/sequifier-model-categorical-5-best-3.pt
+inference_data_path: data/test_data_categorical_5-split2.parquet
+read_format: parquet
+write_format: csv
+
+selected_columns: null
+target_columns: [itemId, sup1, sup3]
+target_column_types:
+  itemId: categorical
+  sup1: categorical
+  sup3: real
+
+
+output_probabilities: true
+map_to_id: true
+device: cpu
+seq_length: 8
+inference_batch_size: 10
+
+sample_from_distribution: true
+auto_regression: false
