@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+TARGET_VARIABLE_DICT = {"categorical": "itemId", "real": "itemValue"}
+
 
 @pytest.fixture()
 def predictions(run_inference, project_path):
@@ -16,14 +18,15 @@ def predictions(run_inference, project_path):
     ]
     model_names.append("model-real-1-best-3-autoregression")
     for model_name in model_names:
+        target_type = "categorical" if "categorical" in model_name else "real"
         prediction_path = os.path.join(
             project_path,
             "outputs",
             "predictions",
-            f"sequifier-{model_name}_predictions.csv",
+            f"sequifier-{model_name}_{TARGET_VARIABLE_DICT[target_type]}_predictions.csv",
         )
         variant = model_name.split("-")[1]
-        dtype = {"model_output": str} if "categorical" in model_name else None
+        dtype = {"model_output": str} if target_type == "categorical" else None
         preds[variant][model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None, dtype=dtype
         ).values.flatten()
@@ -40,7 +43,7 @@ def probabilities(run_inference, project_path):
             project_path,
             "outputs",
             "probabilities",
-            f"sequifier-{model_name}-best-3_probabilities.csv",
+            f"sequifier-{model_name}-best-3_itemId_probabilities.csv",
         )
         probs[model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None

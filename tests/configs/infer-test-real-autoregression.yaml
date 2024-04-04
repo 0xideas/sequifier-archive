@@ -7,8 +7,9 @@ read_format: csv
 write_format: csv
 
 selected_columns: null
-target_column: itemValue
-target_column_type: real
+target_columns: [itemValue]
+target_column_types:
+ itemValue: real
 
 output_probabilities: false
 map_to_id: false

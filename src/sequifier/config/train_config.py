@@ -228,3 +228,11 @@ class TransformerModel(BaseModel):
             np.array(self.target_columns)
             == np.array(list(self.training_spec.criterion.keys()))
         ), "target_columns and criterion must contain the same values/keys in the same order"
+
+        column_ordered = np.array(list(self.column_types.keys()))
+        columns_ordered_filtered = column_ordered[
+            np.array([c in self.target_columns for c in column_ordered])
+        ]
+        assert np.all(
+            columns_ordered_filtered == np.array(self.target_columns)
+        ), f"{columns_ordered_filtered = } != {self.target_columns = }"

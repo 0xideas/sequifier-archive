@@ -614,20 +614,18 @@ def load_inference_model(
     return model
 
 
-def infer_with_model(model, x, device, size):
+def infer_with_model(model, x, device, size, target_columns):
 
     outs0 = [
         model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
-        .cpu()
-        .detach()
-        .numpy()
         for x_sub in x
     ]
     outs = {
         target_column: np.concatenate(
-            [o[target_column] for o in outs2],
+            [o[target_column].cpu().detach().numpy() for o in outs0],
             axis=0,
         )[:size, :]
+        for target_column in target_columns
     }
 
     return outs

@@ -20,7 +20,7 @@ model_spec:
   nlayers: 2
 training_spec:
   device: cpu
-  epochs: 50
+  epochs: 3
   iter_save: 1
   batch_size: 10
   lr: 0.003

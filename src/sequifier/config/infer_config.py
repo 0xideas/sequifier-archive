@@ -121,3 +121,11 @@ class InfererModel(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**{k: v for k, v in kwargs.items()})
+
+        column_ordered = np.array(list(self.column_types.keys()))
+        columns_ordered_filtered = column_ordered[
+            np.array([c in self.target_columns for c in column_ordered])
+        ]
+        assert np.all(
+            columns_ordered_filtered == np.array(self.target_columns)
+        ), f"{columns_ordered_filtered = } != {self.target_columns = }"

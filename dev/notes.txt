@@ -25,9 +25,16 @@ x reorder config and class attributes logically
 
 make underscore and dash usage consistent
 
-
 add decoder only architecture
 learnable positional encoding
 address torch depreciation warning
+
+multi target preprocessing, training & inference
+loss weights in multi target setting
+
+make fewer config values optional
+
+look into device in get_probs_preds
+
 
 
