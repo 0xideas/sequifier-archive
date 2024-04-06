@@ -4,8 +4,10 @@ read_format: parquet
 ddconfig_path: configs/ddconfigs/test_data_categorical_5.json
 
 selected_columns: null
-target_column: itemId
-target_column_type: categorical
+target_columns: [itemId]
+target_column_types:
+  itemId: categorical
+
 
 seq_length: 8
 inference_batch_size: 10
@@ -24,7 +26,10 @@ training_spec:
   lr: 0.003
   accumulation_steps: 2
   dropout: 0.3
-  criterion: CrossEntropyLoss
+  criterion:
+    itemId: CrossEntropyLoss
+  loss_weights:
+    itemId: 1.0
   optimizer:
     name: Adam
   scheduler:

@@ -32,6 +32,13 @@ def preprocessing_config_path_cat():
 
 
 @pytest.fixture(scope="session")
+def preprocessing_config_path_cat_multitarget():
+    return os.path.join(
+        "tests", "configs", "preprocess-test-categorical-multitarget.yaml"
+    )
+
+
+@pytest.fixture(scope="session")
 def preprocessing_config_path_real():
     return os.path.join("tests", "configs", "preprocess-test-real.yaml")
 
@@ -42,6 +49,11 @@ def training_config_path_cat():
 
 
 @pytest.fixture(scope="session")
+def training_config_path_cat_multitarget():
+    return os.path.join("tests", "configs", "train-test-categorical-multitarget.yaml")
+
+
+@pytest.fixture(scope="session")
 def training_config_path_real():
     return os.path.join("tests", "configs", "train-test-real.yaml")
 
@@ -49,6 +61,11 @@ def training_config_path_real():
 @pytest.fixture(scope="session")
 def inference_config_path_cat():
     return os.path.join("tests", "configs", "infer-test-categorical.yaml")
+
+
+@pytest.fixture(scope="session")
+def inference_config_path_cat_multitarget():
+    return os.path.join("tests", "configs", "infer-test-categorical-multitarget.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -84,10 +101,13 @@ def reformat_parameter(attr, param, type):
 @pytest.fixture(scope="session", autouse=True)
 def format_configs_locally(
     preprocessing_config_path_cat,
+    preprocessing_config_path_cat_multitarget,
     preprocessing_config_path_real,
     training_config_path_cat,
+    training_config_path_cat_multitarget,
     training_config_path_real,
     inference_config_path_cat,
+    inference_config_path_cat_multitarget,
     inference_config_path_real,
     inference_config_path_real_autoregression,
 ):
@@ -96,10 +116,13 @@ def format_configs_locally(
     if platform == "windows":
         config_paths = [
             preprocessing_config_path_cat,
+            preprocessing_config_path_cat_multitarget,
             preprocessing_config_path_real,
             training_config_path_cat,
+            training_config_path_cat_multitarget,
             training_config_path_real,
             inference_config_path_cat,
+            inference_config_path_cat_multitarget,
             inference_config_path_real,
             inference_config_path_real_autoregression,
         ]
@@ -141,6 +164,7 @@ def format_configs_locally(
 @pytest.fixture(scope="session")
 def run_preprocessing(
     preprocessing_config_path_cat,
+    preprocessing_config_path_cat_multitarget,
     preprocessing_config_path_real,
     format_configs_locally,
     remove_project_path_contents,
@@ -159,6 +183,10 @@ def run_preprocessing(
         os.system(
             f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real} --selected-columns={SELECTED_COLUMNS['real'][data_number]}"
         )
+
+    os.system(
+        f"sequifier --preprocess --config-path={preprocessing_config_path_cat_multitarget}"
+    )
 
     source_path = os.path.join(
         "tests", "resources", "test_data_real_1-split2-autoregression.csv"
@@ -183,13 +211,14 @@ def delete_inference_target(
         )
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
-    ]
-
-    inference_data_paths.append(
+    ] + [
         os.path.join(
             project_path, "data", f"test_data_real_1-split2-autoregression.csv"
-        )
-    )
+        ),
+        os.path.join(
+            project_path, "data", f"test_data_categorical_multitarget_5-split2.parquet"
+        ),
+    ]
 
     for inference_data_path in inference_data_paths:
 
@@ -203,7 +232,11 @@ def delete_inference_target(
 
 @pytest.fixture(scope="session")
 def run_training(
-    run_preprocessing, project_path, training_config_path_cat, training_config_path_real
+    run_preprocessing,
+    project_path,
+    training_config_path_cat,
+    training_config_path_real,
+    training_config_path_cat_multitarget,
 ):
     for model_number in [1, 3, 5]:
         ddconfig_path_cat = os.path.join(
@@ -222,6 +255,9 @@ def run_training(
             f"sequifier --train --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real} --selected-columns=None"
         )
 
+    model_name_cat = f"model-categorical-{model_number}"
+    os.system(f"sequifier --train --config-path={training_config_path_cat_multitarget}")
+
     source_path = os.path.join(
         project_path, "models", "sequifier-model-real-1-best-3.pt"
     )
@@ -238,6 +274,7 @@ def run_inference(
     delete_inference_target,
     project_path,
     inference_config_path_cat,
+    inference_config_path_cat_multitarget,
     inference_config_path_real,
     inference_config_path_real_autoregression,
 ):
@@ -267,6 +304,10 @@ def run_inference(
         os.system(
             f"sequifier --infer --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real} --selected-columns=None"
         )
+
+    os.system(
+        f"sequifier --infer --config-path={inference_config_path_cat_multitarget}"
+    )
 
     os.system(
         f"sequifier --infer --config-path={inference_config_path_real_autoregression} --selected-columns={SELECTED_COLUMNS['real'][1]}"

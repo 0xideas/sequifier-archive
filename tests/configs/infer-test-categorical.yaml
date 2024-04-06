@@ -7,8 +7,9 @@ read_format: parquet
 write_format: csv
 
 selected_columns: null
-target_column: itemId
-target_column_type: categorical
+target_columns: [itemId]
+target_column_types:
+  itemId: categorical
 
 output_probabilities: true
 map_to_id: true

@@ -22,12 +22,17 @@ x add dropout option on inference
 x reorder functions and methods logically
 x systematize hparams or self access for hyperparameters in train.py
 x reorder config and class attributes logically
+x multi target preprocessing, training & inference
+x loss weights in multi target setting
 
-make underscore and dash usage consistent
-
+make underscore and dash usage in files/folders consistent
 
 add decoder only architecture
 learnable positional encoding
 address torch depreciation warning
 
+make fewer config values optional
 
+look into device in get_probs_preds
+
+make losses invariant over batch sizes/training runs

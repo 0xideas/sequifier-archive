@@ -14,13 +14,9 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    LogFile,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns)
 
 
 def train(args, args_config):
@@ -36,12 +32,14 @@ def train(args, args_config):
     }
 
     data_train = read_data(config.training_data_path, config.read_format)
+    check_target_validity(data_train, config.target_columns)
     if config.selected_columns is not None:
         data_train = subset_to_selected_columns(data_train, config.selected_columns)
+
     X_train, y_train = numpy_to_pytorch(
         data_train,
         column_types,
-        config.target_column,
+        config.target_columns,
         config.seq_length,
         config.training_spec.device,
         to_device=True,
@@ -49,14 +47,14 @@ def train(args, args_config):
     del data_train
 
     data_valid = read_data(config.validation_data_path, config.read_format)
-
+    check_target_validity(data_valid, config.target_columns)
     if config.selected_columns is not None:
         data_valid = subset_to_selected_columns(data_valid, config.selected_columns)
 
     X_valid, y_valid = numpy_to_pytorch(
         data_valid,
         column_types,
-        config.target_column,
+        config.target_columns,
         config.seq_length,
         config.training_spec.device,
         to_device=True,
@@ -69,6 +67,15 @@ def train(args, args_config):
     model = torch.compile(TransformerModel(config).to(config.training_spec.device))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
+
+
+def check_target_validity(data, target_columns):
+    target_column_filter = np.logical_or.reduce(
+        [data["inputCol"] == target_column for target_column in target_columns]
+    )
+    assert np.all(
+        np.isnan(data.loc[target_column_filter, "target"].values) == False
+    ), "Some target values are NaN"
 
 
 class TransformerModel(nn.Module):
@@ -93,9 +100,9 @@ class TransformerModel(nn.Module):
             if ((self.selected_columns is None) or (col in self.selected_columns))
         ]
 
-        self.target_column = hparams.target_column
-        self.target_column_type = hparams.target_column_type
-
+        self.target_columns = hparams.target_columns
+        self.target_column_types = hparams.target_column_types
+        self.loss_weights = hparams.training_spec.loss_weights
         self.seq_length = hparams.seq_length
         self.n_classes = hparams.n_classes
         self.inference_batch_size = hparams.inference_batch_size
@@ -133,19 +140,28 @@ class TransformerModel(nn.Module):
             encoder_layers, hparams.model_spec.nlayers, enable_nested_tensor=False
         )
 
-        if self.target_column_type == "categorical":
-            self.decoder = nn.Linear(
-                embedding_size * self.seq_length,
-                self.n_classes[self.target_column],
-            )
-        elif self.target_column_type == "real":
-            self.decoder = nn.Linear(embedding_size * self.seq_length, 1)
-        else:
-            raise Exception(
-                f"{self.target_column_type = } not in ['categorical', 'real']"
-            )
+        self.decoder = ModuleDict()
+        for target_column, target_column_type in self.target_column_types.items():
+            if target_column_type == "categorical":
+                self.decoder[target_column] = nn.Linear(
+                    embedding_size * self.seq_length,
+                    self.n_classes[target_column],
+                )
+            elif target_column_type == "real":
+                self.decoder[target_column] = nn.Linear(
+                    embedding_size * self.seq_length, 1
+                )
+            else:
+                raise Exception(
+                    f"{target_column_type = } not in ['categorical', 'real']"
+                )
 
-        self.criterion = eval(f"torch.nn.{hparams.training_spec.criterion}()")
+        self.criterion = {
+            target_column: eval(
+                f"torch.nn.{hparams.training_spec.criterion[target_column]}()"
+            )
+            for target_column in self.target_columns
+        }
         self.batch_size = hparams.training_spec.batch_size
         self.accumulation_steps = hparams.training_spec.accumulation_steps
         self.device = hparams.training_spec.device
@@ -190,8 +206,10 @@ class TransformerModel(nn.Module):
         initrange = 0.1
         for col in self.categorical_columns:
             self.encoder[col].weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+
+        for target_column in self.target_columns:
+            self.decoder[target_column].bias.data.zero_()
+            self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src: dict[str, Tensor]) -> Tensor:
         """
@@ -221,33 +239,46 @@ class TransformerModel(nn.Module):
         concatenated = transposed.reshape(
             transposed.size()[0], transposed.size()[1] * transposed.size()[2]
         )
-        output = self.decoder(concatenated)
+        output = {
+            target_column: self.decoder[target_column](concatenated)
+            for target_column in self.target_columns
+        }
         return output
 
     def train_model(self, X_train, y_train, X_valid, y_valid):
         best_val_loss = float("inf")
         n_epochs_no_improvemet = 0
+
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
+
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
             ):
                 epoch_start_time = time.time()
                 self.train_epoch(X_train, y_train, epoch)
-                val_loss_normalized = 1000 * self.evaluate(X_valid, y_valid)
-                val_ppl = math.exp(val_loss_normalized)
+                total_loss, total_losses = self.evaluate(X_valid, y_valid)
                 elapsed = time.time() - epoch_start_time
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {val_loss_normalized:5.5f} | valid ppl {val_ppl:8.2f}"
+                    f"valid loss {(total_loss * 1000):5.5f}"
                 )
+                if len(total_losses) > 1:
+                    self.log_file.write(
+                        " - ".join(
+                            [
+                                f"{target_column} loss: {(tloss*1000):5.2f}"
+                                for target_column, tloss in total_losses.items()
+                            ]
+                        )
+                    )
                 self.log_file.write("-" * 89)
 
-                if val_loss_normalized < best_val_loss:
-                    best_val_loss = val_loss_normalized
+                if total_loss < best_val_loss:
+                    best_val_loss = total_loss
                     best_model = self.copy_model()
 
                     n_epochs_no_improvemet = 0
@@ -255,8 +286,9 @@ class TransformerModel(nn.Module):
                     n_epochs_no_improvemet += 1
 
                 self.scheduler.step()
-                if epoch % self.iter_save == 0:
-                    self.save(epoch, val_loss_normalized)
+                if (epoch) % self.iter_save == 0:
+                    self.save((epoch), total_loss)
+
                 last_epoch = int(epoch)
 
         self.export(self, "last", last_epoch)
@@ -269,7 +301,9 @@ class TransformerModel(nn.Module):
         total_loss = 0.0
         start_time = time.time()
 
-        num_batches = math.ceil(len(X_train[self.target_column]) / self.batch_size)
+        num_batches = math.ceil(
+            len(X_train[self.target_columns[0]]) / self.batch_size
+        )  # any column will do
         batch_order = list(
             np.random.choice(
                 np.arange(num_batches), size=num_batches, replace=False
@@ -281,14 +315,8 @@ class TransformerModel(nn.Module):
                 X_train, y_train, batch_start, self.batch_size, to_device=False
             )
             output = self(data)
-            if self.target_column_type == "categorical":
-                output = output.view(-1, self.n_classes[self.target_column])
-            elif self.target_column_type == "real":
-                output = output.flatten()
-            else:
-                pass
+            loss, losses = self.calculate_loss(output, targets)
 
-            loss = self.criterion(output, targets)
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -316,6 +344,32 @@ class TransformerModel(nn.Module):
                 total_loss = 0.0
                 start_time = time.time()
 
+    def calculate_loss(self, output, targets):
+        losses = {}
+        for target_column, target_column_type in self.target_column_types.items():
+            if target_column_type == "categorical":
+                output[target_column] = output[target_column].view(
+                    -1, self.n_classes[target_column]
+                )
+            elif target_column_type == "real":
+
+                output[target_column] = output[target_column].flatten()
+            else:
+                pass
+            losses[target_column] = self.criterion[target_column](
+                output[target_column], targets[target_column]
+            )
+
+        loss = list(losses.items())[0][1]
+        for target_column in losses.keys():
+            losses[target_column] = losses[target_column] * (
+                self.loss_weights[target_column]
+                if self.loss_weights is not None
+                else 1.0
+            )
+            loss = loss + losses[target_column]
+        return (loss, losses)
+
     def copy_model(self):
         log_file = self.log_file
         del self.log_file
@@ -326,24 +380,29 @@ class TransformerModel(nn.Module):
     def evaluate(self, X_valid, y_valid) -> float:
         self.eval()  # turn on evaluation mode
         total_loss = 0.0
+        total_losses = {target_column: 0.0 for target_column in y_valid.keys()}
         with torch.no_grad():
             for batch_start in range(
-                0, X_valid[self.target_column].size(0), self.batch_size
+                0,
+                X_valid[self.target_columns[0]].size(0),
+                self.batch_size,  # any column will do
             ):
                 data, targets = self.get_batch(
                     X_valid, y_valid, batch_start, self.batch_size, to_device=False
                 )
                 output = self(data)
-                if self.target_column_type == "categorical":
-                    output = output.view(-1, self.n_classes[self.target_column])
-                elif self.target_column_type == "real":
-                    output = output.flatten()
-                else:
-                    pass
+                loss, losses = self.calculate_loss(output, targets)
+                for target_column, bloss in losses.items():
+                    total_losses[target_column] += bloss
+                total_loss += loss
 
-                total_loss += self.criterion(output, targets).item()
-
-        return total_loss / (X_valid[self.target_column].size(0))
+        denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
+        total_loss = total_loss / denominator
+        total_losses = {
+            target_column: tloss / denominator
+            for target_column, tloss in total_losses.items()
+        }
+        return total_loss, total_losses
 
     def get_batch(self, X, y, batch_start, batch_size, to_device):
         if to_device:
@@ -354,7 +413,12 @@ class TransformerModel(nn.Module):
                     )
                     for col in X.keys()
                 },
-                y[batch_start : batch_start + batch_size].to(self.device),
+                {
+                    target_column: y[target_column][
+                        batch_start : batch_start + batch_size
+                    ].to(self.device)
+                    for target_column in y.keys()
+                },
             )
         else:
             return (
@@ -362,7 +426,12 @@ class TransformerModel(nn.Module):
                     col: X[col][batch_start : batch_start + batch_size, :]
                     for col in X.keys()
                 },
-                y[batch_start : batch_start + batch_size],
+                {
+                    target_column: y[target_column][
+                        batch_start : batch_start + batch_size
+                    ]
+                    for target_column in y.keys()
+                },
             )
 
     def export(self, model, suffix, epoch):
@@ -562,17 +631,18 @@ def load_inference_model(
     return model
 
 
-def infer_with_model(model, x, device):
+def infer_with_model(model, x, device, size, target_columns):
 
-    outs = np.concatenate(
-        [
-            model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
-            .cpu()
-            .detach()
-            .numpy()
-            for x_sub in x
-        ],
-        axis=0,
-    )
+    outs0 = [
+        model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
+        for x_sub in x
+    ]
+    outs = {
+        target_column: np.concatenate(
+            [o[target_column].cpu().detach().numpy() for o in outs0],
+            axis=0,
+        )[:size, :]
+        for target_column in target_columns
+    }
 
     return outs

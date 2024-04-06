@@ -30,16 +30,21 @@ def subset_to_selected_columns(data, selected_columns):
     return data.loc[filter_, :]
 
 
-def numpy_to_pytorch(data, column_types, target_column, seq_length, device, to_device):
+def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_device):
 
     if "target" in data:
-        target = tensor(data.query(f"inputCol=='{target_column}'")["target"].values).to(
-            column_types[target_column]
-        )
-        if to_device:
-            target = target.to(device)
+        targets = {}
+        for target_column in target_columns:
+            target = tensor(
+                data.query(f"inputCol=='{target_column}'")["target"].values
+            ).to(column_types[target_column])
+            if to_device:
+                target = target.to(device)
+            else:
+                target = None
+            targets[target_column] = target
     else:
-        target = None
+        targets = None
 
     sequence = {}
     for col in column_types.keys():
@@ -52,7 +57,7 @@ def numpy_to_pytorch(data, column_types, target_column, seq_length, device, to_d
 
         sequence[col] = tens
 
-    return (sequence, target)
+    return (sequence, targets)
 
 
 class LogFile(object):

@@ -30,7 +30,7 @@ class Preprocessor(object):
         write_format,
         selected_columns,
         return_targets,
-        target_column,
+        target_columns,
         group_proportions,
         seq_length,
         max_rows,
@@ -102,7 +102,7 @@ class Preprocessor(object):
                 self.split_paths,
                 seq_length,
                 data_columns,
-                target_column,
+                target_columns,
                 return_targets,
                 group_proportions,
                 write_format,
@@ -195,7 +195,7 @@ def preprocess_batch(
     split_paths,
     seq_length,
     data_columns,
-    target_column,
+    target_columns,
     return_targets,
     group_proportions,
     write_format,
@@ -205,7 +205,7 @@ def preprocess_batch(
     for i, sequence_id in enumerate(sequence_ids):
         data_subset = batch.loc[batch["sequenceId"] == sequence_id, :]
         sequences = extract_sequences(
-            data_subset, seq_length, data_columns, target_column, return_targets
+            data_subset, seq_length, data_columns, target_columns, return_targets
         )
 
         splits = extract_data_subsets(sequences, group_proportions)
@@ -238,7 +238,7 @@ def preprocess_batch(
             combine_parquet_files(written_files[j], out_path)
 
 
-def extract_sequences(data, seq_length, data_columns, target_column, return_targets):
+def extract_sequences(data, seq_length, data_columns, target_columns, return_targets):
     raw_sequences = (
         data.groupby("sequenceId")
         .agg({col: list for col in data_columns})
@@ -251,17 +251,17 @@ def extract_sequences(data, seq_length, data_columns, target_column, return_targ
             in_row[data_columns],
             seq_length,
             data_columns,
-            target_column,
+            target_columns,
             return_targets,
         )
-        for i, target in enumerate(targets):
+        for i, target_dict in enumerate(targets):
             subsequence_id = i
             for data_col, data_col_seqs in seqs.items():
                 rows.append(
                     [in_row["sequenceId"]]
                     + [subsequence_id, data_col]
                     + data_col_seqs[i]
-                    + [target if data_col == target_column else None]
+                    + [target_dict.get(data_col, None)]
                 )
 
     sequences = pd.DataFrame(
@@ -274,28 +274,38 @@ def extract_sequences(data, seq_length, data_columns, target_column, return_targ
 
 
 def extract_subsequences(
-    in_seq, seq_length, data_columns, target_column, return_targets
+    in_seq, seq_length, data_columns, target_columns, return_targets
 ):
 
     if return_targets:
         nseq = max(
-            len(in_seq[target_column]) - seq_length - 1,
-            min(1, len(in_seq[target_column])),
+            len(in_seq[target_columns[0]]) - seq_length - 1,  # any column will do
+            min(1, len(in_seq[target_columns[0]])),  # any column will do
         )
 
-        targets = [in_seq[target_column][i + seq_length] for i in range(nseq)]
+        targets = [
+            {
+                target_column: in_seq[target_column][i + seq_length]
+                for target_column in target_columns
+            }
+            for i in range(nseq)
+        ]
+
     else:
         nseq = max(
             len(in_seq[target_column]) - seq_length,
             min(1, len(in_seq[target_column])),
         )
-        targets = [np.nan for _ in range(nseq)]
+        targets = [
+            {target_column: np.nan for target_column in target_columns}
+            for _ in range(nseq)
+        ]
 
     seqs = {}
     for data_col in data_columns:
         seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
 
-    if len(seqs[target_column]) == 1:
+    if len(seqs[target_columns[0]]) == 1:  # any column will do
         seqs = {
             col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
             for col in data_columns

@@ -8,13 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
+                               read_data, subset_to_selected_columns,
+                               write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -41,8 +37,8 @@ def infer(args, args_config):
         config.map_to_id,
         config.categorical_columns,
         config.real_columns,
-        config.target_column,
-        config.target_column_type,
+        config.target_columns,
+        config.target_column_types,
         config.sample_from_distribution,
         config.infer_with_dropout,
         config.inference_batch_size,
@@ -83,28 +79,35 @@ def infer(args, args_config):
         os.makedirs(
             os.path.join(config.project_path, "outputs", "probabilities"), exist_ok=True
         )
-        probabilities_path = os.path.join(
+        for target_column in inferer.target_columns:
+            if inferer.target_column_types[target_column] == "categorical":
+
+                probabilities_path = os.path.join(
+                    config.project_path,
+                    "outputs",
+                    "probabilities",
+                    f"{model_id}_{target_column}_probabilities.{config.write_format}",
+                )
+                print(f"Writing probabilities to {probabilities_path}")
+                write_data(
+                    pd.DataFrame(probs[target_column]),
+                    probabilities_path,
+                    config.write_format,
+                )
+
+    for target_column in inferer.target_columns:
+        predictions_path = os.path.join(
             config.project_path,
             "outputs",
-            "probabilities",
-            f"{model_id}_probabilities.{config.write_format}",
+            "predictions",
+            f"{model_id}_{target_column}_predictions.{config.write_format}",
         )
-        print(f"Writing probabilities to {probabilities_path}")
-        write_data(pd.DataFrame(probs), probabilities_path, config.write_format)
-
-    predictions_path = os.path.join(
-        config.project_path,
-        "outputs",
-        "predictions",
-        f"{model_id}_predictions.{config.write_format}",
-    )
-
-    print(f"Writing predictions to {predictions_path}")
-    write_data(
-        pd.DataFrame(preds, columns=["model_output"]),
-        predictions_path,
-        config.write_format,
-    )
+        print(f"Writing predictions to {predictions_path}")
+        write_data(
+            pd.DataFrame(preds[target_column], columns=["model_output"]),
+            predictions_path,
+            config.write_format,
+        )
     print("Inference complete")
 
 
@@ -112,7 +115,7 @@ def get_probs_preds(config, inferer, data, column_types):
     X, _ = numpy_to_pytorch(
         data,
         column_types,
-        config.target_column,
+        config.target_columns,
         config.seq_length,
         config.device,
         to_device=False,
@@ -122,7 +125,8 @@ def get_probs_preds(config, inferer, data, column_types):
     del data
 
     if config.output_probabilities:
-        probs = inferer.infer_probs_any_size(X)
+        probs = inferer.infer(X, return_probs=True)
+
         preds = inferer.infer(None, probs)
     else:
         probs = None
@@ -132,17 +136,21 @@ def get_probs_preds(config, inferer, data, column_types):
 
 
 def get_probs_preds_auto_regression(config, inferer, data, column_types):
+    sequence_ids = data["sequenceId"].values
+    subsequence_ids = data["subsequenceId"].values
+    assert (
+        np.all(sequence_ids[1:] - sequence_ids[:-1]) >= 0
+    ), "sequenceId must be in ascending order for autoregression"
+    assert (
+        np.all(subsequence_ids[1:] - subsequence_ids[:-1]) >= 0
+    ), "subsequenceId must be in ascending order for autoregression"
+
     data = data.sort_values(["subsequenceId", "sequenceId"])
     n_input_col_values = len(np.unique(data["inputCol"]))
     preds_list, probs_list, indices = [], [], []
     subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
     for subsequence_id in subsequence_ids:
         data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
-        indices.append(
-            np.array(data_subset.index)[
-                np.arange(0, data_subset.shape[0], n_input_col_values)
-            ]
-        )
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
         preds_list.append(preds)
         if probs is not None:
@@ -152,9 +160,6 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
             target_subsequence_filter = data["subsequenceId"].values == (
                 subsequence_id + offset
             )  # filter all data on target subsequence id
-            data_col_filter = (
-                data["inputCol"].values == config.target_column
-            )  # filter on the target column
             data_subset_sequence_ids = sorted(
                 list(np.unique(data_subset["sequenceId"]))
             )
@@ -164,17 +169,22 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     for sequence_id in data["sequenceId"]
                 ]
             )
-            f = np.logical_and.reduce(
-                [
-                    target_subsequence_filter,
-                    data_col_filter,
-                    sequence_filter,
-                ]
-            )  # filter on target subsequence id and target column and sequence ids in data_subset
 
-            if np.sum(f) > 0:
+            fs = {
+                target_column: np.logical_and.reduce(
+                    [
+                        target_subsequence_filter,  # the right subsequence to add values to
+                        data["inputCol"].values
+                        == target_column,  # the rows with the values for the target row
+                        sequence_filter,  # only values that were predicted from the current subsequence
+                    ]
+                )
+                for target_column in inferer.target_columns
+            }
+            single_f = list(fs.values())[0]
+            if np.sum(single_f) > 0:
                 f_sequence_ids = sorted(
-                    list(np.unique(data.loc[f, "sequenceId"]))
+                    list(np.unique(data.loc[single_f, "sequenceId"]))
                 )  # sequence ids that exist in those rows
 
                 f_sequence_ids_filter = np.array(
@@ -183,18 +193,25 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                         for sequence_id in data_subset["sequenceId"]
                     ]
                 )  # subset data_subset to those rows with sequence ids that also exist for the target subsequence id
-                data_subset_col_filter = (
-                    data_subset["inputCol"].values == config.target_column
+                data_subset_target_col_filter = np.logical_or.reduce(
+                    [
+                        data_subset["inputCol"].values == target_column
+                        for target_column in config.target_columns
+                    ]
                 )  # filter data_subset to target column
                 f_sequence_ids_filter_subset = np.logical_and(
-                    f_sequence_ids_filter, data_subset_col_filter
+                    f_sequence_ids_filter, data_subset_target_col_filter
                 )  # combine
 
-                f_preds = preds[
-                    f_sequence_ids_filter[
-                        np.arange(0, len(f_sequence_ids_filter), n_input_col_values)
+                f_preds = {
+                    target_column: preds[target_column][
+                        f_sequence_ids_filter[
+                            np.arange(0, len(f_sequence_ids_filter), n_input_col_values)
+                        ]
                     ]
-                ]  # subset preds to those sequence ids that exist for target subsequence id
+                    for target_column in inferer.target_columns
+                }
+                # subset preds to those sequence ids that exist for target subsequence id
                 # f_sequence_ids_filter has to be subset itself because it contains n_input_col_values
                 # rows for each observtion
 
@@ -202,31 +219,32 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                     f_sequence_ids_filter_subset, ["sequenceId", "subsequenceId"]
                 ]  # find sequence ids and subsequence ids that exist for both the original subsequence
                 # id and the target subsequence id
-                assert (
-                    data.loc[f, str(offset)].shape[0] == f_preds.shape[0]
-                ), f"{data.columns = }: {data.loc[f,:].values = }  != {f_preds.shape = }"
-                assert np.all(
-                    data.loc[f, "sequenceId"].values
-                    == f_data_subset["sequenceId"].values
-                )
+                for target_column in inferer.target_columns:
+                    assert (
+                        data.loc[fs[target_column], str(offset)].shape[0]
+                        == f_preds[target_column].shape[0]
+                    ), f"{data.columns = }: {data.loc[f,:].values = }  != {f_preds.shape = }"
+                    assert np.all(
+                        data.loc[fs[target_column], "sequenceId"].values
+                        == f_data_subset["sequenceId"].values
+                    )
                 assert np.all(
                     (f_data_subset["subsequenceId"].values + 1) == (subsequence_id + 1)
                 ), f"{f_data_subset['subsequenceId'].values + 1} != {(subsequence_id + 1)}"
-                data.loc[f, str(offset)] = f_preds
+                for target_column, f in fs.items():
+                    data.loc[f, str(offset)] = f_preds[target_column]
 
-    preds = np.concatenate(preds_list, axis=0)
-    index_order = np.concatenate(indices, axis=0)
-    assert len(preds) == len(index_order)
-    preds = np.array(
-        [p for p, i in sorted(list(zip(preds, index_order)), key=lambda t: t[1])]
-    )
+    preds = {
+        target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)
+        for target_column in inferer.target_columns
+    }
     if len(probs_list):
-        probs = np.concatenate(probs, axis=0)
-        assert probs.shape[0] == len(index_order)
-        probs = np.array(
-            [p for p, i in sorted(list(zip(probs, index_order)), key=lambda t: t[1])]
-        )
-
+        probs = {
+            target_column: np.concatenate(
+                [p[target_column] for p in probs_list], axis=0
+            )
+            for target_column in inferer.target_columns
+        }
     else:
         probs = None
     return (probs, preds)
@@ -241,8 +259,8 @@ class Inferer(object):
         map_to_id,
         categorical_columns,
         real_columns,
-        target_column,
-        target_column_type,
+        target_columns,
+        target_column_types,
         sample_from_distribution,
         infer_with_dropout,
         inference_batch_size,
@@ -251,20 +269,26 @@ class Inferer(object):
         training_config_path,
     ):
         self.map_to_id = map_to_id
-        if target_column_type == "categorical" and self.map_to_id:
-            self.index_map = (
-                {v: k for k, v in id_map[target_column].items()} if map_to_id else None
-            )
-            if isinstance(list(self.index_map.values())[0], str):
-                self.index_map[0] = "unknown"
-            else:
-                self.index_map[0] = np.min(self.index_map.values()) - 1
+        if self.map_to_id:
+            self.index_map = {}
+            for target_column in target_columns:
+                if target_column_types[target_column] == "categorical":
+                    map_ = (
+                        {v: k for k, v in id_map[target_column].items()}
+                        if map_to_id
+                        else None
+                    )
+                    if isinstance(list(map_.values())[0], str):
+                        map_[0] = "unknown"
+                    else:
+                        map_[0] = np.min(map_.values()) - 1
+                    self.index_map[target_column] = map_
 
         self.device = device
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
-        self.target_column = target_column
-        self.target_column_type = target_column_type
+        self.target_columns = target_columns
+        self.target_column_types = target_column_types
         self.sample_from_distribution = sample_from_distribution
         self.infer_with_dropout = infer_with_dropout
         self.inference_batch_size = inference_batch_size
@@ -299,57 +323,72 @@ class Inferer(object):
                 self.infer_with_dropout,
             )
 
-    def infer(self, x, probs=None):
-        if self.target_column_type == "categorical":
-            return self.infer_categorical_any_size(x, probs)
-        if self.target_column_type == "real":
-            return self.infer_real_any_size(x)
+    def infer(
+        self, x, probs=None, return_probs=False
+    ):  # probs are of type Optional[dict[str, np.ndarray]]
+        if probs is None or (
+            x is not None and len(set(x.keys()).difference(set(probs.keys()))) > 0
+        ):
+            size = x[self.target_columns[0]].shape[0]
+            if (
+                probs is not None
+                and len(set(x.keys()).difference(set(probs.keys()))) > 0
+            ):
+                warnings.warn(
+                    f"not all keys in x are in probs - {x.keys() = } != {probs.keys() = }. This is why full inference is executed"
+                )
+            if self.inference_model_type == "onnx":
+                x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
+                out_subs = [
+                    dict(zip(self.target_columns, self.infer_pure(x_sub)))
+                    for x_sub in x_adjusted
+                ]
 
-    def infer_categorical_any_size(self, x, probs=None):
-        if probs is None:
-            probs = self.infer_probs_any_size(x)
-        if self.sample_from_distribution is False:
-            preds = probs.argmax(1)
+                outs = {
+                    target_column: np.concatenate(
+                        [out_sub[target_column] for out_sub in out_subs], axis=0
+                    )[:size, :]
+                    for target_column in self.target_columns
+                }
+            if self.inference_model_type == "pt":
+                x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
+                outs = infer_with_model(
+                    self.inference_model,
+                    x_adjusted,
+                    self.device,
+                    size,
+                    self.target_columns,
+                )
+
+            if return_probs:
+                preds = {
+                    target_column: outputs
+                    for target_column, outputs in outs.items()
+                    if self.target_column_types[target_column] != "categorical"
+                }
+                logits = {
+                    target_column: outputs
+                    for target_column, outputs in outs.items()
+                    if self.target_column_types[target_column] == "categorical"
+                }
+                return {**preds, **normalize(logits)}
         else:
-            preds = sample_with_cumsum(probs)
-        if self.map_to_id:
-            preds = np.array([self.index_map[i] for i in preds])
-        return preds
+            outs = dict(probs)
+        for target_column in self.target_columns:
+            if self.target_column_types[target_column] == "categorical":
+                if self.sample_from_distribution is False:
+                    outs[target_column] = outs[target_column].argmax(1)
+                else:
+                    outs[target_column] = sample_with_cumsum(outs[target_column])
+                if self.map_to_id:
+                    outs[target_column] = np.array(
+                        [self.index_map[target_column][i] for i in outs[target_column]]
+                    )
 
-    def infer_probs_any_size(self, x):
-        size = x[self.target_column].shape[0]
-        if self.inference_model_type == "onnx":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
-            logits = np.concatenate(
-                [self.infer_pure(x_sub) for x_sub in x_adjusted], 0
-            )[:size, :]
-        if self.inference_model_type == "pt":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            logits = infer_with_model(
-                self.inference_model,
-                x_adjusted,
-                self.device,
-            )
-        return normalize(logits)
-
-    def infer_real_any_size(self, x):
-        size = x[self.target_column].shape[0]
-        if self.inference_model_type == "onnx":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
-            preds = np.concatenate([self.infer_pure(x_sub) for x_sub in x_adjusted], 0)[
-                :size, :
-            ]
-        if self.inference_model_type == "pt":
-            x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
-            preds = infer_with_model(
-                self.inference_model,
-                x_adjusted,
-                self.device,
-            )
-        return preds.flatten()
+        return outs
 
     def prepare_inference_batches(self, x, pad_to_batch_size):
-        size = x[self.target_column].shape[0]
+        size = x[self.target_columns[0]].shape[0]
         if size == self.inference_batch_size:
             return [x]
         elif size < self.inference_batch_size:
@@ -381,7 +420,7 @@ class Inferer(object):
                 self.categorical_columns + self.real_columns,
             )
         }
-        ort_outs = self.ort_session.run(None, ort_inputs)[0]
+        ort_outs = self.ort_session.run(None, ort_inputs)
 
         return ort_outs
 
@@ -392,11 +431,16 @@ class Inferer(object):
 
 
 def normalize(outs):
-
-    normalizer = np.repeat(np.sum(np.exp(outs), axis=1), outs.shape[1]).reshape(
-        outs.shape
-    )
-    probs = np.exp(outs) / normalizer
+    normalizer = {
+        target_column: np.repeat(
+            np.sum(np.exp(target_values), axis=1), target_values.shape[1]
+        ).reshape(target_values.shape)
+        for target_column, target_values in outs.items()
+    }
+    probs = {
+        target_column: np.exp(target_values) / normalizer[target_column]
+        for target_column, target_values in outs.items()
+    }
     return probs
 
 
