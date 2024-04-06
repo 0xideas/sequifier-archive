@@ -31,6 +31,10 @@ training_spec:
     itemId: CrossEntropyLoss
     sup1: CrossEntropyLoss
     sup3: MSELoss
+  loss_weights:
+    itemId: 1.0
+    sup1: 0.5
+    sup3: 0.5
   optimizer:
     name: Adam
   scheduler:

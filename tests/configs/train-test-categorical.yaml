@@ -28,6 +28,8 @@ training_spec:
   dropout: 0.3
   criterion:
     itemId: CrossEntropyLoss
+  loss_weights:
+    itemId: 1.0
   optimizer:
     name: Adam
   scheduler:

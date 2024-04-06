@@ -106,7 +106,7 @@ class TransformerModel(nn.Module):
 
         self.target_columns = hparams.target_columns
         self.target_column_types = hparams.target_column_types
-
+        self.loss_weights = hparams.training_spec.loss_weights
         self.seq_length = hparams.seq_length
         self.n_classes = hparams.n_classes
         self.inference_batch_size = hparams.inference_batch_size
@@ -318,8 +318,9 @@ class TransformerModel(nn.Module):
             output = self(data)
             loss, losses = self.calculate_loss(output, targets)
 
-            for target_column, target_loss in losses.items():
-                target_loss.backward(retain_graph=True)
+            for i, target_loss in enumerate(losses.values()):
+                is_not_last_loss = (i + 1) != len(losses)
+                target_loss.backward(retain_graph=is_not_last_loss)
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
 
@@ -364,8 +365,8 @@ class TransformerModel(nn.Module):
 
         losses_items = list(losses.items())
         loss = losses_items[0][1]
-        for _, subloss in losses_items[1:]:
-            loss = loss + subloss
+        for target_column, subloss in losses_items[1:]:
+            loss = loss + (subloss * self.loss_weights[target_column])
         return (loss, losses)
 
     def copy_model(self):

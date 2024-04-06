@@ -122,6 +122,7 @@ class TrainingSpecModel(BaseModel):
     accumulation_steps: Optional[int]
     dropout: float
     criterion: dict[str, str]
+    loss_weights: Optional[dict[str, float]]
     optimizer: CustomValidation[DotDict]  # mandatory
     scheduler: CustomValidation[DotDict]  # mandatory
     continue_training: bool
