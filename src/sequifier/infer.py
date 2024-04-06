@@ -126,6 +126,7 @@ def get_probs_preds(config, inferer, data, column_types):
 
     if config.output_probabilities:
         probs = inferer.infer(X, return_probs=True)
+        
         preds = inferer.infer(None, probs)
     else:
         probs = None
@@ -342,6 +343,7 @@ class Inferer(object):
                     dict(zip(self.target_columns, self.infer_pure(x_sub)))
                     for x_sub in x_adjusted
                 ]
+
                 outs = {
                     target_column: np.concatenate(
                         [out_sub[target_column] for out_sub in out_subs], axis=0
@@ -357,11 +359,13 @@ class Inferer(object):
                     size,
                     self.target_columns,
                 )
+
             if return_probs:
-                return normalize(outs)
+                preds = {target_column: outputs for target_column, outputs in outs.items() if self.target_column_types[target_column] != "categorical"}
+                logits = {target_column: outputs for target_column, outputs in outs.items() if self.target_column_types[target_column] == "categorical"}
+                return {**preds, **normalize(logits)}
         else:
             outs = dict(probs)
-
         for target_column in self.target_columns:
             if self.target_column_types[target_column] == "categorical":
                 if self.sample_from_distribution is False:

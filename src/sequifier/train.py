@@ -284,8 +284,8 @@ class TransformerModel(nn.Module):
                     n_epochs_no_improvemet += 1
 
                 self.scheduler.step()
-                if epoch % self.iter_save == 0:
-                    self.save(epoch, total_loss)
+                if (epoch + 1) % self.iter_save == 0:
+                    self.save((epoch + 1), total_loss)
                 last_epoch = int(epoch)
 
         self.export(self, "last", last_epoch)
@@ -314,9 +314,7 @@ class TransformerModel(nn.Module):
             output = self(data)
             loss, losses = self.calculate_loss(output, targets)
 
-            for i, target_loss in enumerate(losses.values()):
-                is_not_last_loss = (i + 1) != len(losses)
-                target_loss.backward(retain_graph=is_not_last_loss)
+            loss.backward()
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
 
@@ -359,10 +357,10 @@ class TransformerModel(nn.Module):
                 output[target_column], targets[target_column]
             )
 
-        losses_items = list(losses.items())
-        loss = losses_items[0][1]
-        for target_column, subloss in losses_items[1:]:
-            loss = loss + (subloss * self.loss_weights[target_column])
+        loss = list(losses.items())[0][1]
+        for target_column in losses.keys():
+            losses[target_column] = losses[target_column] * (self.loss_weights[target_column] if self.loss_weights is not None else 1.0)
+            loss = loss + losses[target_column]
         return (loss, losses)
 
     def copy_model(self):
