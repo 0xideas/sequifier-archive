@@ -16,7 +16,10 @@ def predictions(run_inference, project_path):
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
     ]
-    model_names.append("model-real-1-best-3-autoregression")
+    model_names += [
+        "model-categorical-multitarget-5-best-3",
+        "model-real-1-best-3-autoregression",
+    ]
     for model_name in model_names:
         target_type = "categorical" if "categorical" in model_name else "real"
         prediction_path = os.path.join(
@@ -69,3 +72,24 @@ def test_probabilities(probabilities):
         np.testing.assert_almost_equal(
             model_probabilities.sum(1), np.ones(model_probabilities.shape[0]), decimal=5
         )
+
+
+def test_non_itemId_preds_exist(run_inference, project_path):
+    paths = [
+        os.path.join(
+            project_path,
+            "outputs",
+            "predictions",
+            "sequifier-model-categorical-multitarget-5-best-3_sup1_predictions.csv",
+        ),
+        os.path.join(
+            project_path,
+            "outputs",
+            "predictions",
+            "sequifier-model-categorical-multitarget-5-best-3_sup3_predictions.csv",
+        ),
+    ]
+
+    for path in paths:
+        preds = pd.read_csv(path)
+        assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
