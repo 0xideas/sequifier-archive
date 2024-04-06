@@ -49,7 +49,7 @@ sequifier --train --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yam
 ```console
 sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml
 ```
-10. find your predictions at `[PROJECT PATH]/outputs/predictions/sequifier-default-best_predictions.csv`
+10. find your predictions at `[PROJECT PATH]/outputs/predictions/sequifier-default-best-predictions.csv`
 
 
 ## More detailed explanations of the three steps

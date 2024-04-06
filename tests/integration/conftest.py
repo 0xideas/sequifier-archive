@@ -171,14 +171,14 @@ def run_preprocessing(
 ):
     for data_number in [1, 3, 5]:
         data_path_cat = os.path.join(
-            "tests", "resources", f"test_data_categorical_{data_number}.csv"
+            "tests", "resources", f"test-data-categorical-{data_number}.csv"
         )
         os.system(
             f"sequifier --preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat} --selected-columns=None"
         )
 
         data_path_real = os.path.join(
-            "tests", "resources", f"test_data_real_{data_number}.csv"
+            "tests", "resources", f"test-data-real-{data_number}.csv"
         )
         os.system(
             f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real} --selected-columns={SELECTED_COLUMNS['real'][data_number]}"
@@ -189,11 +189,11 @@ def run_preprocessing(
     )
 
     source_path = os.path.join(
-        "tests", "resources", "test_data_real_1-split2-autoregression.csv"
+        "tests", "resources", "test-data-real-1-split2-autoregression.csv"
     )
 
     target_path = os.path.join(
-        "tests", "project_folder", "data", "test_data_real_1-split2-autoregression.csv"
+        "tests", "project_folder", "data", "test-data-real-1-split2-autoregression.csv"
     )
 
     shutil.copyfile(source_path, target_path)
@@ -207,16 +207,16 @@ def delete_inference_target(
 
     inference_data_paths = [
         os.path.join(
-            project_path, "data", f"test_data_{variant}_{model_number}-split2.parquet"
+            project_path, "data", f"test-data-{variant}-{model_number}-split2.parquet"
         )
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
     ] + [
         os.path.join(
-            project_path, "data", f"test_data_real_1-split2-autoregression.csv"
+            project_path, "data", f"test-data-real-1-split2-autoregression.csv"
         ),
         os.path.join(
-            project_path, "data", f"test_data_categorical_multitarget_5-split2.parquet"
+            project_path, "data", f"test-data-categorical-multitarget-5-split2.parquet"
         ),
     ]
 
@@ -240,7 +240,7 @@ def run_training(
 ):
     for model_number in [1, 3, 5]:
         ddconfig_path_cat = os.path.join(
-            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
+            "configs", "ddconfigs", f"test-data-categorical-{model_number}.json"
         )
         model_name_cat = f"model-categorical-{model_number}"
         os.system(
@@ -248,7 +248,7 @@ def run_training(
         )
 
         ddconfig_path_real = os.path.join(
-            "configs", "ddconfigs", f"test_data_real_{model_number}.json"
+            "configs", "ddconfigs", f"test-data-real-{model_number}.json"
         )
         model_name_real = f"model-real-{model_number}"
         os.system(
@@ -283,10 +283,10 @@ def run_inference(
             "models", f"sequifier-model-categorical-{model_number}-best-3.onnx"
         )
         inference_data_path_cat = os.path.join(
-            "data", f"test_data_categorical_{model_number}-split2.parquet"
+            "data", f"test-data-categorical-{model_number}-split2.parquet"
         )
         ddconfig_path_cat = os.path.join(
-            "configs", "ddconfigs", f"test_data_categorical_{model_number}.json"
+            "configs", "ddconfigs", f"test-data-categorical-{model_number}.json"
         )
         os.system(
             f"sequifier --infer --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
@@ -296,10 +296,10 @@ def run_inference(
             "models", f"sequifier-model-real-{model_number}-best-3.pt"
         )
         inference_data_path_real = os.path.join(
-            "data", f"test_data_real_{model_number}-split2.parquet"
+            "data", f"test-data-real-{model_number}-split2.parquet"
         )
         ddconfig_path_real = os.path.join(
-            "configs", "ddconfigs", f"test_data_real_{model_number}.json"
+            "configs", "ddconfigs", f"test-data-real-{model_number}.json"
         )
         os.system(
             f"sequifier --infer --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real} --selected-columns=None"
