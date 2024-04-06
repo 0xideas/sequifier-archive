@@ -24,8 +24,7 @@ x systematize hparams or self access for hyperparameters in train.py
 x reorder config and class attributes logically
 x multi target preprocessing, training & inference
 x loss weights in multi target setting
-
-make underscore and dash usage in files/folders consistent
+x make underscore and dash usage in files/folders consistent
 
 add decoder only architecture
 learnable positional encoding

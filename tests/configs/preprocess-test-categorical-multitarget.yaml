@@ -1,5 +1,5 @@
 project_path: tests/project_folder
-data_path: tests/resources/test_data_categorical_multitarget_5.csv
+data_path: tests/resources/test-data-categorical-multitarget-5.csv
 read_format: csv
 write_format: parquet
 selected_columns: null

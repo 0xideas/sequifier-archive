@@ -1,7 +1,7 @@
 project_path: tests/project_folder
 model_name: default
 read_format: parquet
-ddconfig_path: configs/ddconfigs/test_data_real_1.json
+ddconfig_path: configs/ddconfigs/test-data-real-1.json
 
 selected_columns: null
 target_columns: [itemValue]

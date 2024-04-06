@@ -86,7 +86,7 @@ def infer(args, args_config):
                     config.project_path,
                     "outputs",
                     "probabilities",
-                    f"{model_id}_{target_column}_probabilities.{config.write_format}",
+                    f"{model_id}-{target_column}-probabilities.{config.write_format}",
                 )
                 print(f"Writing probabilities to {probabilities_path}")
                 write_data(
@@ -100,7 +100,7 @@ def infer(args, args_config):
             config.project_path,
             "outputs",
             "predictions",
-            f"{model_id}_{target_column}_predictions.{config.write_format}",
+            f"{model_id}-{target_column}-predictions.{config.write_format}",
         )
         print(f"Writing predictions to {predictions_path}")
         write_data(

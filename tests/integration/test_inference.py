@@ -26,7 +26,7 @@ def predictions(run_inference, project_path):
             project_path,
             "outputs",
             "predictions",
-            f"sequifier-{model_name}_{TARGET_VARIABLE_DICT[target_type]}_predictions.csv",
+            f"sequifier-{model_name}-{TARGET_VARIABLE_DICT[target_type]}-predictions.csv",
         )
         variant = model_name.split("-")[1]
         dtype = {"model_output": str} if target_type == "categorical" else None
@@ -46,7 +46,7 @@ def probabilities(run_inference, project_path):
             project_path,
             "outputs",
             "probabilities",
-            f"sequifier-{model_name}-best-3_itemId_probabilities.csv",
+            f"sequifier-{model_name}-best-3-itemId-probabilities.csv",
         )
         probs[model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None
@@ -70,7 +70,9 @@ def test_probabilities(probabilities):
         assert model_probabilities.shape[1] == 31
 
         np.testing.assert_almost_equal(
-            model_probabilities.sum(1), np.ones(model_probabilities.shape[0]), decimal=5
+            model_probabilities.sum(1),
+            np.ones(model_probabilities.shape[0]),
+            decimal=5,
         )
 
 
@@ -80,7 +82,7 @@ def test_sup1_preds(run_inference, project_path):
         project_path,
         "outputs",
         "predictions",
-        "sequifier-model-categorical-multitarget-5-best-3_sup1_predictions.csv",
+        "sequifier-model-categorical-multitarget-5-best-3-sup1-predictions.csv",
     )
     preds = pd.read_csv(path)
     assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
@@ -94,7 +96,7 @@ def test_sup3_preds(run_inference, project_path):
         project_path,
         "outputs",
         "predictions",
-        "sequifier-model-categorical-multitarget-5-best-3_sup3_predictions.csv",
+        "sequifier-model-categorical-multitarget-5-best-3-sup3-predictions.csv",
     )
     preds = pd.read_csv(path)
     assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
