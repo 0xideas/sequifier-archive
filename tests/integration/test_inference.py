@@ -74,22 +74,30 @@ def test_probabilities(probabilities):
         )
 
 
-def test_non_itemId_preds_exist(run_inference, project_path):
-    paths = [
-        os.path.join(
-            project_path,
-            "outputs",
-            "predictions",
-            "sequifier-model-categorical-multitarget-5-best-3_sup1_predictions.csv",
-        ),
-        os.path.join(
-            project_path,
-            "outputs",
-            "predictions",
-            "sequifier-model-categorical-multitarget-5-best-3_sup3_predictions.csv",
-        ),
-    ]
+def test_sup1_preds(run_inference, project_path):
 
-    for path in paths:
-        preds = pd.read_csv(path)
-        assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
+    path = os.path.join(
+        project_path,
+        "outputs",
+        "predictions",
+        "sequifier-model-categorical-multitarget-5-best-3_sup1_predictions.csv",
+    )
+    preds = pd.read_csv(path)
+    assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
+    assert np.all(preds["model_output"].values >= 0) and np.all(
+        preds["model_output"].values < 10
+    )
+
+
+def test_sup3_preds(run_inference, project_path):
+    path = os.path.join(
+        project_path,
+        "outputs",
+        "predictions",
+        "sequifier-model-categorical-multitarget-5-best-3_sup3_predictions.csv",
+    )
+    preds = pd.read_csv(path)
+    assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
+    assert np.all(preds["model_output"].values > -4.0) and np.all(
+        preds["model_output"].values < 4.0
+    )
