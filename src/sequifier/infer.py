@@ -126,7 +126,7 @@ def get_probs_preds(config, inferer, data, column_types):
 
     if config.output_probabilities:
         probs = inferer.infer(X, return_probs=True)
-        
+
         preds = inferer.infer(None, probs)
     else:
         probs = None
@@ -361,8 +361,16 @@ class Inferer(object):
                 )
 
             if return_probs:
-                preds = {target_column: outputs for target_column, outputs in outs.items() if self.target_column_types[target_column] != "categorical"}
-                logits = {target_column: outputs for target_column, outputs in outs.items() if self.target_column_types[target_column] == "categorical"}
+                preds = {
+                    target_column: outputs
+                    for target_column, outputs in outs.items()
+                    if self.target_column_types[target_column] != "categorical"
+                }
+                logits = {
+                    target_column: outputs
+                    for target_column, outputs in outs.items()
+                    if self.target_column_types[target_column] == "categorical"
+                }
                 return {**preds, **normalize(logits)}
         else:
             outs = dict(probs)

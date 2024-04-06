@@ -248,9 +248,11 @@ class TransformerModel(nn.Module):
     def train_model(self, X_train, y_train, X_valid, y_valid):
         best_val_loss = float("inf")
         n_epochs_no_improvemet = 0
+
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
+
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
@@ -284,8 +286,9 @@ class TransformerModel(nn.Module):
                     n_epochs_no_improvemet += 1
 
                 self.scheduler.step()
-                if (epoch + 1) % self.iter_save == 0:
-                    self.save((epoch + 1), total_loss)
+                if (epoch) % self.iter_save == 0:
+                    self.save((epoch), total_loss)
+
                 last_epoch = int(epoch)
 
         self.export(self, "last", last_epoch)
@@ -359,7 +362,11 @@ class TransformerModel(nn.Module):
 
         loss = list(losses.items())[0][1]
         for target_column in losses.keys():
-            losses[target_column] = losses[target_column] * (self.loss_weights[target_column] if self.loss_weights is not None else 1.0)
+            losses[target_column] = losses[target_column] * (
+                self.loss_weights[target_column]
+                if self.loss_weights is not None
+                else 1.0
+            )
             loss = loss + losses[target_column]
         return (loss, losses)
 
