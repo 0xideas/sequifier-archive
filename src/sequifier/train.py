@@ -338,11 +338,10 @@ class TransformerModel(nn.Module):
                 cur_loss_normalized = (
                     1000 * total_loss / (self.log_interval * self.batch_size)
                 )
-                ppl = math.exp(cur_loss_normalized)
                 self.log_file.write(
                     f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss_normalized :5.5f} | ppl {ppl:8.2f}"
+                    f"loss {cur_loss_normalized :5.5f}"
                 )
                 total_loss = 0.0
                 start_time = time.time()
