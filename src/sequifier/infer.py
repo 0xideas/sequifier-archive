@@ -122,7 +122,7 @@ def get_probs_preds(config, inferer, data, column_types):
         config.target_columns,
         config.seq_length,
         config.device,
-        to_device=False,
+        to_device=True,
     )
     X = {col: X_col.numpy() for col, X_col in X.items()}
 
