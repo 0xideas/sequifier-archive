@@ -119,7 +119,9 @@ class TransformerModel(nn.Module):
         for col, n_classes in self.n_classes.items():
             if col in self.categorical_columns:
                 self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
-                self.pos_encoder[col] = nn.Embedding(self.seq_length, hparams.model_spec.d_model)
+                self.pos_encoder[col] = nn.Embedding(
+                    self.seq_length, hparams.model_spec.d_model
+                )
 
         self.real_columns_repetitions = self.get_real_columns_repetitions(
             self.real_columns, hparams.model_spec.nhead
@@ -223,11 +225,15 @@ class TransformerModel(nn.Module):
             src_t = self.encoder[col](src[col].T) * math.sqrt(
                 self.hparams.model_spec.d_model
             )
-            pos = torch.arange(0, self.seq_length, dtype=torch.long, device=self.device).repeat(src_t.shape[1], 1).T
+            pos = (
+                torch.arange(0, self.seq_length, dtype=torch.long, device=self.device)
+                .repeat(src_t.shape[1], 1)
+                .T
+            )
             src_p = self.pos_encoder[col](pos)
 
             src_c = self.drop(src_t + src_p)
-            
+
             srcs.append(src_c)
 
         for col in self.real_columns:
@@ -569,7 +575,6 @@ class TransformerModel(nn.Module):
             return max(files, key=os.path.getctime)
         else:
             return None
-
 
 
 def load_inference_model(

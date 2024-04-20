@@ -35,8 +35,8 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
 class InfererModel(BaseModel):
     project_path: str
     ddconfig_path: Optional[str] = None
-    inference_model_path: str
-    inference_data_path: str
+    model_path: str
+    data_path: str
     training_config_path: Optional[str] = None
     read_format: str = "parquet"
     write_format: str = "csv"
@@ -61,11 +61,11 @@ class InfererModel(BaseModel):
 
     @validator("training_config_path", always=True)
     def validate_training_config_path(cls, v, values):
-        assert v is not None or values["inference_model_path"].endswith(".onnx")
+        assert v is not None or values["model_path"].endswith(".onnx")
         return v
 
-    @validator("inference_data_path", always=True)
-    def validate_inference_data_path(cls, v, values):
+    @validator("data_path", always=True)
+    def validate_data_path(cls, v, values):
 
         path = os.path.join(values["project_path"], v)
 

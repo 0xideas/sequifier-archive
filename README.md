@@ -14,7 +14,8 @@ model outputs for data (usually the test data from preprocessing), is done via c
 ## Overview
 The sequifier package enables:
   - the extraction of sequences for training
-  - the configuration and training of a transformer classification model
+  - the configuration and training of a transformer classification or regression model
+  - using multiple input and output sequences
   - inference on data with a trained model
 
 
@@ -37,17 +38,17 @@ pip install sequifier
 4. adapt preprocess config to take the path to the data you want to preprocess and set `project_path` to`PROJECT PATH`
 5. run 
 ```console
-sequifier --preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml
+sequifier preprocess --config_path=[PROJECT PATH]/configs/preprocess.yaml
 ```
 6. the preprocessing step outputs a "data driven config" at `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`. It contains the number of classes found in the data, a map of classes to indices and the oaths to train, validation and test splits of data. Adapt the `dd_config` parameter in `train-on-preprocessed.yaml` and `infer.yaml` in to the path `[PROJECT PATH]/configs/ddconfigs/[FILE NAME]`and set `project_path` to `PROJECT PATH` in both configs
 7. run
 ```console
-sequifier --train --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml
+sequifier train --config_path=[PROJECT PATH]/configs/train-on-preprocessed.yaml
 ```
-8. adapt `inference_data_path` in `infer.yaml`
+8. adapt `data_path` in `infer.yaml`
 9. run
 ```console
-sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml
+sequifier infer --config_path=[PROJECT PATH]/configs/infer.yaml
 ```
 10. find your predictions at `[PROJECT PATH]/outputs/predictions/sequifier-default-best-predictions.csv`
 
@@ -56,10 +57,8 @@ sequifier --infer --config_path=[PROJECT PATH]/configs/infer.yaml
 #### Preprocessing of data into sequences for training
 
 The preprocessing step is designed for scenarios where for timeseries or timeseries-like data,
-the prediction of the next data point of a particular variable from prior values of that variable
-and (optionally) other variables is of interest.
-In cases of sequences where only the last item is a valid target, the preprocessing
-step should not be executed.
+the prediction of the next data point of one or more variables from prior values of these
+variables and (optionally) other variables is of interest.
 
 This step presupposes input data with three columns: "sequenceId" and "itemPosition", and a column
 with the variable that is the prediction target.
@@ -71,7 +70,7 @@ The data can then be processed and split into training, validation and testing d
 valid subsequences in the original data with the command:
 
 ```console
-sequifier --preprocess --config_path=[CONFIG PATH]
+sequifier preprocess --config_path=[CONFIG PATH]
 ```
 
 The config path specifies the path to the preprocessing config and the project
@@ -89,7 +88,7 @@ The default config can be found on this path:
 The training step is executed with the command:
 
 ```console
-sequifier --train --config_path=[CONFIG PATH]
+sequifier train --config_path=[CONFIG PATH]
 ```
 
 If the data on which the model is trained DOES NOT come from the preprocessing step, the flag
@@ -98,7 +97,7 @@ If the data on which the model is trained DOES NOT come from the preprocessing s
 --on-unprocessed
 ```
 
-should also be added.
+should be added.
 
 If the training data does not come from the preprocessing step, both train and validation
 data have to take the form of a csv file with the columns "sequenceId", "subsequenceId", "col_name", [SEQ LENGTH], [SEQ LENGTH - 1],...,"1", "target".
@@ -118,7 +117,7 @@ depending on whether the preprocessing step was executed.
 Inference is done using the command:
 
 ```console
-sequifier --infer --config_path=[CONFIG PATH]
+sequifier infer --config_path=[CONFIG PATH]
 ```
 
 and configured using a config file. The default version can be found here:

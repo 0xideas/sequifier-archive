@@ -25,12 +25,11 @@ x reorder config and class attributes logically
 x multi target preprocessing, training & inference
 x loss weights in multi target setting
 x make underscore and dash usage in files/folders consistent
+x learnable positional encoding
 
-add decoder only architecture
-learnable positional encoding
 address torch depreciation warning
 
-make fewer config values optional
+make more config values optional
 
 look into device in get_probs_preds
 

@@ -31,7 +31,7 @@ def infer(args, args_config):
         id_maps = None
 
     inferer = Inferer(
-        config.inference_model_path,
+        config.model_path,
         config.project_path,
         id_maps,
         config.map_to_id,
@@ -52,15 +52,15 @@ def infer(args, args_config):
         for col in config.column_types
     }
 
-    model_id = os.path.split(config.inference_model_path)[1].replace(
+    model_id = os.path.split(config.model_path)[1].replace(
         f".{inferer.inference_model_type}", ""
     )
 
     print(f"Inferring for {model_id}")
 
-    inference_data_path = os.path.join(config.project_path, config.inference_data_path)
+    data_path = os.path.join(config.project_path, config.data_path)
 
-    data = read_data(inference_data_path, config.read_format)
+    data = read_data(data_path, config.read_format)
     if config.selected_columns is not None:
         data = subset_to_selected_columns(data, config.selected_columns)
 
@@ -253,7 +253,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
 class Inferer(object):
     def __init__(
         self,
-        inference_model_path,
+        model_path,
         project_path,
         id_map,
         map_to_id,
@@ -292,10 +292,8 @@ class Inferer(object):
         self.sample_from_distribution = sample_from_distribution
         self.infer_with_dropout = infer_with_dropout
         self.inference_batch_size = inference_batch_size
-        self.inference_model_type = inference_model_path.split(".")[-1]
-        self.inference_model_path_load = os.path.join(
-            project_path, inference_model_path
-        )
+        self.inference_model_type = model_path.split(".")[-1]
+        self.model_path_load = os.path.join(project_path, model_path)
         self.args_config = args_config
         self.training_config_path = training_config_path
 
@@ -312,11 +310,11 @@ class Inferer(object):
                 )
 
             self.ort_session = onnxruntime.InferenceSession(
-                self.inference_model_path_load, providers=execution_providers, **kwargs
+                self.model_path_load, providers=execution_providers, **kwargs
             )
         if self.inference_model_type == "pt":
             self.inference_model = load_inference_model(
-                self.inference_model_path_load,
+                self.model_path_load,
                 self.training_config_path,
                 self.args_config,
                 self.device,
