@@ -115,17 +115,18 @@ CustomValidation = Optional
 class TrainingSpecModel(BaseModel):
     device: str
     epochs: int
+    log_interval: int = 10
     early_stopping_epochs: Optional[int]
     iter_save: int
     batch_size: int
     lr: float  # learning rate
-    accumulation_steps: Optional[int]
-    dropout: float
     criterion: dict[str, str]
+    accumulation_steps: Optional[int]
+    dropout: float = 0.0
     loss_weights: Optional[dict[str, float]]
-    optimizer: CustomValidation[DotDict]  # mandatory
-    scheduler: CustomValidation[DotDict]  # mandatory
-    continue_training: bool
+    optimizer: CustomValidation[DotDict]  # mandatory; default value in __init__
+    scheduler: CustomValidation[DotDict]  # mandatory; default value in __init__
+    continue_training: bool = True
 
     def __init__(self, **kwargs):
 
@@ -133,8 +134,11 @@ class TrainingSpecModel(BaseModel):
             **{k: v for k, v in kwargs.items() if k not in ["optimizer", "scheduler"]}
         )
 
-        optimizer = kwargs.get("optimizer")
-        scheduler = kwargs.get("scheduler")
+        optimizer = kwargs.get("optimizer", {"name": "Adam"})
+        scheduler = kwargs.get(
+            "scheduler", {"name": "StepLR", "step_size": 1, "gamma": 0.99}
+        )
+
         self.validate_optimizer_config(optimizer)
         self.optimizer = DotDict(optimizer)
         self.validate_scheduler_config(scheduler)
@@ -189,7 +193,6 @@ class TransformerModel(BaseModel):
     n_classes: dict[str, int]
     inference_batch_size: int
     seed: int
-    log_interval: int
 
     export_onnx: bool = True
     export_pt: bool = False

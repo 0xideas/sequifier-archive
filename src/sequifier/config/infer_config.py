@@ -29,6 +29,8 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
             for col, type_ in dd_config["column_types"].items()
             if type_ == "float64"
         ]
+        config_values["data_path"] = dd_config["split_paths"][2]
+
     return InfererModel(**config_values)
 
 
@@ -66,11 +68,8 @@ class InfererModel(BaseModel):
 
     @validator("data_path", always=True)
     def validate_data_path(cls, v, values):
-
-        path = os.path.join(values["project_path"], v)
-
-        if not os.path.exists(path):
-            raise ValueError(f"{path} does not exist")
+        if not os.path.exists(v):
+            raise ValueError(f"{v} does not exist")
 
         return v
 

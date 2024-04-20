@@ -1,0 +1,12 @@
+project_path: "documentation/example_inputs"
+ddconfig_path: "configs/ddconfigs/preprocessing_input.json"
+model_path: "documentation/example_inputs/models/sequifier-a8c5865b-best-2.onnx"
+
+target_columns: ["itemId"]
+target_column_types:
+  itemId: "categorical"
+
+device: "mps"
+seq_length: 5
+map_to_id: false
+inference_batch_size: 3

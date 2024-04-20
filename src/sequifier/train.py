@@ -14,9 +14,13 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+)
 
 
 def train(args, args_config):
@@ -106,7 +110,7 @@ class TransformerModel(nn.Module):
         self.seq_length = hparams.seq_length
         self.n_classes = hparams.n_classes
         self.inference_batch_size = hparams.inference_batch_size
-        self.log_interval = hparams.log_interval
+        self.log_interval = hparams.training_spec.log_interval
         self.export_onnx = hparams.export_onnx
         self.export_pt = hparams.export_pt
         self.export_with_dropout = hparams.export_with_dropout
