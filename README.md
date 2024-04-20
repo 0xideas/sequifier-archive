@@ -14,7 +14,8 @@ model outputs for data (usually the test data from preprocessing), is done via c
 ## Overview
 The sequifier package enables:
   - the extraction of sequences for training
-  - the configuration and training of a transformer classification model
+  - the configuration and training of a transformer classification or regression model
+  - using multiple input and output sequences
   - inference on data with a trained model
 
 
@@ -56,10 +57,8 @@ sequifier infer --config_path=[PROJECT PATH]/configs/infer.yaml
 #### Preprocessing of data into sequences for training
 
 The preprocessing step is designed for scenarios where for timeseries or timeseries-like data,
-the prediction of the next data point of a particular variable from prior values of that variable
-and (optionally) other variables is of interest.
-In cases of sequences where only the last item is a valid target, the preprocessing
-step should not be executed.
+the prediction of the next data point of one or more variables from prior values of these
+variables and (optionally) other variables is of interest.
 
 This step presupposes input data with three columns: "sequenceId" and "itemPosition", and a column
 with the variable that is the prediction target.
@@ -98,7 +97,7 @@ If the data on which the model is trained DOES NOT come from the preprocessing s
 --on-unprocessed
 ```
 
-should also be added.
+should be added.
 
 If the training data does not come from the preprocessing step, both train and validation
 data have to take the form of a csv file with the columns "sequenceId", "subsequenceId", "col_name", [SEQ LENGTH], [SEQ LENGTH - 1],...,"1", "target".
