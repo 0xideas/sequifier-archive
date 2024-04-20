@@ -65,7 +65,7 @@ class InfererModel(BaseModel):
 
     @validator("training_config_path", always=True)
     def validate_training_config_path(cls, v):
-        if not os.path.exists(v):
+        if not (v is None or os.path.exists(v)):
             raise ValueError(f"{v} does not exist")
 
         return v
