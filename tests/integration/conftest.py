@@ -174,18 +174,18 @@ def run_preprocessing(
             "tests", "resources", f"test-data-categorical-{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat} --selected-columns=None"
+            f"sequifier preprocess --config-path={preprocessing_config_path_cat} --data-path={data_path_cat} --selected-columns=None"
         )
 
         data_path_real = os.path.join(
             "tests", "resources", f"test-data-real-{data_number}.csv"
         )
         os.system(
-            f"sequifier --preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real} --selected-columns={SELECTED_COLUMNS['real'][data_number]}"
+            f"sequifier preprocess --config-path={preprocessing_config_path_real} --data-path={data_path_real} --selected-columns={SELECTED_COLUMNS['real'][data_number]}"
         )
 
     os.system(
-        f"sequifier --preprocess --config-path={preprocessing_config_path_cat_multitarget}"
+        f"sequifier preprocess --config-path={preprocessing_config_path_cat_multitarget}"
     )
 
     source_path = os.path.join(
@@ -205,7 +205,7 @@ def delete_inference_target(
     project_path,
 ):
 
-    inference_data_paths = [
+    data_paths = [
         os.path.join(
             project_path, "data", f"test-data-{variant}-{model_number}-split2.parquet"
         )
@@ -220,14 +220,14 @@ def delete_inference_target(
         ),
     ]
 
-    for inference_data_path in inference_data_paths:
+    for data_path in data_paths:
 
-        file_format = inference_data_path.split(".")[-1]
-        inference_data = read_data(inference_data_path, file_format)
+        file_format = data_path.split(".")[-1]
+        inference_data = read_data(data_path, file_format)
 
         inference_data = inference_data.drop(columns=["target"])
 
-        write_data(inference_data, inference_data_path, file_format)
+        write_data(inference_data, data_path, file_format)
 
 
 @pytest.fixture(scope="session")
@@ -244,7 +244,7 @@ def run_training(
         )
         model_name_cat = f"model-categorical-{model_number}"
         os.system(
-            f"sequifier --train --config-path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
+            f"sequifier train --config-path={training_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-name={model_name_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
         )
 
         ddconfig_path_real = os.path.join(
@@ -252,11 +252,11 @@ def run_training(
         )
         model_name_real = f"model-real-{model_number}"
         os.system(
-            f"sequifier --train --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real} --selected-columns=None"
+            f"sequifier train --config-path={training_config_path_real} --ddconfig-path={ddconfig_path_real} --model-name={model_name_real} --selected-columns=None"
         )
 
     model_name_cat = f"model-categorical-{model_number}"
-    os.system(f"sequifier --train --config-path={training_config_path_cat_multitarget}")
+    os.system(f"sequifier train --config-path={training_config_path_cat_multitarget}")
 
     source_path = os.path.join(
         project_path, "models", "sequifier-model-real-1-best-3.pt"
@@ -279,36 +279,34 @@ def run_inference(
     inference_config_path_real_autoregression,
 ):
     for model_number in [1, 3, 5]:
-        inference_model_path_cat = os.path.join(
+        model_path_cat = os.path.join(
             "models", f"sequifier-model-categorical-{model_number}-best-3.onnx"
         )
-        inference_data_path_cat = os.path.join(
+        data_path_cat = os.path.join(
             "data", f"test-data-categorical-{model_number}-split2.parquet"
         )
         ddconfig_path_cat = os.path.join(
             "configs", "ddconfigs", f"test-data-categorical-{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --inference-model-path={inference_model_path_cat} --inference-data-path={inference_data_path_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
+            f"sequifier infer --config-path={inference_config_path_cat} --ddconfig-path={ddconfig_path_cat} --model-path={model_path_cat} --data-path={data_path_cat} --selected-columns={SELECTED_COLUMNS['categorical'][model_number]}"
         )
 
-        inference_model_path_real = os.path.join(
+        model_path_real = os.path.join(
             "models", f"sequifier-model-real-{model_number}-best-3.pt"
         )
-        inference_data_path_real = os.path.join(
+        data_path_real = os.path.join(
             "data", f"test-data-real-{model_number}-split2.parquet"
         )
         ddconfig_path_real = os.path.join(
             "configs", "ddconfigs", f"test-data-real-{model_number}.json"
         )
         os.system(
-            f"sequifier --infer --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --inference-model-path={inference_model_path_real} --inference-data-path={inference_data_path_real} --selected-columns=None"
+            f"sequifier infer --config-path={inference_config_path_real} --ddconfig-path={ddconfig_path_real} --model-path={model_path_real} --data-path={data_path_real} --selected-columns=None"
         )
 
-    os.system(
-        f"sequifier --infer --config-path={inference_config_path_cat_multitarget}"
-    )
+    os.system(f"sequifier infer --config-path={inference_config_path_cat_multitarget}")
 
     os.system(
-        f"sequifier --infer --config-path={inference_config_path_real_autoregression} --selected-columns={SELECTED_COLUMNS['real'][1]}"
+        f"sequifier infer --config-path={inference_config_path_real_autoregression} --selected-columns={SELECTED_COLUMNS['real'][1]}"
     )
