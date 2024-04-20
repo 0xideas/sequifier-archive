@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import numpy as np
@@ -50,8 +51,8 @@ def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_
     for col in column_types.keys():
         f = data["inputCol"].values == col
         data_subset = data.loc[f, [str(c) for c in range(seq_length, 0, -1)]].values
-
         tens = tensor(data_subset).to(column_types[col])
+
         if to_device:
             tens = tens.to(device)
 
@@ -72,3 +73,9 @@ class LogFile(object):
 
     def close(self):
         self._file.close()
+
+
+def normalize_path(path, project_path):
+    project_path_normalized = (project_path + os.sep).replace(os.sep + os.sep, os.sep)
+    path2 = os.path.join(project_path, path.replace(project_path_normalized, ""))
+    return path2

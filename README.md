@@ -107,8 +107,6 @@ The training step is configured using the config. The two default configs can be
 
 [configs/train.yaml](./configs/train.yaml)
 
-[configs/train-on-preprocessed.yaml](./configs/train-on-preprocessed.yaml)
-
 depending on whether the preprocessing step was executed.
 
 

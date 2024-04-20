@@ -1,0 +1,24 @@
+project_path: "documentation/example_inputs"
+ddconfig_path: "configs/ddconfigs/preprocessing_input.json"
+target_columns: ["itemId"]
+target_column_types:
+  itemId: "categorical"
+
+seq_length: 5
+inference_batch_size: 3
+
+model_spec:
+  d_model: 6
+  nhead: 2
+  d_hid: 3
+  nlayers: 2
+
+training_spec:
+  device: "mps"
+  batch_size: 4
+  lr: 0.0001  # learning rate
+  epochs: 2
+  iter_save: 1
+  criterion:
+    itemId: CrossEntropyLoss
+

@@ -1,0 +1,5 @@
+project_path: "documentation/example_inputs"
+data_path: "documentation/example_inputs/preprocessing_input.csv"
+target_columns: ["itemId"]
+group_proportions: [0.5, 0.3, 0.2]
+seq_length: 5

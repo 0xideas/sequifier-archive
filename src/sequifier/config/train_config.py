@@ -8,6 +8,8 @@ import numpy as np
 import yaml
 from pydantic import BaseModel, validator
 
+from sequifier.helpers import normalize_path
+
 ANYTYPE = Union[str, int, float]
 
 
@@ -18,10 +20,11 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
     config_values.update(args_config)
 
     if not on_unprocessed:
-        dd_config_path = os.path.join(
-            config_values["project_path"], config_values.pop("ddconfig_path")
-        )
-        with open(dd_config_path, "r") as f:
+        dd_config_path = config_values.pop("ddconfig_path")
+
+        with open(
+            normalize_path(dd_config_path, config_values["project_path"]), "r"
+        ) as f:
             dd_config = json.loads(f.read())
 
         config_values["column_types"] = dd_config["column_types"]
@@ -115,17 +118,18 @@ CustomValidation = Optional
 class TrainingSpecModel(BaseModel):
     device: str
     epochs: int
+    log_interval: int = 10
     early_stopping_epochs: Optional[int]
     iter_save: int
     batch_size: int
     lr: float  # learning rate
-    accumulation_steps: Optional[int]
-    dropout: float
     criterion: dict[str, str]
+    accumulation_steps: Optional[int]
+    dropout: float = 0.0
     loss_weights: Optional[dict[str, float]]
-    optimizer: CustomValidation[DotDict]  # mandatory
-    scheduler: CustomValidation[DotDict]  # mandatory
-    continue_training: bool
+    optimizer: CustomValidation[DotDict]  # mandatory; default value in __init__
+    scheduler: CustomValidation[DotDict]  # mandatory; default value in __init__
+    continue_training: bool = True
 
     def __init__(self, **kwargs):
 
@@ -133,8 +137,11 @@ class TrainingSpecModel(BaseModel):
             **{k: v for k, v in kwargs.items() if k not in ["optimizer", "scheduler"]}
         )
 
-        optimizer = kwargs.get("optimizer")
-        scheduler = kwargs.get("scheduler")
+        optimizer = kwargs.get("optimizer", {"name": "Adam"})
+        scheduler = kwargs.get(
+            "scheduler", {"name": "StepLR", "step_size": 1, "gamma": 0.99}
+        )
+
         self.validate_optimizer_config(optimizer)
         self.optimizer = DotDict(optimizer)
         self.validate_scheduler_config(scheduler)
@@ -189,7 +196,6 @@ class TransformerModel(BaseModel):
     n_classes: dict[str, int]
     inference_batch_size: int
     seed: int
-    log_interval: int
 
     export_onnx: bool = True
     export_pt: bool = False

@@ -8,9 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, numpy_to_pytorch,
-                               read_data, subset_to_selected_columns,
-                               write_data)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -25,7 +25,7 @@ def infer(args, args_config):
         assert (
             config.ddconfig_path is not None
         ), "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
-        with open(os.path.join(config.project_path, config.ddconfig_path), "r") as f:
+        with open(normalize_path(config.ddconfig_path, config.project_path), "r") as f:
             id_maps = json.loads(f.read())["id_maps"]
     else:
         id_maps = None
@@ -57,10 +57,7 @@ def infer(args, args_config):
     )
 
     print(f"Inferring for {model_id}")
-
-    data_path = os.path.join(config.project_path, config.data_path)
-
-    data = read_data(data_path, config.read_format)
+    data = read_data(config.data_path, config.read_format)
     if config.selected_columns is not None:
         data = subset_to_selected_columns(data, config.selected_columns)
 
@@ -70,6 +67,13 @@ def infer(args, args_config):
         probs, preds = get_probs_preds_auto_regression(
             config, inferer, data, column_types
         )
+
+    if inferer.map_to_id:
+        for target_column, predictions in preds.items():
+            if target_column in inferer.index_map:
+                preds[target_column] = np.array(
+                    [inferer.index_map[target_column][i] for i in predictions]
+                )
 
     os.makedirs(
         os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
@@ -145,7 +149,14 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
         np.all(subsequence_ids[1:] - subsequence_ids[:-1]) >= 0
     ), "subsequenceId must be in ascending order for autoregression"
 
-    data = data.sort_values(["subsequenceId", "sequenceId"])
+    assert np.all(data["sequenceId"].values[1:] >= data["sequenceId"].values[:-1])
+
+    for sequence_id, sequence_data in data.groupby("sequenceId"):
+        assert np.all(
+            sequence_data["subsequenceId"].values[1:]
+            >= sequence_data["subsequenceId"].values[:-1]
+        )
+
     n_input_col_values = len(np.unique(data["inputCol"]))
     preds_list, probs_list, indices = [], [], []
     subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
@@ -293,7 +304,6 @@ class Inferer(object):
         self.infer_with_dropout = infer_with_dropout
         self.inference_batch_size = inference_batch_size
         self.inference_model_type = model_path.split(".")[-1]
-        self.model_path_load = os.path.join(project_path, model_path)
         self.args_config = args_config
         self.training_config_path = training_config_path
 
@@ -310,11 +320,13 @@ class Inferer(object):
                 )
 
             self.ort_session = onnxruntime.InferenceSession(
-                self.model_path_load, providers=execution_providers, **kwargs
+                normalize_path(model_path, project_path),
+                providers=execution_providers,
+                **kwargs,
             )
         if self.inference_model_type == "pt":
             self.inference_model = load_inference_model(
-                self.model_path_load,
+                normalize_path(model_path, project_path),
                 self.training_config_path,
                 self.args_config,
                 self.device,
@@ -378,10 +390,6 @@ class Inferer(object):
                     outs[target_column] = outs[target_column].argmax(1)
                 else:
                     outs[target_column] = sample_with_cumsum(outs[target_column])
-                if self.map_to_id:
-                    outs[target_column] = np.array(
-                        [self.index_map[target_column][i] for i in outs[target_column]]
-                    )
 
         return outs
 
