@@ -27,7 +27,6 @@ x loss weights in multi target setting
 x make underscore and dash usage in files/folders consistent
 x learnable positional encoding
 x make more config values optional
+x look into device in get_probs_preds
 
-address torch depreciation warning
-look into device in get_probs_preds
 make losses invariant over batch sizes/training runs
