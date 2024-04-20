@@ -1,21 +1,18 @@
 project_path: tests/project_folder
-model_name: default
+model_name: model-categorical-multitarget-5
 read_format: parquet
-ddconfig_path: configs/ddconfigs/test-data-real-1.json
+ddconfig_path: configs/ddconfigs/test-data-categorical-multitarget-5.json
 
 selected_columns: null
-target_columns: [itemValue]
+target_columns: [itemId, sup1, sup3]
 target_column_types:
-  itemValue: real
-
+  itemId: categorical
+  sup1: categorical
+  sup3: real
 
 seq_length: 8
 inference_batch_size: 10
 log_interval: 200
-
-export_onnx: true
-export_pt: true
-export_with_dropout: true
 
 model_spec:
   d_model: 10
@@ -26,12 +23,18 @@ training_spec:
   device: cpu
   epochs: 3
   iter_save: 1
-  batch_size: 20
+  batch_size: 10
   lr: 0.003
-  accumulation_steps: null
+  accumulation_steps: 2
   dropout: 0.3
   criterion:
-    itemValue: MSELoss
+    itemId: CrossEntropyLoss
+    sup1: CrossEntropyLoss
+    sup3: MSELoss
+  loss_weights:
+    itemId: 1.0
+    sup1: 0.5
+    sup3: 0.5
   optimizer:
     name: Adam
   scheduler:
@@ -39,5 +42,4 @@ training_spec:
     step_size: 1.0
     gamma: 0.99
   continue_training: false
-
 

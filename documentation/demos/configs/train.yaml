@@ -1,14 +1,32 @@
-project_path:
-#data driven config path
-ddconfig_path: "configs/ddconfigs/chr8.json" # 'data driven' config path, written to by preprocessing step
+project_path: .
+#metadata
+training_data_path: "train_data.csv" # absolute path to training data
+validation_data_path: "test_data.csv" # absolute path to validation data
 
 model_name: "default"  # model name to load from in case there are checkpoints of that model available, can be None
 #data specification
-seq_length: 50 # length of sequence used for classification, cannot be larger than sew_length in the preprocessing step
+seq_length: 10 # length of sequence used for classification, cannot be larger than sew_length in the preprocessing step
+inference_batch_size: 10
+log_interval: 50
+
+categorical_columns: ["itemId", "sup1"]
+real_columns: []
+target_column: "itemId"
+target_column_type: "categorical"
+n_classes: {
+  "itemId": 10,
+  "sup1": 3
+}
+column_types:  {
+  "itemId": "int64",
+  "sup1": "int64"
+}
+
+read_format: csv
 
 #model specification
 model_spec:
-  d_model: 50 # dimensionality of the token embedding system
+  d_model: 10 # dimensionality ofc the token embedding system
   nhead: 2 # number of attention heads within each transformer layer
   d_hid: 50 # dimensionality of feedforward network inside transformer layer
   nlayers: 2 # number of transformer layers
@@ -16,11 +34,11 @@ model_spec:
 #training specification
 training_spec:
   device: "cpu" # device for model training
-  epochs: 3 # number of epochs
-  iter_save: 1 # frequency of checkpointing
+  epochs: 100 # number of epochs
+  iter_save: 50 # frequency of checkpointing
   batch_size: 50 # batch size for training
-  lr: 0.003  # learning rate
-  dropout: 0.3 # dropout rate during training
+  lr: 0.01  # learning rate
+  dropout: 0.1 # dropout rate during training
   criterion: "CrossEntropyLoss" # loss function, can be any in torch.nn
   optimizer: 
     name: "Adam" # optimizer, can be any on torch.optim
@@ -29,3 +47,4 @@ training_spec:
     step_size: 1.0
     gamma: 0.99
   continue_training: true
+

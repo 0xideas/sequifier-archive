@@ -1,11 +1,21 @@
 project_path: tests/project_folder
-target_column: itemId
-target_column_type: categorical
-inference_data_path: data/test_data_categorical_1-split2.csv
-model_path: models/sequifier-model-categorical-1-best.onnx
+training_config_path: tests/configs/train-test-categorical.yaml
+ddconfig_path: tests/project_folder/configs/ddconfigs/test-data-categorical-5.json
+model_path: tests/project_folder/models/sequifier-model-categorical-5-best-3.pt
+data_path: tests/project_folder/data/test-data-categorical5-split2.parquet
+read_format: parquet
+write_format: csv
+
+selected_columns: null
+target_columns: [itemId]
+target_column_types:
+  itemId: categorical
+
+output_probabilities: true
+map_to_id: true
 device: cpu
 seq_length: 8
-output_probabilities: true
-ddconfig_path: configs/ddconfigs/test_data_categorical_1.json
-map_to_id: true
-batch_size: 20
+inference_batch_size: 10
+
+sample_from_distribution: true
+auto_regression: false

@@ -12,12 +12,15 @@ def test_checkpoint_files_exists(run_training, project_path):
         sorted(list(os.listdir(os.path.join(project_path, "checkpoints"))))
     )
     expected_items = np.array(
-        [
-            f"model-{model_type}-{j}-epoch-{i}.pt"
-            for model_type in ["categorical", "real"]
-            for j in [1, 3, 5]
-            for i in range(1, 4)
-        ]
+        sorted(
+            [
+                f"model-{model_type}-{j}-epoch-{i}.pt"
+                for model_type in ["categorical", "real"]
+                for j in [1, 3, 5]
+                for i in range(1, 4)
+            ]
+            + [f"model-categorical-multitarget-5-epoch-{i}.pt" for i in range(1, 4)]
+        )
     )
 
     print(f"{expected_items = }")
@@ -29,17 +32,25 @@ def test_checkpoint_files_exists(run_training, project_path):
 
 
 def test_model_files_exists(run_training, project_path):
-
+    model_type_formats = {"categorical": ["onnx"], "real": ["onnx", "pt"]}
     found_items = np.array(
         sorted(list(os.listdir(os.path.join(project_path, "models"))))
     )
     expected_items = np.array(
-        [
-            f"sequifier-model-{model_type}-{j}-{kind}.onnx"
-            for model_type in ["categorical", "real"]
-            for j in [1, 3, 5]
-            for kind in ["best", "last"]
-        ]
+        sorted(
+            [
+                f"sequifier-model-{model_type}-{j}-{kind}-3.{model_type_format}"
+                for model_type in ["categorical", "real"]
+                for model_type_format in model_type_formats[model_type]
+                for j in [1, 3, 5]
+                for kind in ["best", "last"]
+            ]
+            + [
+                "sequifier-model-categorical-multitarget-5-best-3.onnx",
+                "sequifier-model-categorical-multitarget-5-last-3.onnx",
+                "sequifier-model-real-1-best-3-autoregression.pt",
+            ]
+        )
     )
 
     print(f"{expected_items = }")

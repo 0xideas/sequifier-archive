@@ -1,9 +1,14 @@
 project_path: tests/project_folder
-target_column: itemValue
-data_path: tests/resources/test_data_1.csv
-seq_length: 8
+data_path: tests/resources/test-data-real-5.csv
+read_format: csv
+write_format: parquet
+selected_columns: null
+target_columns: [itemValue]
+return_targets: true
+
 group_proportions:
 - 0.6
 - 0.2
 - 0.2
+seq_length: 8
 max_rows: null

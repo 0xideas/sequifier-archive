@@ -11,7 +11,7 @@ def dd_configs(run_preprocessing, project_path):
     dd_configs = {}
     for data_number in [1, 3, 5]:
         for variant in ["categorical", "real"]:
-            file_name = f"test_data_{variant}_{data_number}.json"
+            file_name = f"test-data-{variant}-{data_number}.json"
             with open(
                 os.path.join(project_path, "configs", "ddconfigs", file_name), "r"
             ) as f:
@@ -29,7 +29,7 @@ def test_dd_config(dd_configs):
         ), list(dd_config.keys())
 
         assert len(dd_config["split_paths"]) == 3
-        assert dd_config["split_paths"][0].endswith("split0.csv")
+        assert dd_config["split_paths"][0].endswith("split0.parquet")
 
         if "itemId" in dd_config["n_classes"]:
             assert len(dd_config["id_maps"]["itemId"]) == 30
@@ -50,14 +50,11 @@ def test_dd_config(dd_configs):
 @pytest.fixture()
 def data_splits(project_path):
     data_split_values = {
-        f"{j}_{variant}": [
-            pd.read_csv(
+        f"{j}-{variant}": [
+            pd.read_parquet(
                 os.path.join(
-                    project_path, "data", f"test_data_{variant}_{j}-split{i}.csv"
-                ),
-                sep=",",
-                decimal=".",
-                index_col=None,
+                    project_path, "data", f"test-data-{variant}-{j}-split{i}.parquet"
+                )
             )
             for i in range(3)
         ]
@@ -68,13 +65,16 @@ def data_splits(project_path):
     return data_split_values
 
 
-def test_preprocessed_data_real(data_splits):
+def test_preprocessed_data_real(delete_inference_target, data_splits):
     for j in [1, 3, 5]:
-        name = f"{j}_real"
+        name = f"{j}-real"
         assert len(data_splits[name]) == 3
 
-        for data in data_splits[name]:
-            assert data.shape[1] == 12
+        for i, data in enumerate(data_splits[name]):
+            number_expected_columns = 12 - int(i == 2)
+            assert data.shape[1] == (
+                number_expected_columns
+            ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
             for sequenceId, group in data.groupby("sequenceId"):
 
                 # offset by j in either direction as that is the number of columns in the input
@@ -85,11 +85,14 @@ def test_preprocessed_data_real(data_splits):
 
 def test_preprocessed_data_categorical(data_splits):
     for j in [1, 3, 5]:
-        name = f"{j}_categorical"
+        name = f"{j}-categorical"
         assert len(data_splits[name]) == 3
 
-        for data in data_splits[name]:
-            assert data.shape[1] == 12
+        for i, data in enumerate(data_splits[name]):
+            number_expected_columns = 12 - int(i == 2)
+            assert data.shape[1] == (
+                number_expected_columns
+            ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
 
             for sequenceId, group in data.groupby("sequenceId"):
 

@@ -1,23 +1,34 @@
 project_path: tests/project_folder
-target_column: itemId
-target_column_type: categorical
-ddconfig_path: configs/ddconfigs/test_data_categorical_1.json
 model_name: default
+read_format: parquet
+ddconfig_path: configs/ddconfigs/test-data-categorical5.json
+
+selected_columns: null
+target_columns: [itemId]
+target_column_types:
+  itemId: categorical
+
 seq_length: 8
+inference_batch_size: 10
 log_interval: 200
+
 model_spec:
-  d_model: 10
+  d_model: 6
   nhead: 2
-  d_hid: 10
+  d_hid: 12
   nlayers: 2
 training_spec:
   device: cpu
   epochs: 3
   iter_save: 1
-  batch_size: 20
+  batch_size: 5
   lr: 0.003
+  accumulation_steps: 2
   dropout: 0.3
-  criterion: CrossEntropyLoss
+  criterion:
+    itemId: CrossEntropyLoss
+  loss_weights:
+    itemId: 1.0
   optimizer:
     name: Adam
   scheduler:
@@ -25,3 +36,4 @@ training_spec:
     step_size: 1.0
     gamma: 0.99
   continue_training: false
+
