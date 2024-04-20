@@ -113,14 +113,13 @@ class TransformerModel(nn.Module):
         self.early_stopping_epochs = hparams.training_spec.early_stopping_epochs
         self.hparams = hparams
 
+        self.drop = nn.Dropout(hparams.training_spec.dropout)
         self.encoder = ModuleDict()
         self.pos_encoder = ModuleDict()
         for col, n_classes in self.n_classes.items():
             if col in self.categorical_columns:
                 self.encoder[col] = nn.Embedding(n_classes, hparams.model_spec.d_model)
-                self.pos_encoder[col] = PositionalEncoding(
-                    hparams.model_spec.d_model, hparams.training_spec.dropout
-                )
+                self.pos_encoder[col] = nn.Embedding(self.seq_length, hparams.model_spec.d_model)
 
         self.real_columns_repetitions = self.get_real_columns_repetitions(
             self.real_columns, hparams.model_spec.nhead
@@ -224,8 +223,12 @@ class TransformerModel(nn.Module):
             src_t = self.encoder[col](src[col].T) * math.sqrt(
                 self.hparams.model_spec.d_model
             )
-            src_t = self.pos_encoder[col](src_t)
-            srcs.append(src_t)
+            pos = torch.arange(0, self.seq_length, dtype=torch.long, device=self.device).repeat(src_t.shape[1], 1).T
+            src_p = self.pos_encoder[col](pos)
+
+            src_c = self.drop(src_t + src_p)
+            
+            srcs.append(src_c)
 
         for col in self.real_columns:
             srcs.append(
@@ -335,11 +338,10 @@ class TransformerModel(nn.Module):
                 cur_loss_normalized = (
                     1000 * total_loss / (self.log_interval * self.batch_size)
                 )
-                ppl = math.exp(cur_loss_normalized)
                 self.log_file.write(
                     f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
                     f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss_normalized :5.5f} | ppl {ppl:8.2f}"
+                    f"loss {cur_loss_normalized :5.5f}"
                 )
                 total_loss = 0.0
                 start_time = time.time()
@@ -568,37 +570,6 @@ class TransformerModel(nn.Module):
         else:
             return None
 
-
-######################################################################
-# ``PositionalEncoding`` module injects some information about the
-# relative or absolute position of the tokens in the sequence. The
-# positional encodings have the same dimension as the embeddings so that
-# the two can be summed. Here, we use ``sine`` and ``cosine`` functions of
-# different frequencies.
-#
-
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
-        )
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer("pe", pe)
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        Args:
-            x: Tensor, shape [seq_len, batch_size, embedding_dim]
-        """
-        x = x + self.pe[: x.size(0)]
-        return self.dropout(x)
 
 
 def load_inference_model(
