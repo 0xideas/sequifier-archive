@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import numpy as np
@@ -72,3 +73,9 @@ class LogFile(object):
 
     def close(self):
         self._file.close()
+
+
+def normalize_path(path, project_path):
+    project_path_normalized = (project_path + os.sep).replace(os.sep + os.sep, os.sep)
+    path2 = os.path.join(project_path, path.replace(project_path_normalized, ""))
+    return path2

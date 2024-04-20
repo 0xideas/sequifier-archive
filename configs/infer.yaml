@@ -8,5 +8,4 @@ target_column_types:
 
 device: "mps"
 seq_length: 5
-map_to_id: false
 inference_batch_size: 3

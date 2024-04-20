@@ -8,6 +8,8 @@ import numpy as np
 import yaml
 from pydantic import BaseModel, validator
 
+from sequifier.helpers import normalize_path
+
 ANYTYPE = Union[str, int, float]
 
 
@@ -18,10 +20,11 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
     config_values.update(args_config)
 
     if not on_unprocessed:
-        dd_config_path = os.path.join(
-            config_values["project_path"], config_values.pop("ddconfig_path")
-        )
-        with open(dd_config_path, "r") as f:
+        dd_config_path = config_values.pop("ddconfig_path")
+
+        with open(
+            normalize_path(dd_config_path, config_values["project_path"]), "r"
+        ) as f:
             dd_config = json.loads(f.read())
 
         config_values["column_types"] = dd_config["column_types"]

@@ -6,6 +6,8 @@ import numpy as np
 import yaml
 from pydantic import BaseModel, validator
 
+from sequifier.helpers import normalize_path
+
 
 def load_inferer_config(config_path, args_config, on_unprocessed):
     with open(config_path, "r") as f:
@@ -13,11 +15,11 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
     config_values.update(args_config)
 
     if not on_unprocessed:
-        dd_config_path = os.path.join(
-            config_values["project_path"], config_values.get("ddconfig_path")
-        )
+        dd_config_path = config_values.get("ddconfig_path")
 
-        with open(dd_config_path, "r") as f:
+        with open(
+            normalize_path(dd_config_path, config_values["project_path"]), "r"
+        ) as f:
             dd_config = json.loads(f.read())
 
         config_values["column_types"] = dd_config["column_types"]
@@ -62,14 +64,17 @@ class InfererModel(BaseModel):
     auto_regression: bool = True
 
     @validator("training_config_path", always=True)
-    def validate_training_config_path(cls, v, values):
-        assert v is not None or values["model_path"].endswith(".onnx")
+    def validate_training_config_path(cls, v):
+        if not os.path.exists(v):
+            raise ValueError(f"{v} does not exist")
+
         return v
 
     @validator("data_path", always=True)
     def validate_data_path(cls, v, values):
-        if not os.path.exists(v):
-            raise ValueError(f"{v} does not exist")
+        v2 = normalize_path(v, values["project_path"])
+        if not os.path.exists(v2):
+            raise ValueError(f"{v2} does not exist")
 
         return v
 

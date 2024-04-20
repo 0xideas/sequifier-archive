@@ -8,13 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -29,7 +25,7 @@ def infer(args, args_config):
         assert (
             config.ddconfig_path is not None
         ), "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
-        with open(os.path.join(config.project_path, config.ddconfig_path), "r") as f:
+        with open(normalize_path(config.ddconfig_path, config.project_path), "r") as f:
             id_maps = json.loads(f.read())["id_maps"]
     else:
         id_maps = None
@@ -71,6 +67,13 @@ def infer(args, args_config):
         probs, preds = get_probs_preds_auto_regression(
             config, inferer, data, column_types
         )
+
+    if inferer.map_to_id:
+        for target_column, predictions in preds.items():
+            if target_column in inferer.index_map:
+                preds[target_column] = np.array(
+                    [inferer.index_map[target_column][i] for i in predictions]
+                )
 
     os.makedirs(
         os.path.join(config.project_path, "outputs", "predictions"), exist_ok=True
@@ -317,11 +320,13 @@ class Inferer(object):
                 )
 
             self.ort_session = onnxruntime.InferenceSession(
-                model_path, providers=execution_providers, **kwargs
+                normalize_path(model_path, project_path),
+                providers=execution_providers,
+                **kwargs,
             )
         if self.inference_model_type == "pt":
             self.inference_model = load_inference_model(
-                model_path,
+                normalize_path(model_path, project_path),
                 self.training_config_path,
                 self.args_config,
                 self.device,
@@ -385,10 +390,6 @@ class Inferer(object):
                     outs[target_column] = outs[target_column].argmax(1)
                 else:
                     outs[target_column] = sample_with_cumsum(outs[target_column])
-                if self.map_to_id:
-                    outs[target_column] = np.array(
-                        [self.index_map[target_column][i] for i in outs[target_column]]
-                    )
 
         return outs
 
