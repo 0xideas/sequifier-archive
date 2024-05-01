@@ -22,6 +22,11 @@ SELECTED_COLUMNS = {
 
 
 @pytest.fixture(scope="session")
+def split_groups():
+    return {"categorical": 3, "real": 2}
+
+
+@pytest.fixture(scope="session")
 def project_path():
     return os.path.join("tests", "project_folder")
 
@@ -189,11 +194,11 @@ def run_preprocessing(
     )
 
     source_path = os.path.join(
-        "tests", "resources", "test-data-real-1-split2-autoregression.csv"
+        "tests", "resources", "test-data-real-1-split1-autoregression.csv"
     )
 
     target_path = os.path.join(
-        "tests", "project_folder", "data", "test-data-real-1-split2-autoregression.csv"
+        "tests", "project_folder", "data", "test-data-real-1-split1-autoregression.csv"
     )
 
     shutil.copyfile(source_path, target_path)
@@ -202,18 +207,21 @@ def run_preprocessing(
 @pytest.fixture(scope="session")
 def delete_inference_target(
     run_preprocessing,
+    split_groups,
     project_path,
 ):
 
     data_paths = [
         os.path.join(
-            project_path, "data", f"test-data-{variant}-{model_number}-split2.parquet"
+            project_path,
+            "data",
+            f"test-data-{variant}-{model_number}-split{split_groups[variant] - 1}.parquet",
         )
         for variant in ["categorical", "real"]
         for model_number in [1, 3, 5]
     ] + [
         os.path.join(
-            project_path, "data", f"test-data-real-1-split2-autoregression.csv"
+            project_path, "data", f"test-data-real-1-split1-autoregression.csv"
         ),
         os.path.join(
             project_path, "data", f"test-data-categorical-multitarget-5-split2.parquet"
@@ -296,7 +304,7 @@ def run_inference(
             "models", f"sequifier-model-real-{model_number}-best-3.pt"
         )
         data_path_real = os.path.join(
-            "data", f"test-data-real-{model_number}-split2.parquet"
+            "data", f"test-data-real-{model_number}-split1.parquet"
         )
         ddconfig_path_real = os.path.join(
             "configs", "ddconfigs", f"test-data-real-{model_number}.json"

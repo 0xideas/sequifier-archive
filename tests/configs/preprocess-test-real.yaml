@@ -7,8 +7,7 @@ target_columns: [itemValue]
 return_targets: true
 
 group_proportions:
-- 0.6
-- 0.2
+- 0.8
 - 0.2
 seq_length: 8
 max_rows: null

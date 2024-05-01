@@ -34,7 +34,10 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
             if type_ == "float64"
         ]
         config_values["data_path"] = normalize_path(
-            config_values.get("data_path", dd_config["split_paths"][2]),
+            config_values.get(
+                "data_path",
+                dd_config["split_paths"][min(2, len(dd_config["split_paths"]) - 1)],
+            ),
             config_values["project_path"],
         )
 
