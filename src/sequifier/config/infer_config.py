@@ -22,7 +22,9 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
         ) as f:
             dd_config = json.loads(f.read())
 
-        config_values["column_types"] = dd_config["column_types"]
+        config_values["column_types"] = config_values.get(
+            "column_types", dd_config["column_types"]
+        )
         config_values["categorical_columns"] = [
             col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
         ]
@@ -31,7 +33,10 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
             for col, type_ in dd_config["column_types"].items()
             if type_ == "float64"
         ]
-        config_values["data_path"] = dd_config["split_paths"][2]
+        config_values["data_path"] = normalize_path(
+            config_values.get("data_path", dd_config["split_paths"][2]),
+            config_values["project_path"],
+        )
 
     return InfererModel(**config_values)
 
