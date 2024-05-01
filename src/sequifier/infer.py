@@ -8,9 +8,14 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns, write_data)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+    write_data,
+)
 from sequifier.train import infer_with_model, load_inference_model
 
 
