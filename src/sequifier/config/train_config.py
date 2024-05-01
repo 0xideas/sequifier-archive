@@ -13,7 +13,7 @@ from sequifier.helpers import normalize_path
 ANYTYPE = Union[str, int, float]
 
 
-def load_transformer_config(config_path, args_config, on_unprocessed):
+def load_train_config(config_path, args_config, on_unprocessed):
     with open(config_path, "r") as f:
         config_values = yaml.safe_load(f)
 
@@ -53,7 +53,7 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
             config_values["project_path"],
         )
 
-    return TransformerModel(**config_values)
+    return TrainModel(**config_values)
 
 
 VALID_LOSS_FUNCTIONS = [
@@ -191,7 +191,7 @@ class ModelSpecModel(BaseModel):
     nlayers: int
 
 
-class TransformerModel(BaseModel):
+class TrainModel(BaseModel):
     project_path: str
     model_name: Optional[str]
     training_data_path: str

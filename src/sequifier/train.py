@@ -13,10 +13,15 @@ import torch
 from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
-from sequifier.config.train_config import load_transformer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile, normalize_path,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns)
+from sequifier.config.train_config import load_train_config
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+)
 
 
 def train(args, args_config):
@@ -24,7 +29,7 @@ def train(args, args_config):
         args.config_path if args.config_path is not None else "configs/train.yaml"
     )
 
-    config = load_transformer_config(config_path, args_config, args.on_unprocessed)
+    config = load_train_config(config_path, args_config, args.on_unprocessed)
 
     column_types = {
         col: PANDAS_TO_TORCH_TYPES[config.column_types[col]]
@@ -586,7 +591,7 @@ class TransformerModel(nn.Module):
 def load_inference_model(
     model_path, training_config_path, args_config, device, infer_with_dropout
 ):
-    training_config = load_transformer_config(
+    training_config = load_train_config(
         training_config_path, args_config, args_config["on_unprocessed"]
     )
 
