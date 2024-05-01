@@ -51,6 +51,7 @@ def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_
     for col in column_types.keys():
         f = data["inputCol"].values == col
         data_subset = data.loc[f, [str(c) for c in range(seq_length, 0, -1)]].values
+
         tens = tensor(data_subset).to(column_types[col])
 
         if to_device:
