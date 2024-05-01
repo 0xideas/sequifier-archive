@@ -20,4 +20,4 @@ seq_length: 8
 inference_batch_size: 10
 
 sample_from_distribution: false
-auto_regression: false
+autoregression: false

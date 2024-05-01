@@ -22,4 +22,4 @@ column_types:  {
 }
 
 read_format: csv
-auto_regression: false
+autoregression: false
