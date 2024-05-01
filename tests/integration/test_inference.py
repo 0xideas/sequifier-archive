@@ -26,13 +26,17 @@ def predictions(run_inference, project_path):
             project_path,
             "outputs",
             "predictions",
-            f"sequifier-{model_name}-{TARGET_VARIABLE_DICT[target_type]}-predictions.csv",
+            f"sequifier-{model_name}-predictions.csv",
         )
         variant = model_name.split("-")[1]
-        dtype = {"model_output": str} if target_type == "categorical" else None
+        dtype = (
+            {TARGET_VARIABLE_DICT[target_type]: str}
+            if target_type == "categorical"
+            else None
+        )
         preds[variant][model_name] = pd.read_csv(
             prediction_path, sep=",", decimal=".", index_col=None, dtype=dtype
-        ).values.flatten()
+        )
 
     return preds
 
@@ -56,13 +60,23 @@ def probabilities(run_inference, project_path):
 
 def test_predictions_real(predictions):
     for model_name, model_predictions in predictions["real"].items():
-        assert np.all([v > -10.0 and v < 10.0 for v in model_predictions])
+        assert np.all(
+            [
+                v > -10.0 and v < 10.0
+                for v in model_predictions[TARGET_VARIABLE_DICT["real"]].values
+            ]
+        )
 
 
 def test_predictions_cat(predictions):
     valid_values = [str(x) for x in np.arange(100, 130)] + ["unknown"]
     for model_name, model_predictions in predictions["categorical"].items():
-        assert np.all([v in valid_values for v in model_predictions]), model_predictions
+        assert np.all(
+            [
+                v in valid_values
+                for v in model_predictions[TARGET_VARIABLE_DICT["categorical"]].values
+            ]
+        ), model_predictions
 
 
 def test_probabilities(probabilities):
@@ -76,30 +90,10 @@ def test_probabilities(probabilities):
         )
 
 
-def test_sup1_preds(run_inference, project_path):
+def test_multi_pred(predictions):
+    preds = predictions["categorical"]["model-categorical-multitarget-5-best-3"]
 
-    path = os.path.join(
-        project_path,
-        "outputs",
-        "predictions",
-        "sequifier-model-categorical-multitarget-5-best-3-sup1-predictions.csv",
-    )
-    preds = pd.read_csv(path)
-    assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
-    assert np.all(preds["model_output"].values >= 0) and np.all(
-        preds["model_output"].values < 10
-    )
-
-
-def test_sup3_preds(run_inference, project_path):
-    path = os.path.join(
-        project_path,
-        "outputs",
-        "predictions",
-        "sequifier-model-categorical-multitarget-5-best-3-sup3-predictions.csv",
-    )
-    preds = pd.read_csv(path)
-    assert preds["model_output"].shape[0] > 0, f"{path}: {preds}"
-    assert np.all(preds["model_output"].values > -4.0) and np.all(
-        preds["model_output"].values < 4.0
-    )
+    assert preds.shape[0] > 0
+    assert preds.shape[1] == 3
+    assert np.all(preds["sup1"].values >= 0) and np.all(preds["sup1"].values < 10)
+    assert np.all(preds["sup3"].values > -4.0) and np.all(preds["sup3"].values < 4.0)

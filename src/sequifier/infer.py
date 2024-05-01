@@ -8,14 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    normalize_path,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -104,19 +99,24 @@ def infer(args, args_config):
                     config.write_format,
                 )
 
-    for target_column in inferer.target_columns:
-        predictions_path = os.path.join(
-            config.project_path,
-            "outputs",
-            "predictions",
-            f"{model_id}-{target_column}-predictions.{config.write_format}",
-        )
-        print(f"Writing predictions to {predictions_path}")
-        write_data(
-            pd.DataFrame(preds[target_column], columns=["model_output"]),
-            predictions_path,
-            config.write_format,
-        )
+    predictions = pd.DataFrame(
+        {
+            target_column: preds[target_column].flatten()
+            for target_column in inferer.target_columns
+        }
+    )
+    predictions_path = os.path.join(
+        config.project_path,
+        "outputs",
+        "predictions",
+        f"{model_id}-predictions.{config.write_format}",
+    )
+    print(f"Writing predictions to {predictions_path}")
+    write_data(
+        predictions,
+        predictions_path,
+        config.write_format,
+    )
     print("Inference complete")
 
 
