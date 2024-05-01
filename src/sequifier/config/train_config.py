@@ -46,7 +46,10 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
             config_values["project_path"],
         )
         config_values["validation_data_path"] = normalize_path(
-            config_values.get("validation_data_path", dd_config["split_paths"][1]),
+            config_values.get(
+                "validation_data_path",
+                dd_config["split_paths"][min(1, len(dd_config["split_paths"]) - 1)],
+            ),
             config_values["project_path"],
         )
 
