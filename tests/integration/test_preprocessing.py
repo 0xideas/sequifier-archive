@@ -25,7 +25,15 @@ def test_dd_config(dd_configs):
         print(file_name)
         assert np.all(
             np.array(list(dd_config.keys()))
-            == np.array(["n_classes", "id_maps", "split_paths", "column_types"])
+            == np.array(
+                [
+                    "n_classes",
+                    "id_maps",
+                    "split_paths",
+                    "column_types",
+                    "min_max_values",
+                ]
+            )
         ), list(dd_config.keys())
 
         assert dd_config["split_paths"][0].endswith("split0.parquet")
@@ -44,6 +52,10 @@ def test_dd_config(dd_configs):
             assert np.all(
                 id_map_values == np.arange(1, len(id_map_values) + 1)
             ), id_map_values
+
+        if "itemValue" in dd_config["min_max_values"]:
+            assert "max" in dd_config["min_max_values"]["itemValue"]
+            assert "min" in dd_config["min_max_values"]["itemValue"]
 
 
 @pytest.fixture()

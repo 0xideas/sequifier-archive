@@ -8,14 +8,9 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    normalize_path,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-    write_data,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -26,12 +21,15 @@ def infer(args, args_config):
 
     config = load_inferer_config(config_path, args_config, args.on_unprocessed)
 
-    if config.map_to_id:
-        assert (
-            config.ddconfig_path is not None
-        ), "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
+    if config.map_to_id or (len(config.real_columns) > 0):
+        assert config.ddconfig_path is not None, (
+            "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
+            "\nIf you have real columns in the data, you need to provide a json that contains: {{'min_max_values':{COL_NAME:{'min':..., 'max':...}}}}"
+        )
         with open(normalize_path(config.ddconfig_path, config.project_path), "r") as f:
-            id_maps = json.loads(f.read())["id_maps"]
+            dd_config = json.loads(f.read())
+            id_maps = dd_config["id_maps"]
+            min_max_values = dd_config["min_max_values"]
     else:
         id_maps = None
 
@@ -39,6 +37,7 @@ def infer(args, args_config):
         config.model_path,
         config.project_path,
         id_maps,
+        min_max_values,
         config.map_to_id,
         config.categorical_columns,
         config.real_columns,
@@ -145,7 +144,7 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
             )
             input_col_fields = last_observation["inputCol"].values
             empty_data_fields = (
-                np.ones((last_observation.shape[0], min(seq_length, offset))) * 12345678
+                np.ones((last_observation.shape[0], min(seq_length, offset))) * np.inf
             )
             data_cols = [str(c) for c in range(seq_length, 0, -1)]
             offset_data_fields = last_observation[data_cols].values[
@@ -154,7 +153,6 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
             data_fields = np.concatenate(
                 [offset_data_fields, empty_data_fields], axis=1
             )
-            # import code; code.interact(local=locals())
             metadata = pd.DataFrame(
                 {
                     "sequenceId": sequence_id_fields,
@@ -189,7 +187,6 @@ def get_probs_preds(config, inferer, data, column_types):
 
     if config.output_probabilities:
         probs = inferer.infer(X, return_probs=True)
-
         preds = inferer.infer(None, probs)
     else:
         probs = None
@@ -305,18 +302,13 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
                 for target_column, f in fs.items():
                     data.loc[f, str(offset)] = f_preds[target_column]
         data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
-        try:
-            assert (
-                np.any(
-                    np.abs(data_subset[[str(c) for c in range(seq_length, 0, -1)]])
-                    == 12345678
-                )
-                == False
-            ), data_subset
-        except:
-            import code
-
-            code.interact(local=locals())
+        assert (
+            np.any(
+                np.abs(data_subset[[str(c) for c in range(seq_length, 0, -1)]])
+                == np.inf
+            )
+            == False
+        ), data_subset
 
     preds = {
         target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)
@@ -340,6 +332,7 @@ class Inferer(object):
         model_path,
         project_path,
         id_map,
+        min_max_values,
         map_to_id,
         categorical_columns,
         real_columns,
@@ -353,6 +346,7 @@ class Inferer(object):
         training_config_path,
     ):
         self.map_to_id = map_to_id
+        self.min_max_values = min_max_values
         if self.map_to_id:
             self.index_map = {}
             for target_column in target_columns:
@@ -406,6 +400,13 @@ class Inferer(object):
                 self.infer_with_dropout,
             )
 
+    def invert_normalization(self, values, target_column):
+        min_ = self.min_max_values[target_column]["min"]
+        max_ = self.min_max_values[target_column]["max"]
+        return np.array(
+            [(((v + 1.0) / 2.0) * (max_ - min_)) + min_ for v in values.flatten()]
+        ).reshape(*values.shape)
+
     def infer(
         self, x, probs=None, return_probs=False
     ):  # probs are of type Optional[dict[str, np.ndarray]]
@@ -433,6 +434,7 @@ class Inferer(object):
                     )[:size, :]
                     for target_column in self.target_columns
                 }
+
             if self.inference_model_type == "pt":
                 x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=False)
                 outs = infer_with_model(
@@ -464,8 +466,16 @@ class Inferer(object):
                 if self.sample_from_distribution is False:
                     outs[target_column] = outs[target_column].argmax(1)
                 else:
-                    outs[target_column] = sample_with_cumsum(outs[target_column])
+                    try:
+                        outs[target_column] = sample_with_cumsum(outs[target_column])
+                    except:
+                        import code
 
+                        code.interact(local=locals())
+
+        for target_column, output in outs.items():
+            if self.target_column_types[target_column] == "real":
+                outs[target_column] = self.invert_normalization(output, target_column)
         return outs
 
     def prepare_inference_batches(self, x, pad_to_batch_size):

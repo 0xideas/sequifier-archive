@@ -75,6 +75,7 @@ class Preprocessor(object):
         ]
 
         n_classes, id_maps = {}, {}
+        min_max_values = {}
         float_data_columns = []
         for data_col in data_columns:
             dtype = str(data[data_col].dtype)
@@ -83,13 +84,19 @@ class Preprocessor(object):
                 id_maps[data_col] = dict(sup_id_map)
                 n_classes[data_col] = len(np.unique(data[data_col])) + 1
             elif dtype in ["float64"]:
+                min_ = np.min(data[data_col].values)
+                max_ = np.max(data[data_col].values)
+                data[data_col] = [
+                    (((v - min_) / (max_ - min_)) * 2.0) - 1.0 for v in data[data_col]
+                ]
+                min_max_values[data_col] = {"min": min_, "max": max_}
                 float_data_columns.append(data_col)
             else:
                 raise Exception(
                     f"Column {data_col} is of dtype {dtype}, which is not supported"
                 )
         col_types = {col: str(data[col].dtype) for col in data_columns}
-        self.export_metadata(id_maps, n_classes, col_types)
+        self.export_metadata(id_maps, n_classes, col_types, min_max_values)
 
         data = data.sort_values(["sequenceId", "itemPosition"])
 
@@ -130,13 +137,14 @@ class Preprocessor(object):
         delete_command = f"rm -rf {delete_path}*"
         os.system(delete_command)
 
-    def export_metadata(self, id_maps, n_classes, col_types):
+    def export_metadata(self, id_maps, n_classes, col_types, min_max_values):
 
         data_driven_config = {
             "n_classes": n_classes,
             "id_maps": id_maps,
             "split_paths": self.split_paths,
             "column_types": col_types,
+            "min_max_values": min_max_values,
         }
         os.makedirs(
             os.path.join(self.project_path, "configs", "ddconfigs"), exist_ok=True
