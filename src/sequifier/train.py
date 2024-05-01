@@ -14,14 +14,9 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_train_config
-from sequifier.helpers import (
-    PANDAS_TO_TORCH_TYPES,
-    LogFile,
-    normalize_path,
-    numpy_to_pytorch,
-    read_data,
-    subset_to_selected_columns,
-)
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile, normalize_path,
+                               numpy_to_pytorch, read_data,
+                               subset_to_selected_columns)
 
 
 def train(args, args_config):
