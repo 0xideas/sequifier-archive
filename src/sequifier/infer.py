@@ -66,14 +66,14 @@ def infer(args, args_config):
     if config.selected_columns is not None:
         data = subset_to_selected_columns(data, config.selected_columns)
 
-    if not config.auto_regression:
+    if not config.autoregression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
-        if config.auto_regression_additional_steps is not None:
+        if config.autoregression_additional_steps is not None:
             data = expand_data_by_autoregression(
-                data, config.auto_regression_additional_steps, config.seq_length
+                data, config.autoregression_additional_steps, config.seq_length
             )
-        probs, preds = get_probs_preds_auto_regression(
+        probs, preds = get_probs_preds_autoregression(
             config, inferer, data, column_types, config.seq_length
         )
 
@@ -132,13 +132,13 @@ def infer(args, args_config):
     print("Inference complete")
 
 
-def expand_data_by_autoregression(data, auto_regression_additional_steps, seq_length):
+def expand_data_by_autoregression(data, autoregression_additional_steps, seq_length):
     autoregression_additional_observations = []
     for sequence_id, sequence_data in data.groupby("sequenceId"):
         max_subsequence_id = sequence_data["subsequenceId"].values.max()
         last_observation = sequence_data.query(f"subsequenceId=={max_subsequence_id}")
 
-        for offset in range(1, auto_regression_additional_steps + 1):
+        for offset in range(1, autoregression_additional_steps + 1):
             sequence_id_fields = np.repeat(sequence_id, last_observation.shape[0])
             subsequence_id_fields = np.repeat(
                 max_subsequence_id + offset, last_observation.shape[0]
@@ -198,7 +198,7 @@ def get_probs_preds(config, inferer, data, column_types):
     return (probs, preds)
 
 
-def get_probs_preds_auto_regression(config, inferer, data, column_types, seq_length):
+def get_probs_preds_autoregression(config, inferer, data, column_types, seq_length):
     sequence_ids = data["sequenceId"].values
     subsequence_ids = data["subsequenceId"].values
     assert (

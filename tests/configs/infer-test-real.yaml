@@ -15,4 +15,4 @@ device: cpu
 seq_length: 8
 inference_batch_size: 10
 
-auto_regression: false
+autoregression: false

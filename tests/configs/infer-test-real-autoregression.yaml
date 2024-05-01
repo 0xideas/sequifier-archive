@@ -19,5 +19,5 @@ inference_batch_size: 10
 
 sample_from_distribution: false
 infer_with_dropout: true
-auto_regression: true
-auto_regression_additional_steps: 20
+autoregression: true
+autoregression_additional_steps: 20
