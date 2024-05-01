@@ -27,7 +27,9 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
         ) as f:
             dd_config = json.loads(f.read())
 
-        config_values["column_types"] = dd_config["column_types"]
+        config_values["column_types"] = config_values.get(
+            "column_types", dd_config["column_types"]
+        )
         config_values["categorical_columns"] = [
             col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
         ]
@@ -36,9 +38,17 @@ def load_transformer_config(config_path, args_config, on_unprocessed):
             for col, type_ in dd_config["column_types"].items()
             if type_ == "float64"
         ]
-        config_values["n_classes"] = dd_config["n_classes"]
-        config_values["training_data_path"] = dd_config["split_paths"][0]
-        config_values["validation_data_path"] = dd_config["split_paths"][1]
+        config_values["n_classes"] = config_values.get(
+            "n_classes", dd_config["n_classes"]
+        )
+        config_values["training_data_path"] = normalize_path(
+            config_values.get("training_data_path", dd_config["split_paths"][0]),
+            config_values["project_path"],
+        )
+        config_values["validation_data_path"] = normalize_path(
+            config_values.get("validation_data_path", dd_config["split_paths"][1]),
+            config_values["project_path"],
+        )
 
     return TransformerModel(**config_values)
 
