@@ -94,6 +94,6 @@ def test_multi_pred(predictions):
     preds = predictions["categorical"]["model-categorical-multitarget-5-best-3"]
 
     assert preds.shape[0] > 0
-    assert preds.shape[1] == 3
+    assert preds.shape[1] == 4
     assert np.all(preds["sup1"].values >= 0) and np.all(preds["sup1"].values < 10)
     assert np.all(preds["sup3"].values > -4.0) and np.all(preds["sup3"].values < 4.0)

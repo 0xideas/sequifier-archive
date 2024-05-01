@@ -8,9 +8,14 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns, write_data)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+    write_data,
+)
 from sequifier.train import infer_with_model, load_inference_model
 
 
@@ -64,8 +69,12 @@ def infer(args, args_config):
     if not config.auto_regression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
+        if config.auto_regression_additional_steps is not None:
+            data = expand_data_by_autoregression(
+                data, config.auto_regression_additional_steps, config.seq_length
+            )
         probs, preds = get_probs_preds_auto_regression(
-            config, inferer, data, column_types
+            config, inferer, data, column_types, config.seq_length
         )
 
     if inferer.map_to_id:
@@ -98,11 +107,14 @@ def infer(args, args_config):
                     probabilities_path,
                     config.write_format,
                 )
-
+    n_input_cols = len(np.unique(data["inputCol"]))
     predictions = pd.DataFrame(
         {
-            target_column: preds[target_column].flatten()
-            for target_column in inferer.target_columns
+            **{"sequenceId": list(data["sequenceId"].values)[::n_input_cols]},
+            **{
+                target_column: preds[target_column].flatten()
+                for target_column in inferer.target_columns
+            },
         }
     )
     predictions_path = os.path.join(
@@ -120,7 +132,49 @@ def infer(args, args_config):
     print("Inference complete")
 
 
+def expand_data_by_autoregression(data, auto_regression_additional_steps, seq_length):
+    autoregression_additional_observations = []
+    for sequence_id, sequence_data in data.groupby("sequenceId"):
+        max_subsequence_id = sequence_data["subsequenceId"].values.max()
+        last_observation = sequence_data.query(f"subsequenceId=={max_subsequence_id}")
+
+        for offset in range(1, auto_regression_additional_steps + 1):
+            sequence_id_fields = np.repeat(sequence_id, last_observation.shape[0])
+            subsequence_id_fields = np.repeat(
+                max_subsequence_id + offset, last_observation.shape[0]
+            )
+            input_col_fields = last_observation["inputCol"].values
+            empty_data_fields = (
+                np.ones((last_observation.shape[0], min(seq_length, offset))) * 12345678
+            )
+            data_cols = [str(c) for c in range(seq_length, 0, -1)]
+            offset_data_fields = last_observation[data_cols].values[
+                :, min(offset, last_observation.shape[1]) :
+            ]
+            data_fields = np.concatenate(
+                [offset_data_fields, empty_data_fields], axis=1
+            )
+            # import code; code.interact(local=locals())
+            metadata = pd.DataFrame(
+                {
+                    "sequenceId": sequence_id_fields,
+                    "subsequenceId": subsequence_id_fields,
+                    "inputCol": input_col_fields,
+                }
+            )
+            data_df = pd.DataFrame(data_fields, columns=data_cols)
+            observation = pd.concat([metadata, data_df], axis=1)
+            autoregression_additional_observations.append(observation)
+
+    data = pd.concat(
+        [data] + autoregression_additional_observations, axis=0
+    ).sort_values(["sequenceId", "subsequenceId"])
+
+    return data
+
+
 def get_probs_preds(config, inferer, data, column_types):
+
     X, _ = numpy_to_pytorch(
         data,
         column_types,
@@ -144,7 +198,7 @@ def get_probs_preds(config, inferer, data, column_types):
     return (probs, preds)
 
 
-def get_probs_preds_auto_regression(config, inferer, data, column_types):
+def get_probs_preds_auto_regression(config, inferer, data, column_types, seq_length):
     sequence_ids = data["sequenceId"].values
     subsequence_ids = data["subsequenceId"].values
     assert (
@@ -165,6 +219,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
     n_input_col_values = len(np.unique(data["inputCol"]))
     preds_list, probs_list, indices = [], [], []
     subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
+    max_subsequence_id = np.max(subsequence_ids)
     for subsequence_id in subsequence_ids:
         data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
@@ -172,7 +227,7 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
         if probs is not None:
             probs_list.append(probs)
 
-        for offset in range(1, int(list(data.columns)[3])):
+        for offset in range(1, seq_length + 1):
             target_subsequence_filter = data["subsequenceId"].values == (
                 subsequence_id + offset
             )  # filter all data on target subsequence id
@@ -249,6 +304,19 @@ def get_probs_preds_auto_regression(config, inferer, data, column_types):
                 ), f"{f_data_subset['subsequenceId'].values + 1} != {(subsequence_id + 1)}"
                 for target_column, f in fs.items():
                     data.loc[f, str(offset)] = f_preds[target_column]
+        data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
+        try:
+            assert (
+                np.any(
+                    np.abs(data_subset[[str(c) for c in range(seq_length, 0, -1)]])
+                    == 12345678
+                )
+                == False
+            ), data_subset
+        except:
+            import code
+
+            code.interact(local=locals())
 
     preds = {
         target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)
@@ -374,6 +442,8 @@ class Inferer(object):
                     size,
                     self.target_columns,
                 )
+            for target_column, target_outs in outs.items():
+                assert np.any(target_outs == np.inf) == False, target_outs
 
             if return_probs:
                 preds = {

@@ -70,6 +70,7 @@ class InfererModel(BaseModel):
     sample_from_distribution: bool = False
     infer_with_dropout: bool = False
     auto_regression: bool = True
+    auto_regression_additional_steps: Optional[int] = None
 
     @validator("training_config_path", always=True)
     def validate_training_config_path(cls, v):
