@@ -33,4 +33,5 @@ x enable numbers of split groups smaller than 3
 x output single predictions file
 x enable autoregression continuation
 x automatic scaling of real variables to [-1.0, 1.0] and inversion on inference
+x log predicted class distributions in validation
 make losses invariant over batch sizes/training runs

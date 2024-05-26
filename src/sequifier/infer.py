@@ -8,8 +8,8 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, normalize_path,
-                               numpy_to_pytorch, read_data,
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, construct_index_maps,
+                               normalize_path, numpy_to_pytorch, read_data,
                                subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
@@ -23,7 +23,7 @@ def infer(args, args_config):
 
     if config.map_to_id or (len(config.real_columns) > 0):
         assert config.ddconfig_path is not None, (
-            "If you want to map to id, you need to provide a file path to a json that contains: {{'id_map':{...}}} to ddconfig_path"
+            "If you want to map to id, you need to provide a file path to a json that contains: {{'id_maps':{...}}} to ddconfig_path"
             "\nIf you have real columns in the data, you need to provide a json that contains: {{'min_max_values':{COL_NAME:{'min':..., 'max':...}}}}"
         )
         with open(normalize_path(config.ddconfig_path, config.project_path), "r") as f:
@@ -331,7 +331,7 @@ class Inferer(object):
         self,
         model_path,
         project_path,
-        id_map,
+        id_maps,
         min_max_values,
         map_to_id,
         categorical_columns,
@@ -347,20 +347,12 @@ class Inferer(object):
     ):
         self.map_to_id = map_to_id
         self.min_max_values = min_max_values
-        if self.map_to_id:
-            self.index_map = {}
-            for target_column in target_columns:
-                if target_column_types[target_column] == "categorical":
-                    map_ = (
-                        {v: k for k, v in id_map[target_column].items()}
-                        if map_to_id
-                        else None
-                    )
-                    if isinstance(list(map_.values())[0], str):
-                        map_[0] = "unknown"
-                    else:
-                        map_[0] = np.min(map_.values()) - 1
-                    self.index_map[target_column] = map_
+        target_columns_index_map = [
+            c for c in target_columns if target_column_types[c] == "categorical"
+        ]
+        self.index_map = construct_index_maps(
+            id_maps, target_columns_index_map, map_to_id
+        )
 
         self.device = device
         self.categorical_columns = categorical_columns

@@ -8,10 +8,8 @@ target_columns: [itemValue]
 target_column_types:
   itemValue: real
 
-
 seq_length: 8
 inference_batch_size: 10
-log_interval: 200
 
 export_onnx: true
 export_pt: true
@@ -27,6 +25,7 @@ training_spec:
   epochs: 3
   iter_save: 1
   batch_size: 20
+  log_interval: 200
   lr: 0.003
   accumulation_steps: null
   dropout: 0.3

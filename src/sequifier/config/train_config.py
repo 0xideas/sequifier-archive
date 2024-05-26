@@ -53,6 +53,8 @@ def load_train_config(config_path, args_config, on_unprocessed):
             config_values["project_path"],
         )
 
+        config_values["id_maps"] = dd_config["id_maps"]
+
     return TrainModel(**config_values)
 
 
@@ -132,6 +134,7 @@ class TrainingSpecModel(BaseModel):
     device: str
     epochs: int
     log_interval: int = 10
+    class_share_log_columns: list[str] = []
     early_stopping_epochs: Optional[int]
     iter_save: int
     batch_size: int
@@ -204,6 +207,7 @@ class TrainModel(BaseModel):
     real_columns: list[str]
     target_columns: list[str]
     target_column_types: dict[str, str]
+    id_maps: dict[str, dict[Union[str, int], int]]
 
     seq_length: int
     n_classes: dict[str, int]
