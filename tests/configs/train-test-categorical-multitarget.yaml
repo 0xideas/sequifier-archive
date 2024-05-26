@@ -9,10 +9,10 @@ target_column_types:
   itemId: categorical
   sup1: categorical
   sup3: real
+class_share_log_columns:
 
 seq_length: 8
 inference_batch_size: 10
-log_interval: 200
 
 model_spec:
   d_model: 10
@@ -25,6 +25,7 @@ training_spec:
   iter_save: 1
   batch_size: 10
   lr: 0.003
+  log_interval: 200
   accumulation_steps: 2
   dropout: 0.3
   criterion:

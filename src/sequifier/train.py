@@ -14,7 +14,8 @@ from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
 from sequifier.config.train_config import load_train_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile, normalize_path,
+from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
+                               construct_index_maps, normalize_path,
                                numpy_to_pytorch, read_data,
                                subset_to_selected_columns)
 
@@ -113,6 +114,10 @@ class TransformerModel(nn.Module):
         self.n_classes = hparams.n_classes
         self.inference_batch_size = hparams.inference_batch_size
         self.log_interval = hparams.training_spec.log_interval
+        self.class_share_log_columns = hparams.training_spec.class_share_log_columns
+        self.index_maps = construct_index_maps(
+            hparams.id_maps, self.class_share_log_columns, True
+        )
         self.export_onnx = hparams.export_onnx
         self.export_pt = hparams.export_pt
         self.export_with_dropout = hparams.export_with_dropout
@@ -274,13 +279,14 @@ class TransformerModel(nn.Module):
             ):
                 epoch_start_time = time.time()
                 self.train_epoch(X_train, y_train, epoch)
-                total_loss, total_losses = self.evaluate(X_valid, y_valid)
+                total_loss, total_losses, output = self.evaluate(X_valid, y_valid)
                 elapsed = time.time() - epoch_start_time
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
                     f"valid loss {(total_loss * 1000):5.5f}"
                 )
+
                 if len(total_losses) > 1:
                     self.log_file.write(
                         " - ".join(
@@ -290,6 +296,20 @@ class TransformerModel(nn.Module):
                             ]
                         )
                     )
+                for categorical_column in self.class_share_log_columns:
+                    output_values = (
+                        output[categorical_column].argmax(1).cpu().detach().numpy()
+                    )
+                    output_counts = pd.Series(output_values).value_counts().sort_index()
+                    output_counts = output_counts / output_counts.sum()
+                    value_shares = " | ".join(
+                        [
+                            f"{self.index_maps[categorical_column][value]}: {share:5.5f}"
+                            for value, share in output_counts.to_dict().items()
+                        ]
+                    )
+                    self.log_file.write(f"{categorical_column}: {value_shares}")
+
                 self.log_file.write("-" * 89)
 
                 if total_loss < best_val_loss:
@@ -416,7 +436,7 @@ class TransformerModel(nn.Module):
             target_column: tloss / denominator
             for target_column, tloss in total_losses.items()
         }
-        return total_loss, total_losses
+        return total_loss, total_losses, output
 
     def get_batch(self, X, y, batch_start, batch_size, to_device):
         if to_device:

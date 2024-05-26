@@ -9,6 +9,21 @@ from torch import tensor
 PANDAS_TO_TORCH_TYPES = {"int64": torch.int64, "float64": torch.float32}
 
 
+def construct_index_maps(id_maps, target_columns_index_map, map_to_id):
+    index_map = {}
+    if map_to_id is not None:
+        for target_column in target_columns_index_map:
+            map_ = (
+                {v: k for k, v in id_maps[target_column].items()} if map_to_id else None
+            )
+            if isinstance(list(map_.values())[0], str):
+                map_[0] = "unknown"
+            else:
+                map_[0] = np.min(map_.values()) - 1
+            index_map[target_column] = map_
+    return index_map
+
+
 def read_data(path, read_format, columns=None):
     if read_format == "csv":
         return pd.read_csv(path, sep=",", decimal=".", index_col=False)
