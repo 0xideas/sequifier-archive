@@ -138,7 +138,6 @@ class Preprocessor(object):
         os.system(delete_command)
 
     def export_metadata(self, id_maps, n_classes, col_types, min_max_values):
-
         data_driven_config = {
             "n_classes": n_classes,
             "id_maps": id_maps,
@@ -284,7 +283,6 @@ def extract_sequences(data, seq_length, data_columns, target_columns, return_tar
 def extract_subsequences(
     in_seq, seq_length, data_columns, target_columns, return_targets
 ):
-
     if return_targets:
         nseq = max(
             len(in_seq[target_columns[0]]) - seq_length - 1,  # any column will do
@@ -365,7 +363,6 @@ def combine_multiprocessing_outputs(
     project_path, n_splits, n_batches, dataset_name, write_format
 ):
     for split in range(n_splits):
-
         out_path = os.path.join(
             project_path, "data", f"{dataset_name}-split{split}.{write_format}"
         )

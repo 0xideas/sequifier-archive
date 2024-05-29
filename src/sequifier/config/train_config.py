@@ -148,7 +148,6 @@ class TrainingSpecModel(BaseModel):
     continue_training: bool = True
 
     def __init__(self, **kwargs):
-
         super().__init__(
             **{k: v for k, v in kwargs.items() if k not in ["optimizer", "scheduler"]}
         )

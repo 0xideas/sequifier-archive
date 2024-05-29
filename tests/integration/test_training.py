@@ -7,7 +7,6 @@ import pytest
 
 
 def test_checkpoint_files_exists(run_training, project_path):
-
     found_items = np.array(
         sorted(list(os.listdir(os.path.join(project_path, "checkpoints"))))
     )

@@ -120,7 +120,6 @@ class InfererModel(BaseModel):
 
     @validator("sample_from_distribution", always=True)
     def validate_sample_from_distribution(cls, v, values):
-
         if (
             v
             and np.max(np.array(list(values["target_column_types"].values())) == "real")

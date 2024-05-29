@@ -47,7 +47,6 @@ def subset_to_selected_columns(data, selected_columns):
 
 
 def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_device):
-
     if "target" in data:
         targets = {}
         for target_column in target_columns:
@@ -56,8 +55,6 @@ def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_
             ).to(column_types[target_column])
             if to_device:
                 target = target.to(device)
-            else:
-                target = None
             targets[target_column] = target
     else:
         targets = None

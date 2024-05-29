@@ -87,7 +87,6 @@ def test_preprocessed_data_real(delete_inference_target, split_groups, data_spli
                 number_expected_columns
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
             for sequenceId, group in data.groupby("sequenceId"):
-
                 # offset by j in either direction as that is the number of columns in the input
                 # data, thus an offset by 1 'observation' requires an offset by j values
                 assert np.all((group["1"].values[:-j] == group["2"].values[j:]))
@@ -106,7 +105,6 @@ def test_preprocessed_data_categorical(data_splits, split_groups):
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
 
             for sequenceId, group in data.groupby("sequenceId"):
-
                 # offset by j in either direction as that is the number of columns in the input
                 # data, thus an offset by 1 'observation' requires an offset by j values
                 assert np.all(

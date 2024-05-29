@@ -85,7 +85,6 @@ def inference_config_path_real_autoregression():
 
 @pytest.fixture(scope="session")
 def remove_project_path_contents(project_path):
-
     if os.path.exists(project_path):
         shutil.rmtree(project_path)
     os.makedirs(project_path)
@@ -210,7 +209,6 @@ def delete_inference_target(
     split_groups,
     project_path,
 ):
-
     data_paths = [
         os.path.join(
             project_path,
@@ -229,7 +227,6 @@ def delete_inference_target(
     ]
 
     for data_path in data_paths:
-
         file_format = data_path.split(".")[-1]
         inference_data = read_data(data_path, file_format)
 
