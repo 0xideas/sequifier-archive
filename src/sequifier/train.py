@@ -46,7 +46,7 @@ def train(args, args_config):
         config.target_columns,
         config.seq_length,
         config.training_spec.device,
-        to_device=True,
+        to_device=False,
     )
     del data_train
 
@@ -64,7 +64,7 @@ def train(args, args_config):
         config.target_columns,
         config.seq_length,
         config.training_spec.device,
-        to_device=True,
+        to_device=False,
     )
     del data_valid
 
@@ -272,7 +272,6 @@ class TransformerModel(nn.Module):
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
-
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
@@ -347,7 +346,7 @@ class TransformerModel(nn.Module):
         for batch_count, batch in enumerate(batch_order):
             batch_start = batch * self.batch_size
             data, targets = self.get_batch(
-                X_train, y_train, batch_start, self.batch_size, to_device=False
+                X_train, y_train, batch_start, self.batch_size, to_device=True
             )
             output = self(data)
             loss, losses = self.calculate_loss(output, targets)
@@ -386,7 +385,6 @@ class TransformerModel(nn.Module):
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-
                 output[target_column] = output[target_column].flatten()
             else:
                 pass
@@ -422,7 +420,7 @@ class TransformerModel(nn.Module):
                 self.batch_size,  # any column will do
             ):
                 data, targets = self.get_batch(
-                    X_valid, y_valid, batch_start, self.batch_size, to_device=False
+                    X_valid, y_valid, batch_start, self.batch_size, to_device=True
                 )
                 output = self(data)
                 loss, losses = self.calculate_loss(output, targets)
@@ -573,7 +571,6 @@ class TransformerModel(nn.Module):
         )
 
     def load_weights_conditional(self):
-
         latest_model_path = self.get_latest_model_name()
 
         if latest_model_path is not None and self.continue_training:
@@ -588,7 +585,6 @@ class TransformerModel(nn.Module):
             return "Initializing new model"
 
     def get_latest_model_name(self):
-
         checkpoint_path = os.path.join(self.project_path, "checkpoints", "*")
 
         files = glob.glob(
@@ -611,7 +607,6 @@ def load_inference_model(
     )
 
     with torch.no_grad():
-
         model = TransformerModel(training_config)
         model.log_file.write(f"Loading model weights from {model_path}")
         model_state = torch.load(model_path)
@@ -634,7 +629,6 @@ def load_inference_model(
 
 
 def infer_with_model(model, x, device, size, target_columns):
-
     outs0 = [
         model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
         for x_sub in x

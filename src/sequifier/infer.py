@@ -93,7 +93,6 @@ def infer(args, args_config):
         )
         for target_column in inferer.target_columns:
             if inferer.target_column_types[target_column] == "categorical":
-
                 probabilities_path = os.path.join(
                     config.project_path,
                     "outputs",
@@ -172,7 +171,6 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
 
 
 def get_probs_preds(config, inferer, data, column_types):
-
     X, _ = numpy_to_pytorch(
         data,
         column_types,
