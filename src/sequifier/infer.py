@@ -39,8 +39,10 @@ def infer(args, args_config):
         id_maps,
         min_max_values,
         config.map_to_id,
+        config.column_types,
         config.categorical_columns,
         config.real_columns,
+        config.selected_columns,
         config.target_columns,
         config.target_column_types,
         config.sample_from_distribution,
@@ -171,16 +173,17 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
 
 
 def get_probs_preds(config, inferer, data, column_types):
+
     X, _ = numpy_to_pytorch(
         data,
         column_types,
+        config.selected_columns,
         config.target_columns,
         config.seq_length,
         config.device,
-        to_device=True,
+        to_device=False,
     )
     X = {col: X_col.numpy() for col, X_col in X.items()}
-
     del data
 
     if config.output_probabilities:
@@ -332,8 +335,10 @@ class Inferer(object):
         id_maps,
         min_max_values,
         map_to_id,
+        column_types,
         categorical_columns,
         real_columns,
+        selected_columns,
         target_columns,
         target_column_types,
         sample_from_distribution,
@@ -355,6 +360,7 @@ class Inferer(object):
         self.device = device
         self.categorical_columns = categorical_columns
         self.real_columns = real_columns
+        self.selected_columns = selected_columns
         self.target_columns = target_columns
         self.target_column_types = target_column_types
         self.sample_from_distribution = sample_from_distribution
@@ -413,6 +419,7 @@ class Inferer(object):
                 )
             if self.inference_model_type == "onnx":
                 x_adjusted = self.prepare_inference_batches(x, pad_to_batch_size=True)
+
                 out_subs = [
                     dict(zip(self.target_columns, self.infer_pure(x_sub)))
                     for x_sub in x_adjusted
@@ -456,12 +463,7 @@ class Inferer(object):
                 if self.sample_from_distribution is False:
                     outs[target_column] = outs[target_column].argmax(1)
                 else:
-                    try:
-                        outs[target_column] = sample_with_cumsum(outs[target_column])
-                    except:
-                        import code
-
-                        code.interact(local=locals())
+                    outs[target_column] = sample_with_cumsum(outs[target_column])
 
         for target_column, output in outs.items():
             if self.target_column_types[target_column] == "real":
@@ -497,8 +499,7 @@ class Inferer(object):
         ort_inputs = {
             session_input.name: self.expand_to_batch_size(x[col])
             for session_input, col in zip(
-                self.ort_session.get_inputs(),
-                self.categorical_columns + self.real_columns,
+                self.ort_session.get_inputs(), self.selected_columns
             )
         }
         ort_outs = self.ort_session.run(None, ort_inputs)
@@ -507,6 +508,7 @@ class Inferer(object):
 
     def expand_to_batch_size(self, x):
         repetitions = self.inference_batch_size // x.shape[0]
+
         filler = self.inference_batch_size % x.shape[0]
         return np.concatenate(([x] * repetitions) + [x[0:filler, :]], axis=0)
 

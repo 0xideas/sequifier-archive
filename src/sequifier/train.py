@@ -43,6 +43,7 @@ def train(args, args_config):
     X_train, y_train = numpy_to_pytorch(
         data_train,
         column_types,
+        config.selected_columns,
         config.target_columns,
         config.seq_length,
         config.training_spec.device,
@@ -61,6 +62,7 @@ def train(args, args_config):
     X_valid, y_valid = numpy_to_pytorch(
         data_valid,
         column_types,
+        config.selected_columns,
         config.target_columns,
         config.seq_length,
         config.training_spec.device,
@@ -95,6 +97,7 @@ class TransformerModel(nn.Module):
             if hparams.model_name is not None
             else uuid.uuid4().hex[:8]
         )
+
         self.selected_columns = hparams.selected_columns
         self.categorical_columns = [
             col
@@ -351,6 +354,9 @@ class TransformerModel(nn.Module):
             output = self(data)
             loss, losses = self.calculate_loss(output, targets)
 
+            with torch.no_grad():
+                torch.cuda.empty_cache()
+
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -427,6 +433,8 @@ class TransformerModel(nn.Module):
                 for target_column, bloss in losses.items():
                     total_losses[target_column] += bloss
                 total_loss += loss
+                with torch.no_grad():
+                    torch.cuda.empty_cache()
 
         denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
         total_loss = total_loss / denominator
@@ -574,7 +582,9 @@ class TransformerModel(nn.Module):
         latest_model_path = self.get_latest_model_name()
 
         if latest_model_path is not None and self.continue_training:
-            checkpoint = torch.load(latest_model_path)
+            checkpoint = torch.load(
+                latest_model_path, map_location=torch.device(self.device)
+            )
             self.load_state_dict(checkpoint["model_state_dict"])
             self.start_epoch = (
                 int(re.findall("epoch-([0-9]+)", latest_model_path)[0]) + 1
@@ -609,7 +619,7 @@ def load_inference_model(
     with torch.no_grad():
         model = TransformerModel(training_config)
         model.log_file.write(f"Loading model weights from {model_path}")
-        model_state = torch.load(model_path)
+        model_state = torch.load(model_path, map_location=torch.device(device))
         model.load_state_dict(model_state["model_state_dict"])
 
         model.eval()

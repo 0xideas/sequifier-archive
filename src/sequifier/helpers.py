@@ -46,7 +46,9 @@ def subset_to_selected_columns(data, selected_columns):
     return data.loc[filter_, :]
 
 
-def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_device):
+def numpy_to_pytorch(
+    data, column_types, selected_columns, target_columns, seq_length, device, to_device
+):
     if "target" in data:
         targets = {}
         for target_column in target_columns:
@@ -60,7 +62,7 @@ def numpy_to_pytorch(data, column_types, target_columns, seq_length, device, to_
         targets = None
 
     sequence = {}
-    for col in column_types.keys():
+    for col in selected_columns:
         f = data["inputCol"].values == col
         data_subset = data.loc[f, [str(c) for c in range(seq_length, 0, -1)]].values
 
