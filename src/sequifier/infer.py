@@ -39,7 +39,6 @@ def infer(args, args_config):
         id_maps,
         min_max_values,
         config.map_to_id,
-        config.column_types,
         config.categorical_columns,
         config.real_columns,
         config.selected_columns,
@@ -335,7 +334,6 @@ class Inferer(object):
         id_maps,
         min_max_values,
         map_to_id,
-        column_types,
         categorical_columns,
         real_columns,
         selected_columns,
@@ -499,7 +497,8 @@ class Inferer(object):
         ort_inputs = {
             session_input.name: self.expand_to_batch_size(x[col])
             for session_input, col in zip(
-                self.ort_session.get_inputs(), self.selected_columns
+                self.ort_session.get_inputs(),
+                self.categorical_columns + self.real_columns,
             )
         }
         ort_outs = self.ort_session.run(None, ort_inputs)

@@ -37,12 +37,14 @@ def load_train_config(config_path, args_config, on_unprocessed):
             )
 
         config_values["categorical_columns"] = [
-            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
+            col
+            for col, type_ in dd_config["column_types"].items()
+            if type_ == "int64" and col in config_values["selected_columns"]
         ]
         config_values["real_columns"] = [
             col
             for col, type_ in dd_config["column_types"].items()
-            if type_ == "float64"
+            if type_ == "float64" and col in config_values["selected_columns"]
         ]
         config_values["n_classes"] = config_values.get(
             "n_classes", dd_config["n_classes"]
