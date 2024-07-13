@@ -25,13 +25,21 @@ def load_inferer_config(config_path, args_config, on_unprocessed):
         config_values["column_types"] = config_values.get(
             "column_types", dd_config["column_types"]
         )
+
+        if config_values["selected_columns"] is None:
+            config_values["selected_columns"] = list(
+                config_values["column_types"].keys()
+            )
+
         config_values["categorical_columns"] = [
-            col for col, type_ in dd_config["column_types"].items() if type_ == "int64"
+            col
+            for col, type_ in dd_config["column_types"].items()
+            if type_ == "int64" and col in config_values["selected_columns"]
         ]
         config_values["real_columns"] = [
             col
             for col, type_ in dd_config["column_types"].items()
-            if type_ == "float64"
+            if type_ == "float64" and col in config_values["selected_columns"]
         ]
         config_values["data_path"] = normalize_path(
             config_values.get(
