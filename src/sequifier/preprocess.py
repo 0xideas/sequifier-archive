@@ -299,8 +299,8 @@ def extract_subsequences(
 
     else:
         nseq = max(
-            len(in_seq[target_column]) - seq_length,
-            min(1, len(in_seq[target_column])),
+            len(in_seq[target_columns[0]]) - seq_length,
+            min(1, len(in_seq[target_columns[0]])),
         )
         targets = [
             {target_column: np.nan for target_column in target_columns}

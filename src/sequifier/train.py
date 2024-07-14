@@ -73,7 +73,7 @@ def train(args, args_config):
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
 
-    model = torch.compile(TransformerModel(config).to(config.training_spec.device))
+    model = torch.compile(TransformerModel(config).to("mps"))
 
     model.train_model(X_train, y_train, X_valid, y_valid)
 
@@ -159,13 +159,11 @@ class TransformerModel(nn.Module):
         for target_column, target_column_type in self.target_column_types.items():
             if target_column_type == "categorical":
                 self.decoder[target_column] = nn.Linear(
-                    embedding_size * self.seq_length,
+                    embedding_size,
                     self.n_classes[target_column],
                 )
             elif target_column_type == "real":
-                self.decoder[target_column] = nn.Linear(
-                    embedding_size * self.seq_length, 1
-                )
+                self.decoder[target_column] = nn.Linear(embedding_size, 1)
             else:
                 raise Exception(
                     f"{target_column_type = } not in ['categorical', 'real']"
@@ -255,15 +253,11 @@ class TransformerModel(nn.Module):
                 src[col].T.unsqueeze(2).repeat(1, 1, self.real_columns_repetitions[col])
             )
 
-        src = torch.cat(srcs, 2)
+        src2 = torch.cat(srcs, 2)
 
-        output = self.transformer_encoder(src, self.src_mask)
-        transposed = output.transpose(0, 1)
-        concatenated = transposed.reshape(
-            transposed.size()[0], transposed.size()[1] * transposed.size()[2]
-        )
+        output = self.transformer_encoder(src2, self.src_mask)
         output = {
-            target_column: self.decoder[target_column](concatenated)
+            target_column: self.decoder[target_column](output)
             for target_column in self.target_columns
         }
         return output
@@ -334,6 +328,7 @@ class TransformerModel(nn.Module):
         self.log_file.close()
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
+
         self.train()  # turn on train mode
         total_loss = 0.0
         start_time = time.time()
@@ -348,10 +343,11 @@ class TransformerModel(nn.Module):
         )
         for batch_count, batch in enumerate(batch_order):
             batch_start = batch * self.batch_size
+
             data, targets = self.get_batch(
                 X_train, y_train, batch_start, self.batch_size, to_device=True
             )
-            output = self(data)
+            output = self.forward(data)
             loss, losses = self.calculate_loss(output, targets)
 
             with torch.no_grad():
@@ -386,26 +382,33 @@ class TransformerModel(nn.Module):
     def calculate_loss(self, output, targets):
         losses = {}
         for target_column, target_column_type in self.target_column_types.items():
+            import code
+
+            code.interact(local=locals())
             if target_column_type == "categorical":
                 output[target_column] = output[target_column].view(
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-                output[target_column] = output[target_column].flatten()
+                output[target_column] = output[target_column].view(-1)
             else:
                 pass
+
             losses[target_column] = self.criterion[target_column](
-                output[target_column], targets[target_column]
+                output[target_column], targets[target_column].T.view(-1)
             )
 
-        loss = list(losses.items())[0][1]
+        loss = None
         for target_column in losses.keys():
             losses[target_column] = losses[target_column] * (
                 self.loss_weights[target_column]
                 if self.loss_weights is not None
                 else 1.0
             )
-            loss = loss + losses[target_column]
+            if loss is None:
+                loss = losses[target_column]
+            else:
+                loss += losses[target_column]
         return (loss, losses)
 
     def copy_model(self):
@@ -455,7 +458,7 @@ class TransformerModel(nn.Module):
                 },
                 {
                     target_column: y[target_column][
-                        batch_start : batch_start + batch_size
+                        batch_start : batch_start + batch_size, :
                     ].to(self.device)
                     for target_column in y.keys()
                 },
@@ -468,7 +471,7 @@ class TransformerModel(nn.Module):
                 },
                 {
                     target_column: y[target_column][
-                        batch_start : batch_start + batch_size
+                        batch_start : batch_start + batch_size, :
                     ]
                     for target_column in y.keys()
                 },
@@ -640,7 +643,9 @@ def load_inference_model(
 
 def infer_with_model(model, x, device, size, target_columns):
     outs0 = [
-        model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
+        model.forward(
+            {col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()}
+        )
         for x_sub in x
     ]
     outs = {
