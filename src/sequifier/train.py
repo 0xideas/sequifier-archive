@@ -10,9 +10,11 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
+import torch._dynamo
 from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
+torch._dynamo.config.suppress_errors = True
 from sequifier.config.train_config import load_train_config
 from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
                                construct_index_maps, normalize_path,
@@ -224,7 +226,7 @@ class TransformerModel(nn.Module):
             self.decoder[target_column].bias.data.zero_()
             self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: dict[str, Tensor]) -> Tensor:
+    def forward_train(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
         """
         Args:
             src: Tensor, shape [batch_size, seq_len]
@@ -261,6 +263,10 @@ class TransformerModel(nn.Module):
             for target_column in self.target_columns
         }
         return output
+
+    def forward(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
+        output = self.forward_train(src)
+        return {target_column: out[-1, :, :] for target_column, out in output.items()}
 
     def train_model(self, X_train, y_train, X_valid, y_valid):
         best_val_loss = float("inf")
@@ -347,7 +353,7 @@ class TransformerModel(nn.Module):
             data, targets = self.get_batch(
                 X_train, y_train, batch_start, self.batch_size, to_device=True
             )
-            output = self.forward(data)
+            output = self.forward_train(data)
             loss, losses = self.calculate_loss(output, targets)
 
             with torch.no_grad():
@@ -382,9 +388,7 @@ class TransformerModel(nn.Module):
     def calculate_loss(self, output, targets):
         losses = {}
         for target_column, target_column_type in self.target_column_types.items():
-            import code
 
-            code.interact(local=locals())
             if target_column_type == "categorical":
                 output[target_column] = output[target_column].view(
                     -1, self.n_classes[target_column]
@@ -395,7 +399,7 @@ class TransformerModel(nn.Module):
                 pass
 
             losses[target_column] = self.criterion[target_column](
-                output[target_column], targets[target_column].T.view(-1)
+                output[target_column], targets[target_column].T.contiguous().view(-1)
             )
 
         loss = None
@@ -431,7 +435,7 @@ class TransformerModel(nn.Module):
                 data, targets = self.get_batch(
                     X_valid, y_valid, batch_start, self.batch_size, to_device=True
                 )
-                output = self(data)
+                output = self.forward_train(data)
                 loss, losses = self.calculate_loss(output, targets)
                 for target_column, bloss in losses.items():
                     total_losses[target_column] += bloss
