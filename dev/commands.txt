@@ -27,6 +27,6 @@ sequifier preprocess --config-path=tests/configs/preprocess-test-real.yaml --dat
 
 sequifier train --config-path=tests/configs/train-test-real.yaml --ddconfig-path=configs/ddconfigs/test-data-real-3.json --model-name=model-real-3 --selected-columns=itemValue,sup1,sup2
 
-sequifier infer --config-path=tests/configs/infer-test-real.yaml --ddconfig-path=configs/ddconfigs/test-data-real-3.json --model-path=models/sequifier-model-real-3-best-3.pt --data-path=data/test-data-real-3-split2.parquet --selected-columns=itemValue,sup1,sup2
+sequifier infer --config-path=tests/configs/infer-test-real.yaml --ddconfig-path=configs/ddconfigs/test-data-real-3.json --model-path=models/sequifier-model-real-3-best-3.pt --data-path=data/test-data-real-3-split1.parquet --selected-columns=itemValue,sup1,sup2
 
 

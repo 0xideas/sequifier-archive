@@ -227,12 +227,6 @@ class TransformerModel(nn.Module):
             self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
     def forward_train(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
-        """
-        Args:
-            src: Tensor, shape [batch_size, seq_len]
-        Returns:
-            output Tensor of shape [batch_size, n_classes]
-        """
 
         srcs = []
         for col in self.categorical_columns:
@@ -262,6 +256,7 @@ class TransformerModel(nn.Module):
             target_column: self.decoder[target_column](output)
             for target_column in self.target_columns
         }
+
         return output
 
     def forward(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
@@ -354,6 +349,10 @@ class TransformerModel(nn.Module):
                 X_train, y_train, batch_start, self.batch_size, to_device=True
             )
             output = self.forward_train(data)
+            import code
+
+            code.interact(local=locals())
+
             loss, losses = self.calculate_loss(output, targets)
 
             with torch.no_grad():
