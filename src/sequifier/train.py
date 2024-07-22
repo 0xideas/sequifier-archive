@@ -249,9 +249,9 @@ class TransformerModel(nn.Module):
                 src[col].T.unsqueeze(2).repeat(1, 1, self.real_columns_repetitions[col])
             )
 
-        src2 = torch.cat(srcs, 2)
+        src = torch.cat(srcs, 2)
 
-        output = self.transformer_encoder(src2, self.src_mask)
+        output = self.transformer_encoder(src, self.src_mask)
         output = {
             target_column: self.decoder[target_column](output)
             for target_column in self.target_columns
