@@ -17,7 +17,7 @@ model_spec:
   d_hid: 12
   nlayers: 2
 training_spec:
-  device: mps
+  device: cpu
   epochs: 3
   iter_save: 1
   batch_size: 5

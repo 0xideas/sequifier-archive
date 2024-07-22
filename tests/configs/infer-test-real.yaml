@@ -11,7 +11,7 @@ target_column_types:
 
 output_probabilities: false
 map_to_id: false
-device: mps
+device: cpu
 seq_length: 8
 inference_batch_size: 10
 
