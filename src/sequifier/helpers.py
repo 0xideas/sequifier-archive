@@ -53,7 +53,9 @@ def numpy_to_pytorch(
         targets = {}
         for target_column in target_columns:
             target = tensor(
-                data.query(f"inputCol=='{target_column}'")["target"].values
+                data.query(f"inputCol=='{target_column}'")[
+                    [str(c) for c in range(seq_length - 1, 0, -1)] + ["target"]
+                ].values
             ).to(column_types[target_column])
             if to_device:
                 target = target.to(device)

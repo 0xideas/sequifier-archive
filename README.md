@@ -122,4 +122,3 @@ and configured using a config file. The default version can be found here:
 
 [configs/infer.yaml](./configs/infer.yaml)
 
-

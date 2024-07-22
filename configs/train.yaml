@@ -1,12 +1,15 @@
 project_path: "documentation/example_inputs"
 ddconfig_path: "configs/ddconfigs/preprocessing_input.json"
+selected_columns: ["itemId"]
+selected_column_types:
+  itemId: "categorical"
 target_columns: ["itemId"]
 target_column_types:
   itemId: "categorical"
 
 seq_length: 5
 inference_batch_size: 3
-
+seed: 101
 model_spec:
   d_model: 6
   nhead: 2
@@ -21,4 +24,3 @@ training_spec:
   iter_save: 1
   criterion:
     itemId: CrossEntropyLoss
-

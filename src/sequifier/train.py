@@ -10,9 +10,11 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
+import torch._dynamo
 from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
 
+torch._dynamo.config.suppress_errors = True
 from sequifier.config.train_config import load_train_config
 from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
                                construct_index_maps, normalize_path,
@@ -159,13 +161,11 @@ class TransformerModel(nn.Module):
         for target_column, target_column_type in self.target_column_types.items():
             if target_column_type == "categorical":
                 self.decoder[target_column] = nn.Linear(
-                    embedding_size * self.seq_length,
+                    embedding_size,
                     self.n_classes[target_column],
                 )
             elif target_column_type == "real":
-                self.decoder[target_column] = nn.Linear(
-                    embedding_size * self.seq_length, 1
-                )
+                self.decoder[target_column] = nn.Linear(embedding_size, 1)
             else:
                 raise Exception(
                     f"{target_column_type = } not in ['categorical', 'real']"
@@ -226,13 +226,7 @@ class TransformerModel(nn.Module):
             self.decoder[target_column].bias.data.zero_()
             self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: dict[str, Tensor]) -> Tensor:
-        """
-        Args:
-            src: Tensor, shape [batch_size, seq_len]
-        Returns:
-            output Tensor of shape [batch_size, n_classes]
-        """
+    def forward_train(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
 
         srcs = []
         for col in self.categorical_columns:
@@ -258,15 +252,16 @@ class TransformerModel(nn.Module):
         src = torch.cat(srcs, 2)
 
         output = self.transformer_encoder(src, self.src_mask)
-        transposed = output.transpose(0, 1)
-        concatenated = transposed.reshape(
-            transposed.size()[0], transposed.size()[1] * transposed.size()[2]
-        )
         output = {
-            target_column: self.decoder[target_column](concatenated)
+            target_column: self.decoder[target_column](output)
             for target_column in self.target_columns
         }
+
         return output
+
+    def forward(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
+        output = self.forward_train(src)
+        return {target_column: out[-1, :, :] for target_column, out in output.items()}
 
     def train_model(self, X_train, y_train, X_valid, y_valid):
         best_val_loss = float("inf")
@@ -334,6 +329,7 @@ class TransformerModel(nn.Module):
         self.log_file.close()
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
+
         self.train()  # turn on train mode
         total_loss = 0.0
         start_time = time.time()
@@ -348,10 +344,12 @@ class TransformerModel(nn.Module):
         )
         for batch_count, batch in enumerate(batch_order):
             batch_start = batch * self.batch_size
+
             data, targets = self.get_batch(
                 X_train, y_train, batch_start, self.batch_size, to_device=True
             )
-            output = self(data)
+            output = self.forward_train(data)
+
             loss, losses = self.calculate_loss(output, targets)
 
             with torch.no_grad():
@@ -386,26 +384,31 @@ class TransformerModel(nn.Module):
     def calculate_loss(self, output, targets):
         losses = {}
         for target_column, target_column_type in self.target_column_types.items():
+
             if target_column_type == "categorical":
                 output[target_column] = output[target_column].view(
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-                output[target_column] = output[target_column].flatten()
+                output[target_column] = output[target_column].view(-1)
             else:
                 pass
+
             losses[target_column] = self.criterion[target_column](
-                output[target_column], targets[target_column]
+                output[target_column], targets[target_column].T.contiguous().view(-1)
             )
 
-        loss = list(losses.items())[0][1]
+        loss = None
         for target_column in losses.keys():
             losses[target_column] = losses[target_column] * (
                 self.loss_weights[target_column]
                 if self.loss_weights is not None
                 else 1.0
             )
-            loss = loss + losses[target_column]
+            if loss is None:
+                loss = losses[target_column]
+            else:
+                loss += losses[target_column]
         return (loss, losses)
 
     def copy_model(self):
@@ -428,7 +431,7 @@ class TransformerModel(nn.Module):
                 data, targets = self.get_batch(
                     X_valid, y_valid, batch_start, self.batch_size, to_device=True
                 )
-                output = self(data)
+                output = self.forward_train(data)
                 loss, losses = self.calculate_loss(output, targets)
                 for target_column, bloss in losses.items():
                     total_losses[target_column] += bloss
@@ -455,7 +458,7 @@ class TransformerModel(nn.Module):
                 },
                 {
                     target_column: y[target_column][
-                        batch_start : batch_start + batch_size
+                        batch_start : batch_start + batch_size, :
                     ].to(self.device)
                     for target_column in y.keys()
                 },
@@ -468,7 +471,7 @@ class TransformerModel(nn.Module):
                 },
                 {
                     target_column: y[target_column][
-                        batch_start : batch_start + batch_size
+                        batch_start : batch_start + batch_size, :
                     ]
                     for target_column in y.keys()
                 },
@@ -640,7 +643,9 @@ def load_inference_model(
 
 def infer_with_model(model, x, device, size, target_columns):
     outs0 = [
-        model({col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()})
+        model.forward(
+            {col: torch.from_numpy(x_).to(device) for col, x_ in x_sub.items()}
+        )
         for x_sub in x
     ]
     outs = {

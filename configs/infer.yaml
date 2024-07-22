@@ -9,3 +9,4 @@ target_column_types:
 device: "mps"
 seq_length: 5
 inference_batch_size: 3
+
