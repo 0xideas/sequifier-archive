@@ -349,9 +349,6 @@ class TransformerModel(nn.Module):
                 X_train, y_train, batch_start, self.batch_size, to_device=True
             )
             output = self.forward_train(data)
-            import code
-
-            code.interact(local=locals())
 
             loss, losses = self.calculate_loss(output, targets)
 
