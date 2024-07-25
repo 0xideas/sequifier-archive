@@ -87,7 +87,7 @@ class Preprocessor(object):
                 min_ = np.min(data[data_col].values)
                 max_ = np.max(data[data_col].values)
                 data[data_col] = [
-                    (((v - min_) / (max_ - min_)) * 2.0) - 1.0 for v in data[data_col]
+                    (((v - min_) / (max_ - min_)) * 1.6) - 0.8 for v in data[data_col]
                 ]
                 min_max_values[data_col] = {"min": min_, "max": max_}
                 float_data_columns.append(data_col)
