@@ -218,7 +218,7 @@ class TransformerModel(nn.Module):
         return {k: v for k, v in dict_.items() if k != key}
 
     def init_weights(self) -> None:
-        initrange = 0.1
+        initrange = 0.01
         for col in self.categorical_columns:
             self.encoder[col].weight.data.uniform_(-initrange, initrange)
 
