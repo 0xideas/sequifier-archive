@@ -398,7 +398,7 @@ class Inferer(object):
         min_ = self.min_max_values[target_column]["min"]
         max_ = self.min_max_values[target_column]["max"]
         return np.array(
-            [(((v + 1.0) / 2.0) * (max_ - min_)) + min_ for v in values.flatten()]
+            [(((v + 0.8) / 1.6) * (max_ - min_)) + min_ for v in values.flatten()]
         ).reshape(*values.shape)
 
     def infer(
