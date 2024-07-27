@@ -216,9 +216,9 @@ def preprocess_batch(
         )
 
         splits = extract_data_subsets(sequences, group_proportions)
-        splits = [cast_columns_to_string(data) for data in splits]
+        splits = {group: cast_columns_to_string(data) for group, data in splits.items()}
 
-        for j, (split_path, split) in enumerate(zip(split_paths, splits)):
+        for split_path, (group, split) in zip(split_paths, splits.items()):
             split_path_batch_seq = split_path.replace(
                 f".{write_format}", f"-{process_id}-{i}.{write_format}"
             )
@@ -229,7 +229,7 @@ def preprocess_batch(
             if write_format == "parquet":
                 write_data(split, split_path_batch_seq, "parquet")
 
-            written_files[j] = written_files[j] + [split_path_batch_seq]
+            written_files[group] = written_files[group] + [split_path_batch_seq]
 
     for j, split_path in enumerate(split_paths):
         out_path = split_path.replace(
@@ -283,11 +283,18 @@ def extract_sequences(data, seq_length, data_columns, target_columns, return_tar
 def extract_subsequences(
     in_seq, seq_length, data_columns, target_columns, return_targets
 ):
+    nseq = max(
+        len(in_seq[target_columns[0]]) - seq_length - 1,  # any column will do
+        min(1, len(in_seq[target_columns[0]])),  # any column will do
+    )
+    if nseq == 1:  # any column will do
+        in_seq = {
+            col: ([0] * (seq_length - len(in_seq[col]) + int(return_targets)))
+            + in_seq[col]
+            for col in data_columns
+        }
+
     if return_targets:
-        nseq = max(
-            len(in_seq[target_columns[0]]) - seq_length - 1,  # any column will do
-            min(1, len(in_seq[target_columns[0]])),  # any column will do
-        )
 
         targets = [
             {
@@ -298,10 +305,6 @@ def extract_subsequences(
         ]
 
     else:
-        nseq = max(
-            len(in_seq[target_columns[0]]) - seq_length,
-            min(1, len(in_seq[target_columns[0]])),
-        )
         targets = [
             {target_column: np.nan for target_column in target_columns}
             for _ in range(nseq)
@@ -310,12 +313,6 @@ def extract_subsequences(
     seqs = {}
     for data_col in data_columns:
         seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
-
-    if len(seqs[target_columns[0]]) == 1:  # any column will do
-        seqs = {
-            col: [[0] * (seq_length - len(seqs[col][0])) + seqs[col][0]]
-            for col in data_columns
-        }
 
     return (seqs, targets)
 
@@ -329,7 +326,7 @@ def insert_top_folder(path, folder_name):
 def extract_data_subsets(sequences, groups):
     assert abs(1.0 - np.sum(groups)) < 0.0000000000001, np.sum(groups)
 
-    datasets = [[] for _ in range(len(groups))]
+    datasets = {i: [] for i in range(len(groups))}
     n_cols = len(np.unique(sequences["inputCol"]))
     for _, sequence_data in sequences.groupby("sequenceId"):
         subset_groups = get_subset_groups(sequence_data, groups, n_cols)
@@ -340,7 +337,13 @@ def extract_data_subsets(sequences, groups):
                 sequence_data.iloc[case_start : case_start + n_cols, :]
             )
 
-    return [pd.concat(dataset, axis=0) for dataset in datasets]
+    data_subset = {
+        group: pd.concat(dataset, axis=0)
+        for group, dataset in datasets.items()
+        if len(dataset)
+    }
+
+    return data_subset
 
 
 def get_subset_groups(sequence_data, groups, n_cols):
