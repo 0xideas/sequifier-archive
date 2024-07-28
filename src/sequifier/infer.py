@@ -32,6 +32,7 @@ def infer(args, args_config):
             min_max_values = dd_config["min_max_values"]
     else:
         id_maps = None
+        min_max_values = {}
 
     inferer = Inferer(
         config.model_path,
