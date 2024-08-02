@@ -64,12 +64,14 @@ def infer(args, args_config):
 
     print(f"Inferring for {model_id}")
     data = read_data(config.data_path, config.read_format)
+
     if config.selected_columns is not None:
         data = subset_to_selected_columns(data, config.selected_columns)
 
     if not config.autoregression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
+
         if config.autoregression_additional_steps is not None:
             data = expand_data_by_autoregression(
                 data, config.autoregression_additional_steps, config.seq_length
@@ -169,7 +171,7 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
         [data] + autoregression_additional_observations, axis=0
     ).sort_values(["sequenceId", "subsequenceId"])
 
-    return data
+    return data.reset_index(drop=True)
 
 
 def get_probs_preds(config, inferer, data, column_types):
@@ -196,9 +198,40 @@ def get_probs_preds(config, inferer, data, column_types):
     return (probs, preds)
 
 
+def fill_in_predictions(
+    data,
+    sequence_id_to_subsequence_ids,
+    ids_to_row,
+    sequence_ids,
+    subsequence_id,
+    preds,
+):
+    sequence_ids_distinct = sorted(list(np.unique(sequence_ids)))
+
+    for input_col, preds_vals in preds.items():
+        assert len(preds_vals) == len(sequence_ids_distinct)
+        for sequence_id, pred in zip(sequence_ids_distinct, preds_vals.flatten()):
+
+            sequence_id_subsequence_ids = sequence_id_to_subsequence_ids[sequence_id]
+            sequence_id_subsequence_ids = sequence_id_subsequence_ids[
+                sequence_id_subsequence_ids > subsequence_id
+            ]
+            for subsequence_id2 in sequence_id_subsequence_ids:
+                offset = subsequence_id2 - subsequence_id
+                assert offset > 0
+                i = ids_to_row[f"{sequence_id}-{subsequence_id2}-{input_col}"]
+
+                data.loc[i, str(offset)] = pred
+
+    return data
+
+
 def get_probs_preds_autoregression(config, inferer, data, column_types, seq_length):
     sequence_ids = data["sequenceId"].values
     subsequence_ids = data["subsequenceId"].values
+    assert np.all(
+        data.index == np.arange(data.shape[0])
+    ), "data index has to be equal to np.arange"
     assert (
         np.all(sequence_ids[1:] - sequence_ids[:-1]) >= 0
     ), "sequenceId must be in ascending order for autoregression"
@@ -206,110 +239,39 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
         np.all(subsequence_ids[1:] - subsequence_ids[:-1]) >= 0
     ), "subsequenceId must be in ascending order for autoregression"
 
-    assert np.all(data["sequenceId"].values[1:] >= data["sequenceId"].values[:-1])
+    sequence_id_to_subsequence_ids = {
+        sequence_id_: np.array(subsequence_ids_)
+        for sequence_id_, subsequence_ids_ in data[["sequenceId", "subsequenceId"]]
+        .groupby("sequenceId")
+        .agg({"subsequenceId": lambda x: sorted(list(set(x)))})
+        .to_dict()["subsequenceId"]
+        .items()
+    }
 
-    for sequence_id, sequence_data in data.groupby("sequenceId"):
-        assert np.all(
-            sequence_data["subsequenceId"].values[1:]
-            >= sequence_data["subsequenceId"].values[:-1]
-        )
+    ids_to_row = {
+        f"{row['sequenceId']}-{row['subsequenceId']}-{row['inputCol']}": i
+        for i, row in data.iterrows()
+    }
 
-    n_input_col_values = len(np.unique(data["inputCol"]))
-    preds_list, probs_list, indices = [], [], []
-    subsequence_ids = sorted(list(np.unique(data["subsequenceId"])))
-    max_subsequence_id = np.max(subsequence_ids)
-    for subsequence_id in subsequence_ids:
-        data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
+    preds_list, probs_list = [], []
+    subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceId"])))
+    for subsequence_id in subsequence_ids_distinct:
+        subsequence_filter = subsequence_ids == subsequence_id
+        data_subset = data.loc[subsequence_filter, :]
+        sequence_ids_present = sequence_ids[subsequence_filter]
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
         preds_list.append(preds)
         if probs is not None:
             probs_list.append(probs)
 
-        for offset in range(1, seq_length + 1):
-            target_subsequence_filter = data["subsequenceId"].values == (
-                subsequence_id + offset
-            )  # filter all data on target subsequence id
-            data_subset_sequence_ids = sorted(
-                list(np.unique(data_subset["sequenceId"]))
-            )
-            sequence_filter = np.array(
-                [
-                    sequence_id in data_subset_sequence_ids
-                    for sequence_id in data["sequenceId"]
-                ]
-            )
-
-            fs = {
-                target_column: np.logical_and.reduce(
-                    [
-                        target_subsequence_filter,  # the right subsequence to add values to
-                        data["inputCol"].values
-                        == target_column,  # the rows with the values for the target row
-                        sequence_filter,  # only values that were predicted from the current subsequence
-                    ]
-                )
-                for target_column in inferer.target_columns
-            }
-            single_f = list(fs.values())[0]
-            if np.sum(single_f) > 0:
-                f_sequence_ids = sorted(
-                    list(np.unique(data.loc[single_f, "sequenceId"]))
-                )  # sequence ids that exist in those rows
-
-                f_sequence_ids_filter = np.array(
-                    [
-                        sequence_id in f_sequence_ids
-                        for sequence_id in data_subset["sequenceId"]
-                    ]
-                )  # subset data_subset to those rows with sequence ids that also exist for the target subsequence id
-                data_subset_target_col_filter = np.logical_or.reduce(
-                    [
-                        data_subset["inputCol"].values == target_column
-                        for target_column in config.target_columns
-                    ]
-                )  # filter data_subset to target column
-                f_sequence_ids_filter_subset = np.logical_and(
-                    f_sequence_ids_filter, data_subset_target_col_filter
-                )  # combine
-
-                f_preds = {
-                    target_column: preds[target_column][
-                        f_sequence_ids_filter[
-                            np.arange(0, len(f_sequence_ids_filter), n_input_col_values)
-                        ]
-                    ]
-                    for target_column in inferer.target_columns
-                }
-                # subset preds to those sequence ids that exist for target subsequence id
-                # f_sequence_ids_filter has to be subset itself because it contains n_input_col_values
-                # rows for each observtion
-
-                f_data_subset = data_subset.loc[
-                    f_sequence_ids_filter_subset, ["sequenceId", "subsequenceId"]
-                ]  # find sequence ids and subsequence ids that exist for both the original subsequence
-                # id and the target subsequence id
-                for target_column in inferer.target_columns:
-                    assert (
-                        data.loc[fs[target_column], str(offset)].shape[0]
-                        == f_preds[target_column].shape[0]
-                    ), f"{data.columns = }: {data.loc[f,:].values = }  != {f_preds.shape = }"
-                    assert np.all(
-                        data.loc[fs[target_column], "sequenceId"].values
-                        == f_data_subset["sequenceId"].values
-                    )
-                assert np.all(
-                    (f_data_subset["subsequenceId"].values + 1) == (subsequence_id + 1)
-                ), f"{f_data_subset['subsequenceId'].values + 1} != {(subsequence_id + 1)}"
-                for target_column, f in fs.items():
-                    data.loc[f, str(offset)] = f_preds[target_column]
-        data_subset = data.loc[data["subsequenceId"] == subsequence_id, :]
-        assert (
-            np.any(
-                np.abs(data_subset[[str(c) for c in range(seq_length, 0, -1)]])
-                == np.inf
-            )
-            == False
-        ), data_subset
+        data = fill_in_predictions(
+            data,
+            sequence_id_to_subsequence_ids,
+            ids_to_row,
+            sequence_ids_present,
+            subsequence_id,
+            preds,
+        )
 
     preds = {
         target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)
