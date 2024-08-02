@@ -253,12 +253,17 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
         for i, row in data.iterrows()
     }
 
-    preds_list, probs_list = [], []
+    preds_list, probs_list, sort_keys = [], [], []
     subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceId"])))
     for subsequence_id in subsequence_ids_distinct:
         subsequence_filter = subsequence_ids == subsequence_id
         data_subset = data.loc[subsequence_filter, :]
         sequence_ids_present = sequence_ids[subsequence_filter]
+
+        sort_keys.extend(
+            [f"{seq_id}-{subsequence_id}" for seq_id in sequence_ids_present]
+        )
+
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
         preds_list.append(preds)
         if probs is not None:
@@ -273,15 +278,19 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
             preds,
         )
 
+    sort_order = np.argsort(sort_keys)
+
     preds = {
-        target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)
+        target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)[
+            sort_order
+        ]
         for target_column in inferer.target_columns
     }
     if len(probs_list):
         probs = {
             target_column: np.concatenate(
                 [p[target_column] for p in probs_list], axis=0
-            )
+            )[sort_order, :]
             for target_column in inferer.target_columns
         }
     else:
