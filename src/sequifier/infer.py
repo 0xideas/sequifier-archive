@@ -135,6 +135,10 @@ def infer(args, args_config):
 
 
 def expand_data_by_autoregression(data, autoregression_additional_steps, seq_length):
+    verify_variable_order(data)
+
+    data_cols = [str(c) for c in range(seq_length, 0, -1)]
+
     autoregression_additional_observations = []
     for sequence_id, sequence_data in data.groupby("sequenceId"):
         max_subsequence_id = sequence_data["subsequenceId"].values.max()
@@ -146,16 +150,6 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
                 max_subsequence_id + offset, last_observation.shape[0]
             )
             input_col_fields = last_observation["inputCol"].values
-            empty_data_fields = (
-                np.ones((last_observation.shape[0], min(seq_length, offset))) * np.inf
-            )
-            data_cols = [str(c) for c in range(seq_length, 0, -1)]
-            offset_data_fields = last_observation[data_cols].values[
-                :, min(offset, last_observation.shape[1]) :
-            ]
-            data_fields = np.concatenate(
-                [offset_data_fields, empty_data_fields], axis=1
-            )
             metadata = pd.DataFrame(
                 {
                     "sequenceId": sequence_id_fields,
@@ -163,13 +157,26 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
                     "inputCol": input_col_fields,
                 }
             )
+
+            # initialize empty fields with infinite value, for n_input_cols rows
+            empty_data_fields = (
+                np.ones((last_observation.shape[0], min(seq_length, offset))) * np.inf
+            )
+
+            # use the last seq_length - offset data fields, if offset >= seq_lengths, no data
+            offset_data_fields = last_observation[data_cols].values[
+                :, min(offset, last_observation.shape[1]) :
+            ]
+            # create data fields from historic and empty fields
+            data_fields = np.concatenate(
+                [offset_data_fields, empty_data_fields], axis=1
+            )
             data_df = pd.DataFrame(data_fields, columns=data_cols)
+            # create observation from metadata and data fields
             observation = pd.concat([metadata, data_df], axis=1)
             autoregression_additional_observations.append(observation)
 
-    data = pd.concat(
-        [data] + autoregression_additional_observations, axis=0
-    ).sort_values(["sequenceId", "subsequenceId"])
+    data = pd.concat([data] + autoregression_additional_observations, axis=0)
 
     return data.reset_index(drop=True)
 
@@ -226,7 +233,7 @@ def fill_in_predictions(
     return data
 
 
-def get_probs_preds_autoregression(config, inferer, data, column_types, seq_length):
+def verify_variable_order(data):
     sequence_ids = data["sequenceId"].values
     subsequence_ids = data["subsequenceId"].values
     assert np.all(
@@ -238,6 +245,13 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
     assert (
         np.all(subsequence_ids[1:] - subsequence_ids[:-1]) >= 0
     ), "subsequenceId must be in ascending order for autoregression"
+
+
+def get_probs_preds_autoregression(config, inferer, data, column_types, seq_length):
+    sequence_ids = data["sequenceId"].values
+    subsequence_ids = data["subsequenceId"].values
+
+    verify_variable_order(data)
 
     sequence_id_to_subsequence_ids = {
         sequence_id_: np.array(subsequence_ids_)
