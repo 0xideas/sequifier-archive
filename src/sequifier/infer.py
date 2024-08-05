@@ -259,23 +259,37 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
     sequence_ids = data["sequenceId"].values
     verify_variable_order(data)
 
+    sequence_id_to_min_subsequence_id = (
+        data[["sequenceId", "subsequenceId"]]
+        .groupby("sequenceId")
+        .agg({"subsequenceId": "min"})
+        .to_dict()["subsequenceId"]
+    )
+
+    data["subsequenceIdAdjusted"] = [
+        row["subsequenceId"] - sequence_id_to_min_subsequence_id[row["sequenceId"]]
+        for _, row in data[["sequenceId", "subsequenceId"]].iterrows()
+    ]
+
     sequence_id_to_subsequence_ids = {
         sequence_id_: np.array(subsequence_ids_)
-        for sequence_id_, subsequence_ids_ in data[["sequenceId", "subsequenceId"]]
+        for sequence_id_, subsequence_ids_ in data[
+            ["sequenceId", "subsequenceIdAdjusted"]
+        ]
         .groupby("sequenceId")
-        .agg({"subsequenceId": lambda x: sorted(list(set(x)))})
-        .to_dict()["subsequenceId"]
+        .agg({"subsequenceIdAdjusted": lambda x: sorted(list(set(x)))})
+        .to_dict()["subsequenceIdAdjusted"]
         .items()
     }
 
     ids_to_row = {
-        f"{row['sequenceId']}-{row['subsequenceId']}-{row['inputCol']}": i
+        f"{row['sequenceId']}-{row['subsequenceIdAdjusted']}-{row['inputCol']}": i
         for i, row in data.iterrows()
     }
 
     preds_list, probs_list, sort_keys = [], [], []
-    subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceId"])))
-    subsequence_ids = data["subsequenceId"].values
+    subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceIdAdjusted"])))
+    subsequence_ids = data["subsequenceIdAdjusted"].values
     for subsequence_id in subsequence_ids_distinct:
         subsequence_filter = subsequence_ids == subsequence_id
         data_subset = data.loc[subsequence_filter, :]
