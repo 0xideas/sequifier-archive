@@ -76,6 +76,7 @@ def infer(args, args_config):
             data = expand_data_by_autoregression(
                 data, config.autoregression_additional_steps, config.seq_length
             )
+
         probs, preds = get_probs_preds_autoregression(
             config, inferer, data, column_types, config.seq_length
         )
@@ -135,6 +136,7 @@ def infer(args, args_config):
 
 
 def expand_data_by_autoregression(data, autoregression_additional_steps, seq_length):
+
     verify_variable_order(data)
 
     data_cols = [str(c) for c in range(seq_length, 0, -1)]
@@ -178,7 +180,9 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
 
     data = pd.concat([data] + autoregression_additional_observations, axis=0)
 
-    return data.reset_index(drop=True)
+    return data.sort_values(
+        ["sequenceId", "subsequenceId"], ascending=True
+    ).reset_index(drop=True)
 
 
 def get_probs_preds(config, inferer, data, column_types):
@@ -235,40 +239,57 @@ def fill_in_predictions(
 
 def verify_variable_order(data):
     sequence_ids = data["sequenceId"].values
-    subsequence_ids = data["subsequenceId"].values
     assert np.all(
         data.index == np.arange(data.shape[0])
     ), "data index has to be equal to np.arange"
-    assert (
-        np.all(sequence_ids[1:] - sequence_ids[:-1]) >= 0
+    assert np.all(
+        sequence_ids[1:] - sequence_ids[:-1] >= 0
     ), "sequenceId must be in ascending order for autoregression"
-    assert (
-        np.all(subsequence_ids[1:] - subsequence_ids[:-1]) >= 0
-    ), "subsequenceId must be in ascending order for autoregression"
+
+    for _, sequence_id_group in data[["sequenceId", "subsequenceId"]].groupby(
+        "sequenceId"
+    ):
+        subsequence_ids = sequence_id_group["subsequenceId"].values
+        assert np.all(
+            subsequence_ids[1:] - subsequence_ids[:-1] >= 0
+        ), "subsequenceId must be in ascending order for autoregression"
 
 
 def get_probs_preds_autoregression(config, inferer, data, column_types, seq_length):
     sequence_ids = data["sequenceId"].values
-    subsequence_ids = data["subsequenceId"].values
-
     verify_variable_order(data)
+
+    sequence_id_to_min_subsequence_id = (
+        data[["sequenceId", "subsequenceId"]]
+        .groupby("sequenceId")
+        .agg({"subsequenceId": "min"})
+        .to_dict()["subsequenceId"]
+    )
+
+    data["subsequenceIdAdjusted"] = [
+        row["subsequenceId"] - sequence_id_to_min_subsequence_id[row["sequenceId"]]
+        for _, row in data[["sequenceId", "subsequenceId"]].iterrows()
+    ]
 
     sequence_id_to_subsequence_ids = {
         sequence_id_: np.array(subsequence_ids_)
-        for sequence_id_, subsequence_ids_ in data[["sequenceId", "subsequenceId"]]
+        for sequence_id_, subsequence_ids_ in data[
+            ["sequenceId", "subsequenceIdAdjusted"]
+        ]
         .groupby("sequenceId")
-        .agg({"subsequenceId": lambda x: sorted(list(set(x)))})
-        .to_dict()["subsequenceId"]
+        .agg({"subsequenceIdAdjusted": lambda x: sorted(list(set(x)))})
+        .to_dict()["subsequenceIdAdjusted"]
         .items()
     }
 
     ids_to_row = {
-        f"{row['sequenceId']}-{row['subsequenceId']}-{row['inputCol']}": i
+        f"{row['sequenceId']}-{row['subsequenceIdAdjusted']}-{row['inputCol']}": i
         for i, row in data.iterrows()
     }
 
     preds_list, probs_list, sort_keys = [], [], []
-    subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceId"])))
+    subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceIdAdjusted"])))
+    subsequence_ids = data["subsequenceIdAdjusted"].values
     for subsequence_id in subsequence_ids_distinct:
         subsequence_filter = subsequence_ids == subsequence_id
         data_subset = data.loc[subsequence_filter, :]
