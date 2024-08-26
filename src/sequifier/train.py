@@ -90,6 +90,12 @@ def check_target_validity(data, target_columns):
     ), "Some target values are NaN"
 
 
+def format_number(number):
+    order_of_magnitude = math.floor(math.log(number, 10))
+    number_adjusted = number * (10 ** (-order_of_magnitude))
+    return f"{number_adjusted:5.2f}e{order_of_magnitude}"
+
+
 class TransformerModel(nn.Module):
     def __init__(self, hparams):
         super().__init__()
@@ -228,7 +234,6 @@ class TransformerModel(nn.Module):
             self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
     def forward_train(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
-
         srcs = []
         for col in self.categorical_columns:
             src_t = self.encoder[col](src[col].T) * math.sqrt(
@@ -271,7 +276,6 @@ class TransformerModel(nn.Module):
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
-
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
@@ -283,14 +287,14 @@ class TransformerModel(nn.Module):
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {(total_loss * 1000):5.5f} | baseline loss {self.baseline_loss}"
+                    f"valid loss {format_number(total_loss)} | baseline loss {format_number(self.baseline_loss)}"
                 )
 
                 if len(total_losses) > 1:
                     self.log_file.write(
                         " - ".join(
                             [
-                                f"{target_column} loss: {(tloss*1000):5.2f}"
+                                f"{target_column} loss: {format_number(tloss)}"
                                 for target_column, tloss in total_losses.items()
                             ]
                         )
@@ -298,7 +302,7 @@ class TransformerModel(nn.Module):
                     self.log_file.write(
                         " - ".join(
                             [
-                                f"{target_column} baseline loss: {(tloss*1000):5.2f}"
+                                f"{target_column} baseline loss: {format_number(tloss)}"
                                 for target_column, tloss in self.baseline_losses.items()
                             ]
                         )
@@ -340,7 +344,6 @@ class TransformerModel(nn.Module):
         self.log_file.close()
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
-
         self.train()  # turn on train mode
         total_loss = 0.0
         start_time = time.time()
@@ -395,7 +398,6 @@ class TransformerModel(nn.Module):
     def calculate_loss(self, output, targets):
         losses = {}
         for target_column, target_column_type in self.target_column_types.items():
-
             if target_column_type == "categorical":
                 output[target_column] = output[target_column].reshape(
                     -1, self.n_classes[target_column]

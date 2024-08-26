@@ -71,7 +71,6 @@ def infer(args, args_config):
     if not config.autoregression:
         probs, preds = get_probs_preds(config, inferer, data, column_types)
     else:
-
         if config.autoregression_additional_steps is not None:
             data = expand_data_by_autoregression(
                 data, config.autoregression_additional_steps, config.seq_length
@@ -136,7 +135,6 @@ def infer(args, args_config):
 
 
 def expand_data_by_autoregression(data, autoregression_additional_steps, seq_length):
-
     verify_variable_order(data)
 
     data_cols = [str(c) for c in range(seq_length, 0, -1)]
@@ -186,7 +184,6 @@ def expand_data_by_autoregression(data, autoregression_additional_steps, seq_len
 
 
 def get_probs_preds(config, inferer, data, column_types):
-
     X, _ = numpy_to_pytorch(
         data,
         column_types,
@@ -222,7 +219,6 @@ def fill_in_predictions(
     for input_col, preds_vals in preds.items():
         assert len(preds_vals) == len(sequence_ids_distinct)
         for sequence_id, pred in zip(sequence_ids_distinct, preds_vals.flatten()):
-
             sequence_id_subsequence_ids = sequence_id_to_subsequence_ids[sequence_id]
             sequence_id_subsequence_ids = sequence_id_subsequence_ids[
                 sequence_id_subsequence_ids > subsequence_id
