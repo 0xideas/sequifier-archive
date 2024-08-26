@@ -13,6 +13,7 @@ import torch
 import torch._dynamo
 from torch import Tensor, nn
 from torch.nn import ModuleDict, TransformerEncoder, TransformerEncoderLayer
+from torch.nn.functional import one_hot
 
 torch._dynamo.config.suppress_errors = True
 from sequifier.config.train_config import load_train_config
@@ -270,6 +271,7 @@ class TransformerModel(nn.Module):
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
+
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
@@ -281,7 +283,7 @@ class TransformerModel(nn.Module):
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {(total_loss * 1000):5.5f}"
+                    f"valid loss {(total_loss * 1000):5.5f} | baseline loss {self.baseline_loss}"
                 )
 
                 if len(total_losses) > 1:
@@ -293,6 +295,15 @@ class TransformerModel(nn.Module):
                             ]
                         )
                     )
+                    self.log_file.write(
+                        " - ".join(
+                            [
+                                f"{target_column} baseline loss: {(tloss*1000):5.2f}"
+                                for target_column, tloss in self.baseline_losses.items()
+                            ]
+                        )
+                    )
+
                 for categorical_column in self.class_share_log_columns:
                     output_values = (
                         output[categorical_column].argmax(1).cpu().detach().numpy()
@@ -386,16 +397,21 @@ class TransformerModel(nn.Module):
         for target_column, target_column_type in self.target_column_types.items():
 
             if target_column_type == "categorical":
-                output[target_column] = output[target_column].view(
+                output[target_column] = output[target_column].reshape(
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-                output[target_column] = output[target_column].view(-1)
+                try:
+                    output[target_column] = output[target_column].reshape(-1)
+                except:
+                    import code
+
+                    code.interact(local=locals())
             else:
                 pass
 
             losses[target_column] = self.criterion[target_column](
-                output[target_column], targets[target_column].T.contiguous().view(-1)
+                output[target_column], targets[target_column].T.contiguous().reshape(-1)
             )
 
         loss = None
@@ -418,26 +434,28 @@ class TransformerModel(nn.Module):
         self.log_file = log_file
         return model_copy
 
+    def _transform_val(self, col, val):
+        if self.target_column_types[col] == "categorical":
+            return (
+                one_hot(val, self.n_classes[col])
+                .reshape(-1, self.n_classes[col])
+                .float()
+            )
+        else:
+            assert self.target_column_types[col] == "real"
+            return val
+
     def evaluate(self, X_valid, y_valid) -> float:
         self.eval()  # turn on evaluation mode
-        total_loss = 0.0
-        total_losses = {target_column: 0.0 for target_column in y_valid.keys()}
+
         with torch.no_grad():
-            for batch_start in range(
-                0,
-                X_valid[self.target_columns[0]].size(0),
-                self.batch_size,  # any column will do
-            ):
-                data, targets = self.get_batch(
-                    X_valid, y_valid, batch_start, self.batch_size, to_device=True
-                )
-                output = self.forward_train(data)
-                loss, losses = self.calculate_loss(output, targets)
-                for target_column, bloss in losses.items():
-                    total_losses[target_column] += bloss
-                total_loss += loss
-                with torch.no_grad():
-                    torch.cuda.empty_cache()
+            data, targets = self.get_batch(
+                X_valid, y_valid, 0, self.batch_size, to_device=True
+            )
+            output = self.forward_train(data)
+            total_loss, total_losses = self.calculate_loss(output, targets)
+
+            torch.cuda.empty_cache()
 
         denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
         total_loss = total_loss / denominator
@@ -445,6 +463,23 @@ class TransformerModel(nn.Module):
             target_column: tloss / denominator
             for target_column, tloss in total_losses.items()
         }
+
+        if not hasattr(self, "baseline_loss"):
+            # import code; code.interact(local=locals())
+            self.baseline_loss, self.baseline_losses = self.calculate_loss(
+                {
+                    col: self._transform_val(col, val[:, :-1])
+                    for col, val in targets.items()
+                },  # this variant is chosen because the same batch might have several "sequenceId" sequences
+                {col: val[:, 1:] for col, val in targets.items()},
+            )
+            shape_1_adjustment = self.seq_length / (self.seq_length - 1)
+            self.baseline_loss = (self.baseline_loss / denominator) * shape_1_adjustment
+            self.baseline_losses = {
+                target_column: (bloss / denominator) * shape_1_adjustment
+                for target_column, bloss in total_losses.items()
+            }
+
         return total_loss, total_losses, output
 
     def get_batch(self, X, y, batch_start, batch_size, to_device):
