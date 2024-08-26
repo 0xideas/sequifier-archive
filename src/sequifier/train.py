@@ -302,8 +302,8 @@ class TransformerModel(nn.Module):
                     self.log_file.write(
                         " - ".join(
                             [
-                                f"{target_column} baseline loss: {format_number(tloss)}"
-                                for target_column, tloss in self.baseline_losses.items()
+                                f"{target_column} baseline loss: {format_number(bloss)}"
+                                for target_column, bloss in self.baseline_losses.items()
                             ]
                         )
                     )
@@ -383,14 +383,12 @@ class TransformerModel(nn.Module):
             total_loss += loss.item()
             if batch_count % self.log_interval == 0 and batch_count > 0:
                 lr = self.scheduler.get_last_lr()[0]
-                ms_per_batch = (time.time() - start_time) * 1000 / self.log_interval
-                cur_loss_normalized = (
-                    1000 * total_loss / (self.log_interval * self.batch_size)
-                )
+                s_per_batch = (time.time() - start_time) / self.log_interval
+
                 self.log_file.write(
                     f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
-                    f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss_normalized :5.5f}"
+                    f"lr {format_number(lr)} | s/batch {format_number(s_per_batch)} | "
+                    f"loss {format_number(total_loss)}"
                 )
                 total_loss = 0.0
                 start_time = time.time()
@@ -403,30 +401,25 @@ class TransformerModel(nn.Module):
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-                try:
-                    output[target_column] = output[target_column].reshape(-1)
-                except:
-                    import code
-
-                    code.interact(local=locals())
+                output[target_column] = output[target_column].reshape(-1)
             else:
                 pass
 
             losses[target_column] = self.criterion[target_column](
                 output[target_column], targets[target_column].T.contiguous().reshape(-1)
             )
-
         loss = None
-        for target_column in losses.keys():
+        for target_column in self.target_columns:
             losses[target_column] = losses[target_column] * (
                 self.loss_weights[target_column]
                 if self.loss_weights is not None
                 else 1.0
             )
             if loss is None:
-                loss = losses[target_column]
+                loss = losses[target_column].clone()
             else:
                 loss += losses[target_column]
+
         return (loss, losses)
 
     def copy_model(self):
@@ -467,7 +460,6 @@ class TransformerModel(nn.Module):
         }
 
         if not hasattr(self, "baseline_loss"):
-            # import code; code.interact(local=locals())
             self.baseline_loss, self.baseline_losses = self.calculate_loss(
                 {
                     col: self._transform_val(col, val[:, :-1])
