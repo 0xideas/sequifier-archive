@@ -292,17 +292,17 @@ class TransformerModel(nn.Module):
 
                 if len(total_losses) > 1:
                     self.log_file.write(
-                        " - ".join(
+                        ", ".join(
                             [
-                                f"{target_column} loss: {format_number(tloss)}"
+                                f"'{target_column} loss': {format_number(tloss)}"
                                 for target_column, tloss in total_losses.items()
                             ]
                         )
                     )
                     self.log_file.write(
-                        " - ".join(
+                        ", ".join(
                             [
-                                f"{target_column} baseline loss: {format_number(bloss)}"
+                                f"'{target_column} baseline loss': {format_number(bloss)}"
                                 for target_column, bloss in self.baseline_losses.items()
                             ]
                         )
@@ -447,18 +447,16 @@ class TransformerModel(nn.Module):
             data, targets = self.get_batch(
                 X_valid, y_valid, 0, self.batch_size, to_device=True
             )
+
             output = self.forward_train(data)
             total_loss, total_losses = self.calculate_loss(output, targets)
 
             torch.cuda.empty_cache()
 
-        denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
-        total_loss = total_loss / denominator
+        total_loss = total_loss
         total_losses = {
-            target_column: tloss / denominator
-            for target_column, tloss in total_losses.items()
+            target_column: tloss for target_column, tloss in total_losses.items()
         }
-
         if not hasattr(self, "baseline_loss"):
             self.baseline_loss, self.baseline_losses = self.calculate_loss(
                 {
@@ -468,10 +466,10 @@ class TransformerModel(nn.Module):
                 {col: val[:, 1:] for col, val in targets.items()},
             )
             shape_1_adjustment = self.seq_length / (self.seq_length - 1)
-            self.baseline_loss = (self.baseline_loss / denominator) * shape_1_adjustment
+            self.baseline_loss = (self.baseline_loss) * shape_1_adjustment
             self.baseline_losses = {
-                target_column: (bloss / denominator) * shape_1_adjustment
-                for target_column, bloss in total_losses.items()
+                target_column: (bloss) * shape_1_adjustment
+                for target_column, bloss in self.baseline_losses.items()
             }
 
         return total_loss, total_losses, output
