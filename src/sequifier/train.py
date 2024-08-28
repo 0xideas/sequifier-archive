@@ -90,6 +90,12 @@ def check_target_validity(data, target_columns):
     ), "Some target values are NaN"
 
 
+def format_number(number):
+    order_of_magnitude = math.floor(math.log(number, 10))
+    number_adjusted = number * (10 ** (-order_of_magnitude))
+    return f"{number_adjusted:5.2f}e{order_of_magnitude}"
+
+
 class TransformerModel(nn.Module):
     def __init__(self, hparams):
         super().__init__()
@@ -228,7 +234,6 @@ class TransformerModel(nn.Module):
             self.decoder[target_column].weight.data.uniform_(-initrange, initrange)
 
     def forward_train(self, src: dict[str, Tensor]) -> dict[str, Tensor]:
-
         srcs = []
         for col in self.categorical_columns:
             src_t = self.encoder[col](src[col].T) * math.sqrt(
@@ -271,7 +276,6 @@ class TransformerModel(nn.Module):
         for epoch in range(
             self.start_epoch, self.hparams.training_spec.epochs + self.start_epoch
         ):
-
             if (
                 self.early_stopping_epochs is None
                 or n_epochs_no_improvemet < self.early_stopping_epochs
@@ -283,23 +287,23 @@ class TransformerModel(nn.Module):
                 self.log_file.write("-" * 89)
                 self.log_file.write(
                     f"| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | "
-                    f"valid loss {(total_loss * 1000):5.5f} | baseline loss {self.baseline_loss}"
+                    f"valid loss {format_number(total_loss)} | baseline loss {format_number(self.baseline_loss)}"
                 )
 
                 if len(total_losses) > 1:
                     self.log_file.write(
-                        " - ".join(
+                        ", ".join(
                             [
-                                f"{target_column} loss: {(tloss*1000):5.2f}"
+                                f"'{target_column} loss': {format_number(tloss)}"
                                 for target_column, tloss in total_losses.items()
                             ]
                         )
                     )
                     self.log_file.write(
-                        " - ".join(
+                        ", ".join(
                             [
-                                f"{target_column} baseline loss: {(tloss*1000):5.2f}"
-                                for target_column, tloss in self.baseline_losses.items()
+                                f"'{target_column} baseline loss': {format_number(bloss)}"
+                                for target_column, bloss in self.baseline_losses.items()
                             ]
                         )
                     )
@@ -340,7 +344,6 @@ class TransformerModel(nn.Module):
         self.log_file.close()
 
     def train_epoch(self, X_train, y_train, epoch) -> None:
-
         self.train()  # turn on train mode
         total_loss = 0.0
         start_time = time.time()
@@ -380,14 +383,12 @@ class TransformerModel(nn.Module):
             total_loss += loss.item()
             if batch_count % self.log_interval == 0 and batch_count > 0:
                 lr = self.scheduler.get_last_lr()[0]
-                ms_per_batch = (time.time() - start_time) * 1000 / self.log_interval
-                cur_loss_normalized = (
-                    1000 * total_loss / (self.log_interval * self.batch_size)
-                )
+                s_per_batch = (time.time() - start_time) / self.log_interval
+
                 self.log_file.write(
                     f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
-                    f"lr {lr:02.5f} | ms/batch {ms_per_batch:5.2f} | "
-                    f"loss {cur_loss_normalized :5.5f}"
+                    f"lr {format_number(lr)} | s/batch {format_number(s_per_batch)} | "
+                    f"loss {format_number(total_loss)}"
                 )
                 total_loss = 0.0
                 start_time = time.time()
@@ -395,36 +396,30 @@ class TransformerModel(nn.Module):
     def calculate_loss(self, output, targets):
         losses = {}
         for target_column, target_column_type in self.target_column_types.items():
-
             if target_column_type == "categorical":
                 output[target_column] = output[target_column].reshape(
                     -1, self.n_classes[target_column]
                 )
             elif target_column_type == "real":
-                try:
-                    output[target_column] = output[target_column].reshape(-1)
-                except:
-                    import code
-
-                    code.interact(local=locals())
+                output[target_column] = output[target_column].reshape(-1)
             else:
                 pass
 
             losses[target_column] = self.criterion[target_column](
                 output[target_column], targets[target_column].T.contiguous().reshape(-1)
             )
-
         loss = None
-        for target_column in losses.keys():
+        for target_column in self.target_columns:
             losses[target_column] = losses[target_column] * (
                 self.loss_weights[target_column]
                 if self.loss_weights is not None
                 else 1.0
             )
             if loss is None:
-                loss = losses[target_column]
+                loss = losses[target_column].clone()
             else:
                 loss += losses[target_column]
+
         return (loss, losses)
 
     def copy_model(self):
@@ -452,20 +447,17 @@ class TransformerModel(nn.Module):
             data, targets = self.get_batch(
                 X_valid, y_valid, 0, self.batch_size, to_device=True
             )
+
             output = self.forward_train(data)
             total_loss, total_losses = self.calculate_loss(output, targets)
 
             torch.cuda.empty_cache()
 
-        denominator = X_valid[self.target_columns[0]].size(0)  # any column will do
-        total_loss = total_loss / denominator
+        total_loss = total_loss
         total_losses = {
-            target_column: tloss / denominator
-            for target_column, tloss in total_losses.items()
+            target_column: tloss for target_column, tloss in total_losses.items()
         }
-
         if not hasattr(self, "baseline_loss"):
-            # import code; code.interact(local=locals())
             self.baseline_loss, self.baseline_losses = self.calculate_loss(
                 {
                     col: self._transform_val(col, val[:, :-1])
@@ -474,10 +466,10 @@ class TransformerModel(nn.Module):
                 {col: val[:, 1:] for col, val in targets.items()},
             )
             shape_1_adjustment = self.seq_length / (self.seq_length - 1)
-            self.baseline_loss = (self.baseline_loss / denominator) * shape_1_adjustment
+            self.baseline_loss = (self.baseline_loss) * shape_1_adjustment
             self.baseline_losses = {
-                target_column: (bloss / denominator) * shape_1_adjustment
-                for target_column, bloss in total_losses.items()
+                target_column: (bloss) * shape_1_adjustment
+                for target_column, bloss in self.baseline_losses.items()
             }
 
         return total_loss, total_losses, output

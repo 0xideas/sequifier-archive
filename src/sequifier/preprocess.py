@@ -295,7 +295,6 @@ def extract_subsequences(
         }
 
     if return_targets:
-
         targets = [
             {
                 target_column: in_seq[target_column][i + seq_length]
