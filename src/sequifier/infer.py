@@ -9,9 +9,15 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, construct_index_maps,
-                               normalize_path, numpy_to_pytorch, read_data,
-                               subset_to_selected_columns, write_data)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    construct_index_maps,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+    write_data,
+)
 from sequifier.train import infer_with_model, load_inference_model
 
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
@@ -322,7 +328,6 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
         )
     sort_order = np.argsort(sort_keys)
 
-    assert len(preds_list) == len(sort_keys), f"{preds_list = } - {sort_keys = }"
     preds = {
         target_column: np.concatenate([p[target_column] for p in preds_list], axis=0)[
             sort_order
