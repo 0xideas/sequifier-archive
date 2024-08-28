@@ -57,7 +57,7 @@ class InfererModel(BaseModel):
     ddconfig_path: Optional[str] = None
     model_path: str
     data_path: str
-    training_config_path: Optional[str] = None
+    training_config_path: Optional[str] = "configs/train.yaml"
     read_format: str = "parquet"
     write_format: str = "csv"
 

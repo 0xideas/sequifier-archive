@@ -1,6 +1,7 @@
 import json
 import os
 import warnings
+from warnings import simplefilter
 
 import numpy as np
 import onnxruntime
@@ -8,10 +9,18 @@ import pandas as pd
 import torch
 
 from sequifier.config.infer_config import load_inferer_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, construct_index_maps,
-                               normalize_path, numpy_to_pytorch, read_data,
-                               subset_to_selected_columns, write_data)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    construct_index_maps,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+    write_data,
+)
 from sequifier.train import infer_with_model, load_inference_model
+
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 
 def infer(args, args_config):
@@ -233,6 +242,11 @@ def fill_in_predictions(
     return data
 
 
+def fill_number(number, max_length):
+    number_str = str(number)
+    return f"{'0'*(max_length-len(number_str))}{number_str}"
+
+
 def verify_variable_order(data):
     sequence_ids = data["sequenceId"].values
     assert np.all(
@@ -286,13 +300,17 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
     preds_list, probs_list, sort_keys = [], [], []
     subsequence_ids_distinct = sorted(list(np.unique(data["subsequenceIdAdjusted"])))
     subsequence_ids = data["subsequenceIdAdjusted"].values
+    max_length = len(str(np.max(subsequence_ids_distinct)))
     for subsequence_id in subsequence_ids_distinct:
         subsequence_filter = subsequence_ids == subsequence_id
         data_subset = data.loc[subsequence_filter, :]
         sequence_ids_present = sequence_ids[subsequence_filter]
 
         sort_keys.extend(
-            [f"{seq_id}-{subsequence_id}" for seq_id in sequence_ids_present]
+            [
+                f"{fill_number(seq_id, max_length)}-{fill_number(subsequence_id, max_length)}"
+                for seq_id in np.unique(sequence_ids_present)
+            ]
         )
 
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
@@ -308,7 +326,6 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
             subsequence_id,
             preds,
         )
-
     sort_order = np.argsort(sort_keys)
 
     preds = {

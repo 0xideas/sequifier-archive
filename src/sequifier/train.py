@@ -17,10 +17,15 @@ from torch.nn.functional import one_hot
 
 torch._dynamo.config.suppress_errors = True
 from sequifier.config.train_config import load_train_config
-from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, LogFile,
-                               construct_index_maps, normalize_path,
-                               numpy_to_pytorch, read_data,
-                               subset_to_selected_columns)
+from sequifier.helpers import (
+    PANDAS_TO_TORCH_TYPES,
+    LogFile,
+    construct_index_maps,
+    normalize_path,
+    numpy_to_pytorch,
+    read_data,
+    subset_to_selected_columns,
+)
 
 
 def train(args, args_config):
@@ -91,7 +96,11 @@ def check_target_validity(data, target_columns):
 
 
 def format_number(number):
-    order_of_magnitude = math.floor(math.log(number, 10))
+    if number == 0:
+        order_of_magnitude = 0
+    else:
+        order_of_magnitude = math.floor(math.log(number, 10))
+
     number_adjusted = number * (10 ** (-order_of_magnitude))
     return f"{number_adjusted:5.2f}e{order_of_magnitude}"
 
