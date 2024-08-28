@@ -95,7 +95,7 @@ def format_number(number):
         order_of_magnitude = 0
     else:
         order_of_magnitude = math.floor(math.log(number, 10))
-    
+
     number_adjusted = number * (10 ** (-order_of_magnitude))
     return f"{number_adjusted:5.2f}e{order_of_magnitude}"
 
@@ -154,11 +154,10 @@ class TransformerModel(nn.Module):
             self.real_columns, hparams.model_spec.nhead
         )
 
-
         embedding_size = (
             hparams.model_spec.d_model * len(self.categorical_columns)
         ) + int(np.sum(list(self.real_columns_repetitions.values())))
-        
+
         encoder_layers = TransformerEncoderLayer(
             embedding_size,
             hparams.model_spec.nhead,

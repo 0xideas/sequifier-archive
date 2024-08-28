@@ -1,6 +1,7 @@
 import json
 import os
 import warnings
+from warnings import simplefilter
 
 import numpy as np
 import onnxruntime
@@ -13,8 +14,8 @@ from sequifier.helpers import (PANDAS_TO_TORCH_TYPES, construct_index_maps,
                                subset_to_selected_columns, write_data)
 from sequifier.train import infer_with_model, load_inference_model
 
-from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
 
 def infer(args, args_config):
     config_path = (
@@ -234,9 +235,11 @@ def fill_in_predictions(
 
     return data
 
+
 def fill_number(number, max_length):
     number_str = str(number)
-    return(f"{'0'*(max_length-len(number_str))}{number_str}")
+    return f"{'0'*(max_length-len(number_str))}{number_str}"
+
 
 def verify_variable_order(data):
     sequence_ids = data["sequenceId"].values
@@ -298,7 +301,10 @@ def get_probs_preds_autoregression(config, inferer, data, column_types, seq_leng
         sequence_ids_present = sequence_ids[subsequence_filter]
 
         sort_keys.extend(
-            [f"{fill_number(seq_id, max_length)}-{fill_number(subsequence_id, max_length)}" for seq_id in np.unique(sequence_ids_present)]
+            [
+                f"{fill_number(seq_id, max_length)}-{fill_number(subsequence_id, max_length)}"
+                for seq_id in np.unique(sequence_ids_present)
+            ]
         )
 
         probs, preds = get_probs_preds(config, inferer, data_subset, column_types)
