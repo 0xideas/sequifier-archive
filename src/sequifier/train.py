@@ -358,7 +358,7 @@ class TransformerModel(nn.Module):
         start_time = time.time()
 
         num_batches = math.ceil(
-            len(X_train[self.target_columns[0]]) / self.batch_size
+            X_train[self.target_columns[0]].shape[0] / self.batch_size
         )  # any column will do
         batch_order = list(
             np.random.choice(
@@ -375,27 +375,25 @@ class TransformerModel(nn.Module):
 
             loss, losses = self.calculate_loss(output, targets)
 
-            with torch.no_grad():
-                torch.cuda.empty_cache()
-
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
 
             if (
                 self.accumulation_steps is None
-                or (batch_count // self.batch_size + 1) % self.accumulation_steps == 0
+                or (batch_count + 1) % self.accumulation_steps == 0
+                or (batch_count + 1) == num_batches
             ):
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
             total_loss += loss.item()
-            if batch_count % self.log_interval == 0 and batch_count > 0:
+            if (batch_count + 1) % self.log_interval == 0:
                 lr = self.scheduler.get_last_lr()[0]
                 s_per_batch = (time.time() - start_time) / self.log_interval
 
                 self.log_file.write(
-                    f"| epoch {epoch:3d} | {batch_count:5d}/{num_batches:5d} batches | "
+                    f"| epoch {epoch:3d} | {(batch_count+1):5d}/{num_batches:5d} batches | "
                     f"lr {format_number(lr)} | s/batch {format_number(s_per_batch)} | "
                     f"loss {format_number(total_loss)}"
                 )
@@ -453,33 +451,47 @@ class TransformerModel(nn.Module):
         self.eval()  # turn on evaluation mode
 
         with torch.no_grad():
-            data, targets = self.get_batch(
-                X_valid, y_valid, 0, self.batch_size, to_device=True
-            )
+            num_batches = math.ceil(
+                X_valid[self.target_columns[0]].shape[0] / self.batch_size
+            )  # any column will do
+            total_loss_collect, total_losses_collect = [], []
+            for batch_start in range(0, num_batches * self.batch_size, self.batch_size):
+                data, targets = self.get_batch(
+                    X_valid,
+                    y_valid,
+                    batch_start,
+                    batch_start + self.batch_size,
+                    to_device=True,
+                )
+                output = self.forward_train(data)
+                total_loss_iter, total_losses_iter = self.calculate_loss(
+                    output, targets
+                )
+                total_loss_collect.append(total_loss_iter.cpu())
+                total_losses_collect.append(total_losses_iter)
 
-            output = self.forward_train(data)
-            total_loss, total_losses = self.calculate_loss(output, targets)
+                torch.cuda.empty_cache()
 
-            torch.cuda.empty_cache()
-
-        total_loss = total_loss
+        total_loss = np.sum(total_loss_collect)
         total_losses = {
-            target_column: tloss for target_column, tloss in total_losses.items()
+            target_column: np.sum(
+                [
+                    total_losses_i[target_column].cpu()
+                    for total_losses_i in total_losses_collect
+                ]
+            )
+            for target_column in total_losses_iter.keys()
         }
         if not hasattr(self, "baseline_loss"):
+            data, targets = self.get_batch(
+                X_valid, y_valid, 0, list(X_valid.values())[0].shape[0], to_device=False
+            )
             self.baseline_loss, self.baseline_losses = self.calculate_loss(
                 {
-                    col: self._transform_val(col, val[:, :-1])
-                    for col, val in targets.items()
+                    col: self._transform_val(col, data[col]) for col in targets.keys()
                 },  # this variant is chosen because the same batch might have several "sequenceId" sequences
-                {col: val[:, 1:] for col, val in targets.items()},
+                {col: val for col, val in targets.items()},
             )
-            shape_1_adjustment = self.seq_length / (self.seq_length - 1)
-            self.baseline_loss = (self.baseline_loss) * shape_1_adjustment
-            self.baseline_losses = {
-                target_column: (bloss) * shape_1_adjustment
-                for target_column, bloss in self.baseline_losses.items()
-            }
 
         return total_loss, total_losses, output
 
