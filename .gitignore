@@ -9,6 +9,8 @@ project_folder/
 *\~
 *.DS_Store
 
+.env.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -183,3 +185,4 @@ API
 Training
 Blog
 About
+.aider*
