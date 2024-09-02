@@ -29,10 +29,9 @@ class Preprocessor(object):
         read_format,
         write_format,
         selected_columns,
-        return_targets,
-        target_columns,
         group_proportions,
         seq_length,
+        seq_step_size,
         max_rows,
         seed,
         n_cores,
@@ -108,9 +107,8 @@ class Preprocessor(object):
                 data.iloc[start:end, :],
                 self.split_paths,
                 seq_length,
+                seq_step_size,
                 data_columns,
-                target_columns,
-                return_targets,
                 group_proportions,
                 write_format,
             )
@@ -201,9 +199,8 @@ def preprocess_batch(
     batch,
     split_paths,
     seq_length,
+    seq_step_size,
     data_columns,
-    target_columns,
-    return_targets,
     group_proportions,
     write_format,
 ):
@@ -212,7 +209,7 @@ def preprocess_batch(
     for i, sequence_id in enumerate(sequence_ids):
         data_subset = batch.loc[batch["sequenceId"] == sequence_id, :]
         sequences = extract_sequences(
-            data_subset, seq_length, data_columns, target_columns, return_targets
+            data_subset, seq_length, seq_step_size, data_columns
         )
 
         splits = extract_data_subsets(sequences, group_proportions)
@@ -245,75 +242,67 @@ def preprocess_batch(
             combine_parquet_files(written_files[j], out_path)
 
 
-def extract_sequences(data, seq_length, data_columns, target_columns, return_targets):
+def extract_sequences(data, seq_length, seq_step_size, columns):
     raw_sequences = (
         data.groupby("sequenceId")
-        .agg({col: list for col in data_columns})
+        .agg({col: list for col in columns})
         .reset_index(drop=False)
     )
 
     rows = []
-    for _, in_row in raw_sequences.iterrows():
-        seqs, targets = extract_subsequences(
-            in_row[data_columns],
+    for i, in_row in raw_sequences.iterrows():
+        subsequences = extract_subsequences(
+            in_row[columns],
             seq_length,
-            data_columns,
-            target_columns,
-            return_targets,
+            seq_step_size,
+            columns,
         )
-        for i, target_dict in enumerate(targets):
-            subsequence_id = i
-            for data_col, data_col_seqs in seqs.items():
+
+        for subsequence_id in range(len(subsequences[columns[0]])):
+            for col, subseqs in subsequences.items():
                 rows.append(
-                    [in_row["sequenceId"]]
-                    + [subsequence_id, data_col]
-                    + data_col_seqs[i]
-                    + [target_dict.get(data_col, None)]
+                    [in_row["sequenceId"], subsequence_id, col]
+                    + subseqs[subsequence_id]
                 )
 
     sequences = pd.DataFrame(
         rows,
         columns=["sequenceId", "subsequenceId", "inputCol"]
-        + list(range(seq_length, 0, -1))
-        + ["target"],
+        + list(range(seq_length-1, -1, -1))
     )
     return sequences
 
 
+def get_subsequence_starts(in_seq_length, seq_length, seq_step_size):
+
+    nseq_adjusted = math.ceil((in_seq_length-seq_length)/seq_step_size)
+    seq_step_size_adjusted = math.floor((in_seq_length-seq_length)/(nseq_adjusted))
+    increments = [0] + [max(1, seq_step_size_adjusted)] * nseq_adjusted
+    while np.sum(increments) < (in_seq_length-seq_length):
+        increments[np.argmin(increments[1:]) + 1] += 1 
+
+    subsequence_starts = np.cumsum(increments)
+    return(subsequence_starts)
+
 def extract_subsequences(
-    in_seq, seq_length, data_columns, target_columns, return_targets
+    in_seq, seq_length, seq_step_size, columns
 ):
-    nseq = max(
-        len(in_seq[target_columns[0]]) - seq_length - 1,  # any column will do
-        min(1, len(in_seq[target_columns[0]])),  # any column will do
-    )
-    if nseq == 1:  # any column will do
+    if len(in_seq[columns[0]]) == 1:
         in_seq = {
-            col: ([0] * (seq_length - len(in_seq[col]) + int(return_targets)))
+            col: ([0] * (seq_length - len(in_seq[col])))
             + in_seq[col]
-            for col in data_columns
+            for col in columns
         }
+    in_seq_length = len(in_seq[columns[0]]) # any column will do
 
-    if return_targets:
-        targets = [
-            {
-                target_column: in_seq[target_column][i + seq_length]
-                for target_column in target_columns
-            }
-            for i in range(nseq)
-        ]
-
-    else:
-        targets = [
-            {target_column: np.nan for target_column in target_columns}
-            for _ in range(nseq)
-        ]
+    subsequence_starts = get_subsequence_starts(in_seq_length, seq_length, seq_step_size)
+    print(f"{seq_length = } - {subsequence_starts = } - {np.array(in_seq[columns[0]]).shape}")
 
     seqs = {}
-    for data_col in data_columns:
-        seqs[data_col] = [in_seq[data_col][i : i + seq_length] for i in range(nseq)]
+    for col in columns:
+        seqs[col] = [in_seq[col][i : i + seq_length] for i in subsequence_starts]
 
-    return (seqs, targets)
+    return (seqs)
 
 
 def insert_top_folder(path, folder_name):
@@ -386,6 +375,7 @@ def combine_multiprocessing_outputs(
 
 
 def combine_parquet_files(files, out_path):
+    print(f"{files = }")
     schema = pq.ParquetFile(files[0]).schema_arrow
     with pq.ParquetWriter(out_path, schema=schema, compression="snappy") as writer:
         for file in files:

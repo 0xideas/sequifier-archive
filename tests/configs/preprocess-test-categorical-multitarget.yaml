@@ -3,8 +3,6 @@ data_path: tests/resources/test-data-categorical-multitarget-5.csv
 read_format: csv
 write_format: parquet
 selected_columns: null
-target_columns: [itemId, sup1, sup3]
-return_targets: true
 
 group_proportions:
 - 0.6
