@@ -9,5 +9,6 @@ group_proportions:
 - 0.2
 - 0.2
 seq_length: 8
+seq_step_size: 1
 max_rows: null
 

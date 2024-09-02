@@ -52,10 +52,6 @@ class PreprocessorModel(BaseModel):
 
     def __init__(self, **kwargs):
         kwargs["seq_step_size"] = kwargs.get("seq_step_size", kwargs["seq_length"])
+        kwargs["seq_length"] = kwargs["seq_length"] + 1
 
-        super().__init__(
-            **{
-                k: v
-                for k, v in kwargs.items()
-            }
-        )
+        super().__init__(**{k: v for k, v in kwargs.items()})

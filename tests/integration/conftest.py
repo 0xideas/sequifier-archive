@@ -230,7 +230,7 @@ def delete_inference_target(
         file_format = data_path.split(".")[-1]
         inference_data = read_data(data_path, file_format)
 
-        inference_data = inference_data.drop(columns=["target"])
+        inference_data = inference_data.drop(columns=[0])
 
         write_data(inference_data, data_path, file_format)
 
