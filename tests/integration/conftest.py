@@ -204,38 +204,6 @@ def run_preprocessing(
 
 
 @pytest.fixture(scope="session")
-def delete_inference_target(
-    run_preprocessing,
-    split_groups,
-    project_path,
-):
-    data_paths = [
-        os.path.join(
-            project_path,
-            "data",
-            f"test-data-{variant}-{model_number}-split{split_groups[variant] - 1}.parquet",
-        )
-        for variant in ["categorical", "real"]
-        for model_number in [1, 3, 5]
-    ] + [
-        os.path.join(
-            project_path, "data", f"test-data-real-1-split1-autoregression.csv"
-        ),
-        os.path.join(
-            project_path, "data", f"test-data-categorical-multitarget-5-split2.parquet"
-        ),
-    ]
-
-    for data_path in data_paths:
-        file_format = data_path.split(".")[-1]
-        inference_data = read_data(data_path, file_format)
-
-        inference_data = inference_data.drop(columns=[0])
-
-        write_data(inference_data, data_path, file_format)
-
-
-@pytest.fixture(scope="session")
 def run_training(
     run_preprocessing,
     project_path,
@@ -276,7 +244,6 @@ def run_training(
 @pytest.fixture(scope="session")
 def run_inference(
     run_training,
-    delete_inference_target,
     project_path,
     inference_config_path_cat,
     inference_config_path_cat_multitarget,
