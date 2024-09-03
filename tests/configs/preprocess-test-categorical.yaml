@@ -3,13 +3,12 @@ data_path: tests/resources/test-data-categorical-5.csv
 read_format: csv
 write_format: parquet
 selected_columns: null
-target_columns: [itemId]
-return_targets: true
 
 group_proportions:
 - 0.6
 - 0.2
 - 0.2
 seq_length: 8
+seq_step_size: 1
 max_rows: null
 

@@ -3,11 +3,11 @@ data_path: tests/resources/test-data-real-5.csv
 read_format: csv
 write_format: parquet
 selected_columns: null
-target_columns: [itemValue]
-return_targets: true
 
 group_proportions:
-- 0.8
-- 0.2
+- 0.5
+- 0.5
 seq_length: 8
+seq_step_size: 1
 max_rows: null
+n_cores: 1

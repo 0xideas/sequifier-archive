@@ -20,11 +20,10 @@ class PreprocessorModel(BaseModel):
     read_format: str = "csv"
     write_format: str = "parquet"
     selected_columns: Optional[list[str]]
-    target_columns: Optional[list[str]]
-    return_targets: bool = True
 
     group_proportions: List[float]
     seq_length: int
+    seq_step_size: Optional[int]
     max_rows: Optional[int]
     seed: int
     n_cores: Optional[int]
@@ -51,12 +50,8 @@ class PreprocessorModel(BaseModel):
         ], "Currently only 'csv' and 'parquet' are supported"
         return v
 
-    @validator("return_targets", always=True)
-    def validate_return_targets(cls, v, values):
-        assert (
-            v is False or values["target_columns"] is not None
-        ), "Either return_targets is False or target_columns is not None"
-        assert not (
-            values["target_columns"] is not None and v is False
-        ), "If return_targets is False, target_columns has to be None"
-        return v
+    def __init__(self, **kwargs):
+        kwargs["seq_step_size"] = kwargs.get("seq_step_size", kwargs["seq_length"])
+        kwargs["seq_length"] = kwargs["seq_length"] + 1
+
+        super().__init__(**{k: v for k, v in kwargs.items()})

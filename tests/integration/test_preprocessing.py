@@ -76,13 +76,13 @@ def data_splits(project_path, split_groups):
     return data_split_values
 
 
-def test_preprocessed_data_real(delete_inference_target, split_groups, data_splits):
+def test_preprocessed_data_real(data_splits):
     for j in [1, 3, 5]:
         name = f"{j}-real"
         assert len(data_splits[name]) == 2
 
         for i, data in enumerate(data_splits[name]):
-            number_expected_columns = 12 - int(i == (split_groups["real"] - 1))
+            number_expected_columns = 12
             assert data.shape[1] == (
                 number_expected_columns
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
@@ -93,13 +93,13 @@ def test_preprocessed_data_real(delete_inference_target, split_groups, data_spli
                 assert np.all((group["5"].values[:-j] == group["6"].values[j:]))
 
 
-def test_preprocessed_data_categorical(data_splits, split_groups):
+def test_preprocessed_data_categorical(data_splits):
     for j in [1, 3, 5]:
         name = f"{j}-categorical"
         assert len(data_splits[name]) == 3
 
         for i, data in enumerate(data_splits[name]):
-            number_expected_columns = 12 - int(i == (split_groups["categorical"] - 1))
+            number_expected_columns = 12
             assert data.shape[1] == (
                 number_expected_columns
             ), f"{name = } - {i = }: {data.shape = } - {data.columns = }"
