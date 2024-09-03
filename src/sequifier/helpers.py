@@ -89,7 +89,8 @@ class LogFile(object):
             if level2 <= level:
                 self._files[level2].write(f"{string}\n")
                 self._files[level2].flush()
-        print(string)
+        if level >= 3:
+            print(string)
 
     def close(self):
         for level in self.levels:
