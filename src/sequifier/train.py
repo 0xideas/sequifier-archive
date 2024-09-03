@@ -290,7 +290,8 @@ class TransformerModel(nn.Module):
                                 f"'{target_column} loss': {format_number(tloss)}"
                                 for target_column, tloss in total_losses.items()
                             ]
-                        )
+                        ),
+                        level=2,
                     )
                     self.log_file.write(
                         ", ".join(
@@ -298,7 +299,8 @@ class TransformerModel(nn.Module):
                                 f"'{target_column} baseline loss': {format_number(bloss)}"
                                 for target_column, bloss in self.baseline_losses.items()
                             ]
-                        )
+                        ),
+                        level=2,
                     )
 
                 for categorical_column in self.class_share_log_columns:
@@ -609,7 +611,9 @@ class TransformerModel(nn.Module):
         os.makedirs(os.path.join(self.project_path, "logs"), exist_ok=True)
         open_mode = "w" if self.start_epoch == 1 else "a"
         self.log_file = LogFile(
-            os.path.join(self.project_path, "logs", f"sequifier-{self.model_name}.txt"),
+            os.path.join(
+                self.project_path, "logs", f"sequifier-{self.model_name}-[NUMBER].txt"
+            ),
             open_mode,
         )
 

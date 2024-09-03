@@ -77,16 +77,23 @@ def numpy_to_pytorch(
 
 class LogFile(object):
     def __init__(self, path, open_mode):
-        self._file = open(path, open_mode)
+        self.levels = [2, 3]
+        self._files = {
+            level: open(path.replace("[NUMBER]", str(level)), open_mode)
+            for level in self.levels
+        }
         self._path = path
 
-    def write(self, string):
-        self._file.write(f"{string}\n")
-        self._file.flush()
+    def write(self, string, level=3):
+        for level2 in self.levels:
+            if level2 <= level:
+                self._files[level2].write(f"{string}\n")
+                self._files[level2].flush()
         print(string)
 
     def close(self):
-        self._file.close()
+        for level in self.levels:
+            self._files[level].close()
 
 
 def normalize_path(path, project_path):
